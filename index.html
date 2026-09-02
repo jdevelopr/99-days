@@ -6305,6 +6305,15 @@ class HoldemGame {
   }
 }
 
+// the plain door itself, painted onto the street once the static layer exists
+function paintCasinoDoor(g) {
+  const x = 10, base = GROUND_Y;
+  px(g, x - 2, base - 46, 26, 46, '#2a2a30'); px(g, x, base - 44, 22, 44, '#4a4c54'); px(g, x, base - 44, 22, 1, '#6a6c74'); px(g, x, base - 44, 1, 44, '#5a5c64');
+  for (let y = base - 40; y < base - 4; y += 9) px(g, x + 2, y, 18, 1, 'rgba(0,0,0,0.18)');   // steel panels
+  px(g, x + 16, base - 22, 3, 2, '#8a8a92');                                              // a handle, no number
+  px(g, x + 8, base - 30, 6, 2, '#2a2a30');                                                // the slot at eye level
+  px(g, x - 1, base - 2, 24, 2, '#3a3c44');
+}
 // ---------- hooks ----------
 {
   STREET.doors.push({ x: 10, w: 22, to: 'casino', label: 'A plain door' });
@@ -6985,7 +6994,7 @@ function render() {
   }
 }
 // boot
-World.static || buildStreetStatic(); paintLampPosts(World.static.getContext('2d'));
+World.static || buildStreetStatic(); paintLampPosts(World.static.getContext('2d')); paintCasinoDoor(World.static.getContext('2d'));
 titleInit();
 requestAnimationFrame(loop);
 // debug hooks
