@@ -3712,31 +3712,31 @@ playerSpec = function () {
 // ---------- the catalogue ----------
 // kind: 'self' | 'gift' | 'outfit'. always: true = on the shelf until bought. give: who it's for.
 const PAWN_ITEMS = {
-  watch: { name: 'Wristwatch (works)', price: 250, kind: 'self', always: true, desc: 'A clock on your wrist. You will know what time it is.' },
-  bed: { name: 'A real bed', price: 500, kind: 'self', always: true, desc: 'Delivered by two men who complain about the stairs. You sleep better.' },
-  tools: { name: "Carpenter's tools, oak box", price: 180, kind: 'gift', always: true, give: 'amos', desc: 'Chisels, a plane, a square. The name burned into the lid is A. REED.' },
-  textbook: { name: 'Drawing textbook (Bridgman)', price: 125, kind: 'gift', always: true, give: 'mei', desc: 'Constructive anatomy. The spine is cracked in all the right places.' },
-  collar: { name: 'Dog collar, brass tag', price: 50, kind: 'gift', always: true, give: 'dog', desc: 'Sol will engrave the tag. You have to decide what it says.' },
-  ruthWatch: { name: "Ladies' watch, 1979", price: 140, kind: 'gift', always: true, give: 'walter', desc: 'Small, gold-plated, keeps time. The ledger says ASHBY. Sol will not sell it to anyone else.' },
-  heater: { name: 'Space heater', price: 110, kind: 'self', desc: 'The room is warm. You wake up less tired.' },
-  boots: { name: 'Work boots, resoled', price: 85, kind: 'self', desc: 'Walking the street costs half the energy.' },
-  coffee: { name: 'Coffee maker', price: 70, kind: 'self', desc: 'A little energy back every morning.' },
-  umbrella: { name: 'Umbrella, only slightly bent', price: 60, kind: 'self', desc: 'The rain gets to your chest less. Fewer coughing fits on wet days.' },
-  radio: { name: 'Transistor radio', price: 90, kind: 'self', desc: 'For the apartment. Kessler calls the ball games.' },
+  watch: { name: 'Wristwatch (works)', price: 250, kind: 'self', always: true, desc: 'Steel band, cracked crystal. Ticking.' },
+  bed: { name: 'A real bed', price: 500, kind: 'self', always: true, desc: 'Delivered by two men who complain about the stairs.' },
+  tools: { name: "Carpenter's tools, oak box", price: 180, kind: 'gift', always: true, give: 'amos', desc: 'Chisels, a plane, a square, in an oak box with a name burned into the lid.' },
+  textbook: { name: 'Drawing textbook (Bridgman)', price: 125, kind: 'gift', always: true, give: 'mei', desc: 'Constructive anatomy. The spine is cracked at the chapter on hands.' },
+  collar: { name: 'Dog collar, brass tag', price: 50, kind: 'gift', always: true, give: 'dog', desc: 'Leather, with a brass tag that has nothing on it yet.' },
+  ruthWatch: { name: "Ladies' watch, 1979", price: 140, kind: 'gift', always: true, give: 'walter', desc: 'Small, gold-plated, keeps time. The ledger says ASHBY, 1988.' },
+  heater: { name: 'Space heater', price: 110, kind: 'self', desc: 'Two settings, both too hot.' },
+  boots: { name: 'Work boots, resoled', price: 85, kind: 'self', desc: 'Resoled twice. Somebody walked a long way in these.' },
+  coffee: { name: 'Coffee maker', price: 70, kind: 'self', desc: 'Four cups. The carafe is chipped.' },
+  umbrella: { name: 'Umbrella, only slightly bent', price: 60, kind: 'self', desc: 'Only slightly bent.' },
+  radio: { name: 'Transistor radio', price: 90, kind: 'self', desc: 'Transistor. Picks up two stations and, some nights, the dock.' },
   overcoat: { name: 'Wool overcoat', price: 150, kind: 'outfit', desc: 'Heavy, grey, warm. Somebody wore it to funerals.' },
   suit: { name: 'Second-hand suit', price: 200, kind: 'outfit', desc: 'Fits. Nearly.' },
   leather: { name: 'Leather jacket', price: 120, kind: 'outfit', desc: 'Somebody was cooler than you in this once.' },
   flannel: { name: 'Flannel & jeans', price: 75, kind: 'outfit', desc: 'Soft. Clean. Like a day off.' },
   shell: { name: 'Rain shell', price: 95, kind: 'outfit', desc: 'Green, with a hood that stays up.' },
-  cardigan: { name: 'Cardigan', price: 80, kind: 'outfit', desc: 'Cream, with wooden buttons. Walter would approve.' },
-  chessClock: { name: 'Chess clock', price: 65, kind: 'gift', give: 'walter', desc: 'Two faces, one lever. So Walter can cheat on the clock instead of the board.' },
-  strings: { name: 'Guitar strings & a capo', price: 55, kind: 'gift', give: 'busker', desc: "Cal's E string has been a fishing line since March." },
-  checkers: { name: 'Checkers set', price: 50, kind: 'gift', give: 'sam', desc: 'Sam always wins. This will not change that.' },
-  nurseShoes: { name: "Nurse's clogs, size 7", price: 95, kind: 'gift', give: 'nora', desc: 'Her feet have opinions. These are the answer.' },
-  amosHeater: { name: 'Space heater (for Amos)', price: 110, kind: 'gift', give: 'amos', desc: 'Warm through the night, wherever the night is.' },
-  gloves: { name: 'Winter gloves', price: 50, kind: 'gift', give: 'granny', desc: "For Mrs. Ortega, who carries oranges in the rain." },
-  frame: { name: 'Picture frame, walnut', price: 60, kind: 'gift', give: 'nadia', desc: "For the photo of her father's diner she keeps under the register." },
-  busPass: { name: 'Monthly bus pass', price: 50, kind: 'gift', give: 'mei', desc: 'So Mei can see the school before she decides.' },
+  cardigan: { name: 'Cardigan', price: 80, kind: 'outfit', desc: 'Cream, with wooden buttons.' },
+  chessClock: { name: 'Chess clock', price: 65, kind: 'gift', give: 'walter', desc: 'Two faces, one lever. Still runs.' },
+  strings: { name: 'Guitar strings & a capo', price: 55, kind: 'gift', give: 'busker', desc: 'A set of six and a capo, still in the packet.' },
+  checkers: { name: 'Checkers set', price: 50, kind: 'gift', give: 'sam', desc: 'Red and black. One red is missing; a button has taken its place.' },
+  nurseShoes: { name: 'White clogs, size 7', price: 95, kind: 'gift', give: 'nora', desc: 'White, size 7, barely worn.' },
+  amosHeater: { name: 'Space heater, dented', price: 110, kind: 'gift', give: 'amos', desc: 'Dented on one side. Works.' },
+  gloves: { name: 'Winter gloves', price: 50, kind: 'gift', give: 'granny', desc: 'Wool, lined, a little too big.' },
+  frame: { name: 'Picture frame, walnut', price: 60, kind: 'gift', give: 'nadia', desc: 'Walnut, five by seven, glass intact.' },
+  busPass: { name: 'Monthly bus pass', price: 50, kind: 'gift', give: 'mei', desc: 'This month\'s. Unused.' },
 };
 const PAWN_POOL = Object.keys(PAWN_ITEMS).filter(k => !PAWN_ITEMS[k].always);
 // what the player owns that can be pawned: [key, offer, giver, label]
@@ -3765,7 +3765,7 @@ const Pawn = {
     const s = this.S(); s.met = true; const stock = this.todaysStock();
     const items = stock.map(k => { const it = PAWN_ITEMS[k]; return { t: it.name, r: () => `$${it.price}`, disabled: () => G.money < it.price, do: () => this.buy(k) }; });
     items.push({ t: 'Nothing today', do: () => { } });
-    Menu.open("Sol's Pawn & Loan", items, { wide: true, sub: `Six things that are always here, three that are here today. You have $${G.money}.` });
+    Menu.open("Sol's Pawn & Loan", items, { wide: true, sub: `Shelves behind brass wire. You have $${G.money}.` });
   },
   buy(k) {
     const it = PAWN_ITEMS[k]; const s = this.S();
