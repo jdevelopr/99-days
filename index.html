@@ -3,20 +3,31 @@
 <head>
 <meta charset="utf-8">
 <title>99 Days</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
-  :root { color-scheme: dark; }
-  html, body { margin:0; padding:0; background:#07080c; height:100%; overflow:hidden; }
-  body { display:flex; align-items:center; justify-content:center; font-family: monospace; color:#cfd3dc; touch-action:none; -webkit-user-select:none; user-select:none; }
+  :root { color-scheme: dark; --sl: env(safe-area-inset-left, 0px); --sr: env(safe-area-inset-right, 0px); --sb: env(safe-area-inset-bottom, 0px); --st: env(safe-area-inset-top, 0px); }
+  html, body { margin:0; padding:0; background:#07080c; height:100%; overflow:hidden; overscroll-behavior:none; }
+  body { display:flex; align-items:center; justify-content:center; font-family: monospace; color:#cfd3dc; touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
   #wrap { position:relative; }
   #game { display:block; image-rendering: pixelated; image-rendering: crisp-edges; background:#07080c; outline:none; }
   #touch { position:fixed; inset:0; pointer-events:none; display:none; }
   #touch.on { display:block; }
-  .tb { position:absolute; pointer-events:auto; width:56px; height:56px; border-radius:50%; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); color:#dfe3ea; font: 14px monospace; display:flex; align-items:center; justify-content:center; }
-  .tb:active, .tb.down { background:rgba(255,255,255,0.22); }
-  #tl { left:18px; bottom:48px; } #tr { left:108px; bottom:48px; } #tu { left:63px; bottom:104px; } #td { left:63px; bottom:0px; height:44px; }
-  #te { right:24px; bottom:60px; width:72px; height:72px; } #tx { right:108px; bottom:30px; } #tm { right:18px; top:14px; width:44px; height:44px; font-size:11px; }
+  .tb { position:absolute; pointer-events:auto; width:60px; height:60px; border-radius:50%; background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.28); color:#eef1f6; font: bold 16px monospace; display:flex; align-items:center; justify-content:center; box-shadow: 0 0 0 4px rgba(0,0,0,0.12); backdrop-filter: blur(2px); }
+  .tb:active, .tb.down { background:rgba(255,255,255,0.30); }
+  /* d-pad cluster, bottom-left; actions bottom-right; menu top-right; all inside the safe area */
+  #tl { left:calc(var(--sl) + 16px); bottom:calc(var(--sb) + 58px); } #tr { left:calc(var(--sl) + 132px); bottom:calc(var(--sb) + 58px); }
+  #tu { left:calc(var(--sl) + 74px); bottom:calc(var(--sb) + 112px); } #td { left:calc(var(--sl) + 74px); bottom:calc(var(--sb) + 6px); }
+  #te { right:calc(var(--sr) + 22px); bottom:calc(var(--sb) + 64px); width:82px; height:82px; font-size:22px; } #tx { right:calc(var(--sr) + 116px); bottom:calc(var(--sb) + 26px); }
+  #tm { right:calc(var(--sr) + 16px); top:calc(var(--st) + 12px); width:50px; height:36px; border-radius:10px; font-size:11px; }
+  #tf { left:calc(var(--sl) + 16px); top:calc(var(--st) + 12px); width:50px; height:36px; border-radius:10px; font-size:11px; }
   #hint { position:fixed; left:0; right:0; bottom:4px; text-align:center; font-size:11px; color:#5c6270; pointer-events:none; }
+  #touch.on ~ #hint { display:none; }
+  /* portrait phones: ask for landscape */
+  #rotate { position:fixed; inset:0; background:#07080c; color:#cfd3dc; display:none; align-items:center; justify-content:center; text-align:center; font: 16px monospace; z-index:20; padding:24px; }
+  #rotate .ph { width:26px; height:46px; border:2px solid #8a92a4; border-radius:5px; margin:0 auto 18px; animation: turn 1.6s ease-in-out infinite; }
+  @keyframes turn { 0%,25% { transform: rotate(0deg); } 60%,100% { transform: rotate(90deg); } }
+  @media (orientation: portrait) and (pointer: coarse) { #rotate { display:flex; } }
 </style>
 </head>
 <body>
@@ -29,7 +40,9 @@
   <div class="tb" id="te" data-k="KeyE">E</div>
   <div class="tb" id="tx" data-k="KeyX">X</div>
   <div class="tb" id="tm" data-k="Escape">MENU</div>
+  <div class="tb" id="tf">FULL</div>
 </div>
+<div id="rotate"><div><div class="ph"></div>Turn your phone sideways.<br><span style="color:#5c6270;font-size:12px">99 Days plays in landscape.</span></div></div>
 <div id="hint"></div>
 
 <script>
@@ -51,15 +64,30 @@ function mkCanvas(w, h) {
 }
 
 let SCALE = 1;
+const IS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 function resize() {
   const ww = window.innerWidth, wh = window.innerHeight;
-  SCALE = Math.max(1, Math.floor(Math.min(ww / W, wh / H)));
-  // allow fractional scale on very small screens so the whole scene fits
-  if (ww < W || wh < H) SCALE = Math.min(ww / W, wh / H);
+  const fit = Math.min(ww / W, wh / H);
+  // desktop: whole-pixel scale for crisp pixels; phones and tablets: fill the height, with gutters either side for the controls
+  if (IS_TOUCH && ww > wh) {
+    const gut = Math.max(106, Math.round(ww * 0.125));
+    SCALE = Math.min((ww - 2 * gut) / W, wh / H);
+    layoutTouch(ww, wh, gut);
+  } else SCALE = IS_TOUCH ? fit : Math.max(1, Math.floor(fit));
+  if (ww < W || wh < H) SCALE = Math.min(SCALE, fit);
   canvas.style.width = (W * SCALE) + 'px';
   canvas.style.height = (H * SCALE) + 'px';
 }
-window.addEventListener('resize', resize); resize();
+// put the touch buttons in the black gutters beside the game so nothing covers the scene
+function layoutTouch(ww, wh, gut) {
+  const q = id => document.getElementById(id); const S = (el, x, y, w) => { if (!el) return; el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.right = 'auto'; el.style.bottom = 'auto'; if (w) { el.style.width = w + 'px'; el.style.height = w + 'px'; } };
+  const sl = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sl')) || 0, sr = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sr')) || 0;
+  const bw = Math.min(58, Math.floor((gut - 8) / 2)); const lx = sl + gut / 2, rx = ww - sr - gut / 2; const midY = wh * 0.58;
+  S(q('tu'), lx - bw / 2, midY - bw * 1.55, bw); S(q('tl'), lx - bw - 2, midY - bw / 2, bw); S(q('tr'), lx + 2, midY - bw / 2, bw); S(q('td'), lx - bw / 2, midY + bw * 0.55, bw);
+  const ew = Math.min(84, gut - 12); S(q('te'), rx - ew / 2, midY - ew / 2 - 6, ew); S(q('tx'), rx - bw / 2, midY + ew / 2 + 8, bw);
+  const tm = q('tm'), tf = q('tf'); if (tm) { tm.style.left = (rx - 25) + 'px'; tm.style.top = '10px'; tm.style.right = 'auto'; tm.style.bottom = 'auto'; } if (tf) { tf.style.left = (lx - 25) + 'px'; tf.style.top = '10px'; tf.style.right = 'auto'; tf.style.bottom = 'auto'; }
+}
+window.addEventListener('resize', resize); window.addEventListener('orientationchange', () => setTimeout(resize, 200)); resize();
 
 // ---------- utils ----------
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -135,8 +163,15 @@ window.addEventListener('blur', () => { Input.down = {}; });
   const layer = document.getElementById('touch');
   if (!isTouch) return;
   Input.touch = true; layer.classList.add('on');
+  // fullscreen + landscape lock (Android honours the lock; iOS just goes full-bleed)
+  const fs = document.getElementById('tf');
+  const goFull = async () => { try { const el = document.documentElement; if (!document.fullscreenElement) { if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: 'hide' }); else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen(); } else if (document.exitFullscreen) await document.exitFullscreen(); } catch (e) { } try { if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape'); } catch (e) { } setTimeout(resize, 300); };
+  fs.addEventListener('touchstart', e => { e.preventDefault(); Audio.unlock(); goFull(); }, { passive: false });
+  fs.addEventListener('mousedown', e => { e.preventDefault(); goFull(); });
+  if (!document.documentElement.requestFullscreen && !document.documentElement.webkitRequestFullscreen) fs.style.display = 'none';
+  document.addEventListener('fullscreenchange', () => { fs.textContent = document.fullscreenElement ? 'EXIT' : 'FULL'; setTimeout(resize, 200); });
   for (const b of layer.querySelectorAll('.tb')) {
-    const code = b.dataset.k;
+    const code = b.dataset.k; if (!code) continue;
     const dn = e => { e.preventDefault(); b.classList.add('down'); Input.press(code); Audio.unlock(); };
     const up = e => { e.preventDefault(); b.classList.remove('down'); Input.release(code); };
     b.addEventListener('touchstart', dn, { passive: false }); b.addEventListener('touchend', up, { passive: false });
@@ -5148,10 +5183,19 @@ const SONGS = [
     when: () => G.chars.walter.dead,
     alt: { title: 'Something From 1962', lyrics: [[0, 'He asked for something from sixty-two;'], [16, 'I played it wrong and he said so, too.'], [32, "I'll get it right if it takes all year,"], [44, "and he'll be on that bench to hear."]], outro: 'The old man on the bench lifts his cane an inch. From Walter, that is a standing ovation.' },
   },
+  {
+    id: 'sixth', title: 'Sixth Street', bpm: 100, bar: 4, key: 57, // A, the song with the bus in it
+    unlock: () => G.chars.theo && G.chars.theo.reunited,
+    chords: [[0, 'm'], [8, 'M'], [3, 'M'], [10, 'M'], [0, 'm'], [8, 'M'], [3, 'M'], [10, 'M'], [5, 'm'], [3, 'M'], [8, 'M'], [10, 'M'], [0, 'm'], [0, 'm']],
+    melody: [[[12, 1], [12, 1], [15, 1], [17, 1]], [[15, 2], [12, 1], [10, 1]], [[12, 1], [15, 1], [17, 1], [19, 1]], [[17, 3], [null, 1]], [[12, 1], [12, 1], [15, 1], [17, 1]], [[19, 2], [17, 1], [15, 1]], [[12, 1], [10, 1], [8, 1], [10, 1]], [[12, 3], [null, 1]],
+      [[20, 1], [19, 1], [17, 1], [15, 1]], [[17, 2], [15, 1], [12, 1]], [[15, 1], [17, 1], [19, 1], [17, 1]], [[15, 2], [10, 2]], [[12, 4]], [[null, 4]]],
+    lyrics: [[0, 'Bad couch on Sixth, a foot too short,'], [16, 'a kid who sleeps like he\'s standing guard.'], [32, 'I wrote him a bus he\'s never been on'], [44, 'and he rode it all the way home.']],
+    outro: 'Theo stands next to him for the whole thing with his hood down, which is the first time you have seen his whole face in daylight. When it ends he says "the bus part\'s wrong" and Cal says "I know" and neither of them means it.',
+  },
 ];
 const Song = {
   active: false, spec: null, nodes: [], startAt: 0, dur: 0, lyricIdx: -1, shown: '',
-  next() { const f = G.flags; const i = (f.songIdx || 0) % SONGS.length; f.songIdx = i + 1; return SONGS[i]; },
+  next() { const f = G.flags; const avail = SONGS.filter(s => !s.unlock || s.unlock()); const i = (f.songIdx || 0) % avail.length; f.songIdx = i + 1; const s = avail[i]; if (s.id === 'sixth') { Beats.S().theoSongHeard = true; remember('song_sixth'); } return s; },
   play(spec) {
     const A = Audio; if (!A._unlocked) A.unlock();
     this.spec = spec; this.active = true; this.lyricIdx = -1; this.shown = ''; this.nodes = []; this.startedFrame = G.t; G.state = 'song'; G.walking = false; G.facing = STREET.spots.busker > G.px ? 1 : -1;
@@ -5251,6 +5295,7 @@ const Garden = {
     else items.push({ t: s.wilted ? 'Water it (it needs it)' : 'Water and weed', r: tended ? 'done today' : '-8 energy', disabled: () => G.energy < 8 || tended, do: () => this.tend() });
     if (st === 5 && s.ready > 0) items.push({ t: 'Pick what is ready', r: () => `${s.ready} vegetables`, do: () => this.harvest() });
     if (s.barrel) items.push({ t: 'Check the rain barrel', do: () => Dlg.run([narr(G.rain > 0.3 ? 'Full and running over. Amos put a stone on the lid so the wind would not take it. The wind has tried.' : 'Half full. The rain always comes back; Amos said so, and he would know.')]) });
+    if (st >= 3 && s.ortegaTalks >= 1 && !Beats.S().hectorBench) items.push({ t: "Move Hector's bench out of the shed", r: '-6 energy', disabled: () => G.energy < 6, do: () => { useEnergy(6); Beats.hectorBench(); } });
     items.push({ t: 'Leave', do: () => { } });
     const sub = ['Weeds to the fence. Somewhere under them, three beds.', 'Three beds, cleared. Dirt that has not been turned in years.', 'Rows of dirt with the seed packets on sticks at the ends. Nothing yet.', 'Sprouts. Small, green, absurd, alive.', 'Tomato cages and bean poles. Something is going to happen.', s.wilted ? 'Leaves gone soft. It wants water.' : 'Red among the green. Hector\'s garden, thirty-one years on.'][st];
     Menu.open("Hector's garden", items, { sub });
@@ -5443,6 +5488,294 @@ function paintGardenFromStreet(g, camX) {
   const ndm = Nadia.menu; Nadia.menu = function () { ndm.call(this); if (Menu.active && G.inv.veg) Menu.items.splice(Menu.items.length - 1, 0, { t: 'Give her vegetables for the soup', r: () => `x${G.inv.veg}`, keep: true, hide: () => !G.inv.veg, do: () => { G.inv.veg--; const n = G.chars.nadia; n.veg = (n.veg || 0) + 1; if (n.veg === 1) { trust('nadia', 2); remember('garden_soup'); Dlg.run([say('nadia', "Tomatoes? From where? ...Hector's lot? You've got Hector's lot going?"), say('nadia', "My father let him have that lot. I was six. I used to steal the beans."), say('nadia', "These go in the 412. Tonight. That's not a soup anymore, that's a neighborhood.")]); } else { trust('nadia', n.veg % 3 === 0 ? 1 : 0); UI.toast('Into the 412.', '#8ae88a'); } } }); };
 }
 
+// ---- 09o_story_beats.js ----
+// ============================================================
+// Second and third beats for everyone: the call, the roof, Mrs. Lin, after hours, St. Bartholomew's, the type,
+// Sam's father, Thursday, three in the morning, the form, the storm, the cabin, a name comes back, the trumpet,
+// Micah, the cards, Dad under the poster, the song with the bus in it, the scan, the stone, Hector's bench, and four small ones.
+// ============================================================
+SPECS.mrsLin = { skin: '#f0d2b4', hair: '#3a3a40', hairStyle: 'bun', shirt: '#4a4a5a', pants: '#3a3a44', shoes: '#2a2420', coat: '#6a6a72', old: true, short: true };
+SPECS.marsh = { skin: '#c89a78', hair: '#6a5a4a', hairStyle: 'thin', shirt: '#5a5a62', pants: '#3a3a44', shoes: '#2a2420', coat: '#4a4a52', old: true, stubble: true };
+SPECS.micah = { skin: '#dcae88', hair: '#3a2a22', hairStyle: 'messy', shirt: '#4a8a5a', pants: '#3a4a8a', shoes: '#f0f0f0', kid: true };
+SPECS.samDad = { skin: '#e0c0a0', hair: '#c08a3a', hairStyle: 'short', shirt: '#8a8a92', pants: '#3a3a44', shoes: '#2a2420', coat: '#5a4a3a', stubble: true };
+SPEAKERS.mrsLin = { name: 'Mrs. Lin', color: '#c8c8d8', spec: 'mrsLin' };
+SPEAKERS.marsh = { name: 'Mr. Marsh', color: '#b8a898', spec: 'marsh' };
+SPEAKERS.micah = { name: 'Micah', color: '#a8d8a8', spec: 'micah' };
+SPEAKERS.samDad = { name: 'The man', color: '#a8a8b0', spec: 'samDad' };
+SPEAKERS.woman = { name: 'Woman', color: '#c8b0b0', spec: 'woman1' };
+SPEAKERS.inspector = { name: 'Inspector', color: '#a8b8c8', spec: 'man1' };
+
+// ---------- St. Bartholomew's (a diorama you are only ever taken to) ----------
+const CEMETERY = {
+  w: 480, spawn: 60, spots: { gate: 40, ruth: 226, walter: 250, hector: 372 },
+  doors: [{ x: 14, w: 26, to: 'street', at: 'walter', label: 'The long way back' }],
+  render(g, t) { renderCemetery(g, t); }
+};
+OUTDOORS.cemetery = CEMETERY;
+const CemWorld = { static: null };
+function buildCemeteryStatic() {
+  const [c, g] = mkCanvas(CEMETERY.w, H);
+  // low wall with iron railings; the gate at the left; big trees behind
+  for (const tx of [120, 300, 430]) { px(g, tx + 6, GROUND_Y - 130, 8, 130, '#2a2018'); for (let k = 0; k < 6; k++) { const w = 60 - k * 8, y = GROUND_Y - 130 + k * 16 - 10; px(g, tx + 10 - w / 2, y, w, 18, k % 2 ? '#2a3a26' : '#324630'); } }
+  px(g, 0, GROUND_Y - 40, CEMETERY.w, 40, '#4a4a50'); px(g, 0, GROUND_Y - 40, CEMETERY.w, 2, '#6a6a72'); for (let x = 0; x < CEMETERY.w; x += 16) px(g, x, GROUND_Y - 38, 1, 38, 'rgba(0,0,0,0.15)');
+  for (let x = 0; x < CEMETERY.w; x += 8) px(g, x, GROUND_Y - 56, 1, 16, '#2a2a30'); px(g, 0, GROUND_Y - 56, CEMETERY.w, 1, '#2a2a30');
+  px(g, 10, GROUND_Y - 70, 4, 70, '#2a2a30'); px(g, 44, GROUND_Y - 70, 4, 70, '#2a2a30'); px(g, 10, GROUND_Y - 72, 38, 3, '#2a2a30'); for (let x = 16; x < 44; x += 5) px(g, x, GROUND_Y - 66, 1, 66, '#3a3a44');
+  px(g, 8, GROUND_Y - 84, 42, 10, '#3a3a44'); drawText(g, 'ST. BART', 29, GROUND_Y - 83, '#c8c0b0', { align: 'center' });
+  // grass and a gravel path
+  px(g, 0, GROUND_Y, CEMETERY.w, H - GROUND_Y, '#3e4a30'); px(g, 0, GROUND_Y, CEMETERY.w, 1, '#5a6a44');
+  const R = seeded(212); for (let i = 0; i < 500; i++) px(g, Math.floor(R() * CEMETERY.w), GROUND_Y + 1 + Math.floor(R() * 60), 1, 1 + Math.floor(R() * 2), R() < 0.5 ? '#34402a' : '#4a5a38');
+  px(g, 0, FEET_Y - 2, CEMETERY.w, 14, '#6a6252'); for (let i = 0; i < 200; i++) px(g, Math.floor(R() * CEMETERY.w), FEET_Y - 2 + Math.floor(R() * 14), 1, 1, R() < 0.5 ? '#5a5244' : '#7a7262');
+  // rows of stones behind the path (small, weathered)
+  for (let x = 70; x < CEMETERY.w; x += 34) { if (Math.abs(x - 226) < 40 || Math.abs(x - 372) < 20) continue; const h = 14 + ((x * 7) % 8); px(g, x, GROUND_Y - h, 12, h, '#6a6a72'); px(g, x, GROUND_Y - h, 12, 1, '#8a8a92'); px(g, x + 2, GROUND_Y - h + 4, 8, 1, '#4a4a52'); px(g, x + 2, GROUND_Y - h + 7, 6, 1, '#4a4a52'); }
+  // Ruth's stone, and the paid-for one beside it
+  const stone = (x, w, h, col, lines) => { px(g, x, GROUND_Y - h, w, h, col); px(g, x, GROUND_Y - h, w, 1, shade(col, 25)); px(g, x - 2, GROUND_Y - 2, w + 4, 2, shade(col, -20)); lines.forEach((ln, i) => drawText(g, ln, x + w / 2, GROUND_Y - h + 4 + i * 8, '#2a2a30', { align: 'center' })); };
+  stone(214, 32, 30, '#8a8a92', ['RUTH', 'ASHBY', '1939']); stone(250, 32, 30, '#9a9a9a', ['WALTER', 'J.', '1937']);
+  CemWorld.static = c;
+}
+function renderCemetery(g, t) {
+  if (!CemWorld.static) buildCemeteryStatic();
+  const camX = 0; const pal = todPalette(G.tod, G.rain); G.pal = pal; const b = Beats.S();
+  drawSky(g, pal, 1400, t); g.drawImage(CemWorld.static, 0, 0);
+  // Hector's stone, once it is in
+  if (b.stoneIn) { px(g, 358, GROUND_Y - 30, 34, 30, '#7a7a82'); px(g, 358, GROUND_Y - 30, 34, 1, '#9a9aa2'); px(g, 356, GROUND_Y - 2, 38, 2, '#5a5a62'); drawText(g, 'HECTOR', 375, GROUND_Y - 26, '#2a2a30', { align: 'center' }); drawText(g, 'ORTEGA', 375, GROUND_Y - 18, '#2a2a30', { align: 'center' }); drawText(g, 'HE FIXED', 375, GROUND_Y - 10, '#2a2a30', { align: 'center' }); }
+  if (b.walterStone) { px(g, 252, GROUND_Y - 12, 28, 8, '#9a9a9a'); drawText(g, b.walterEpitaph === 'type' ? 'TYPE' : b.walterEpitaph === 'bus' ? 'THE 14' : '', 266, GROUND_Y - 11, '#2a2a30', { align: 'center' }); }
+  const ents = G.entities.slice().sort((a, bb) => (a.y - bb.y) || (a.x - bb.x));
+  const shadow = sunShadow(G.tod); shadow.alpha *= (1 - pal.night) * (1 - G.rain * 0.55) * pal.sun;
+  for (const e of ents) { if (e.hidden || e.noShadow) continue; const fr = entFrame(e); drawShadow(g, e, fr, Math.round(e.x), e.y, shadow, []); }
+  for (const e of ents) { if (e.hidden) continue; const fr = entFrame(e); const sx = Math.round(e.x); g.drawImage(fr.img, sx - fr.cx, e.y - fr.h + (e.sprite ? 0 : 2)); if (e.bubble) drawBubble(g, e, sx, t); }
+  drawRain(g, t, camX);
+  buildLighting(pal, camX, [], t); g.globalCompositeOperation = 'multiply'; g.drawImage(lightCanvas, 0, 0); g.globalCompositeOperation = 'source-over';
+  drawRays(g, pal, camX, t, shadow, [{ x0: 160, x1: 250, top: GROUND_Y - 120 }, { x0: 340, x1: 400, top: GROUND_Y - 120 }]);
+  drawVignette(g);
+}
+
+const Beats = {
+  init() { return {}; },
+  S() { if (!G.beats) G.beats = {}; return G.beats; },
+  // ----- wake events (morning) -----
+  wake() {
+    const b = this.S(); const d = G.day; const c = G.chars; const f = G.flags;
+    // Amos: the call
+    if ((c.amos.room || c.amos.job) && c.amos.met && c.amos.trust >= 4 && !b.amosCall && d >= 20 && !Passing.isBrushed('amos')) { b.amosCall = d; this.amosCall(); return true; }
+    if (b.amosCall && b.amosLetterDay === d) { b.amosLetter = true; remember('amos_letter'); Dlg.run([narr('An envelope with your address and his name. Cleveland postmark. He is on the stoop when you bring it down; he does not open it there.'), narr('Later, from Nora, who was in the hall: he read it on the fourth-floor landing, standing up, twice, and then sat on the stairs for an hour and let people step around him.'), say('amos', "She's got a boy. Seven. She sent a picture. He's got my ears, God help him.")]); return true; }
+    // Walter: Sunday at St. Bartholomew's
+    if (b.walterGraveDay === d && !c.walter.dead && !b.walterGrave) { b.walterGrave = true; this.walterGrave(); return true; }
+    // Walter: the type, in the last days
+    if (c.walter.met && c.walter.sat >= 6 && !c.walter.dead && d >= c.walter.deathDay - 3 && !b.walterType) { b.walterType = true; G.inv.type = 1; remember('walter_type'); Dlg.run([narr('A matchbox on the mat outside your door, with W.A. on it in typesetter\'s capitals.'), narr('Inside, in cotton wool: four pieces of lead type. 4, 1, 2, and a full stop. Set by hand, from a case he must have kept for forty years for exactly no reason until now.'), narr('No note. The type is the note.')]); return true; }
+    // Nora: three in the morning
+    if (c.nora && c.nora.met && !c.nora.cold && c.nora.trust >= 4 && d >= 30 && !b.noraNight && !Passing.isBrushed('nora')) { b.noraNight = true; remember('nora_night'); Dlg.run([narr('Last night, at three, a knock. Not two knocks. One, and a long time, and one more.'), narr('Nora, in scrubs, on your floor with her back against the bed, not looking at you, which is how she wanted it.'), say('nora', "Nineteen. He was nineteen. Same age as my brother was. Same... it doesn't matter what. Same."), say('nora', "You leave it in the parking lot. That's the rule. I left it in the parking lot and it followed me up four flights and through the wall."), narr('She talks until she stops. You do not say anything, because there is nothing that would not be worse than nothing. At some point she sleeps, sitting up. You put the coat over her. At five she is gone and the coat is folded on the chair.'), say('nora', "...Thanks. For the floor.")]); return true; }
+    // Jo: the cards
+    if (Jo.J().stage >= 2 && (Jo.J().visited || Jo.J().calls >= 4) && !b.cards && d >= (Jo.J().callDay || 0) + 4) { b.cards = true; G.inv.cards = 1; remember('jo_cards'); Dlg.run([narr('A package, small, wrapped in a grocery bag and a great deal of tape. Jo\'s handwriting: DO NOT LOSE THESE. THEN AGAIN.'), narr('Dad\'s deck. The ship on the back, the bent aces. A note: "Every ace is bent. That was him or you. I have decided it was him."'), narr('You can play a hand at the table, if anybody comes.')]); return true; }
+    // Mrs. Ortega: the stone goes in
+    if (f.ortegaStone && !b.stoneIn && d >= (f.ortegaStoneDay || 0) + 7 && d % 7 !== 0 && d < 97) { b.stoneIn = true; this.stoneDay(); return true; }
+    // Theo: their father comes to the corner
+    if (c.theo && Theo.clueCount() >= 2 && !c.theo.reunited && !c.theo.gone && !b.theoDad && d >= (c.theo.foundDay || 0) + 2) { b.theoDadPending = true; }
+    // Mr. Pryor's father
+    if (f.pryorDock && !b.pryorDad && d >= 10 + (f.pryorDockDay || d) && d % 7 === 0) { b.pryorDadPending = true; }
+    return false;
+  },
+  // per-frame: their father under the poster, when you come near the corner
+  update() { const b = this.S(); if (b.stormPending && G.scene === 'lake' && G.state === 'play' && !Dlg.active) { b.stormPending = false; if (G.rain > 0.5) this.storm(); } if (b.theoDadPending && G.scene === 'street' && G.state === 'play' && Math.abs(G.px - STREET.spots.busker) < 110 && G.tod > 0.15 && G.tod < 0.9 && !Dlg.active) { b.theoDadPending = false; this.theoDad(); } },
+  // ----- Amos -----
+  amosCall() {
+    const a = G.chars.amos; const b = this.S();
+    Dlg.run([narr('A knock. Amos, with his hat in his hands, which he never does.'), say('amos', "You've got a phone. I've got a number. I've been carrying it nine years; it's worn through in the fold."), say('amos', "My daughter. Renee. Cleveland. I'm going to dial it and I don't know what happens after that."),
+      choice({ t: "I'll stay.", do: () => { b.amosCallStayed = true; return [say('amos', "Okay. Don't say anything. Don't look at me either. Look at the window."), narr('He dials with a finger that shakes on the sixes. It rings four times. Somebody answers.')]; } },
+        { t: "I'll be in the hall.", do: () => [say('amos', "...Yeah. Yeah, that's better."), narr('Through the door: his voice, low, and long silences where hers must be.')] }),
+      { fn: () => { const ok = a.trust >= 6; b.amosCallOk = ok; if (ok) b.amosLetterDay = G.day + 7; } },
+      { if: () => b.amosCallOk, then: [narr('It goes on a long time. When he comes out, or when he hangs up, his face is doing something it has not had practice at.'), say('amos', "She didn't hang up. She said 'Dad' like a question and then she didn't hang up. Fourteen minutes. I watched your clock."), say('amos', "She's going to write. She said she's going to write. People say that."), { fn: () => { trust('amos', 2); remember('amos_call'); } }],
+        else: [narr('It does not go on long.'), say('amos', "She hung up. She didn't hang up right away. She said 'who is this' and I said and she waited, she waited about five seconds, and then she hung up."), say('amos', "Five seconds. Nine years ago it would've been none. I'll take five."), { fn: () => { trust('amos', 1); remember('amos_call'); } }] }]);
+  },
+  amosRoof() {
+    const b = this.S(); if (!talkEnergy(4)) return; b.amosRoof = true; remember('amos_roof');
+    UI.fadeOut(() => { UI.fadeIn(); Dlg.run([narr('The fire escape, then a ladder that is more rust than ladder, then the roof of Harlan Arms: tar, a water tank, the whole wet city laid out under a sky that has, for once, stopped.'), say('amos', "Twenty-two years of these. You never get tired of the top of a building. You get tired of the ladder."), narr('He walks to the edge like it is a sidewalk. You do not.'), say('amos', "I'll tell you how the back went, since you never asked, which is why I'm telling you."), say('amos', "Marcy left on a Tuesday. Wednesday I went up a roof on Delancey with a bottle in my coat, which you don't do, which everybody knows you don't do. I don't remember the fall. I remember the sky doing this."), narr('He turns his hand over, slowly, palm up.'), say('amos', "Eleven years since. The sky's the same. That's the thing I came up here to say and I've said it."), narr('You stand there until the cold makes the decision. Going down the ladder he holds it for you without being asked, the way he must have held a hundred.')]); }, 0.08);
+  },
+  // ----- Mei -----
+  mrsLin() {
+    const m = G.chars.mei; const b = this.S(); b.meiMom = true; G.flags.mrsLinDay = G.day;
+    Dlg.run([narr('Mrs. Lin is at the register instead of Mei. She has been waiting for you; that is clear from the way she is not looking at the door.'), say('mrsLin', "You. The regular."), say('mrsLin', "You are the one telling my daughter to leave."),
+      choice({ t: "She's good. She should go.", do: () => { b.meiMomWon = true; trust('mei', 1); remember('mei_mom'); return [say('mrsLin', "..."), say('mrsLin', "I know she is good. I have known since she was four. Do you think I need a sick man to tell me?"), narr('She takes a drawing from under the register. Mei, at six, in crayon: a woman behind a counter, enormous, smiling.'), say('mrsLin', "Half. I will pay half of the fee. Do not tell her it was you. Tell her it was the register.")]; } },
+        { t: "It's her choice. Not mine, not yours.", do: () => [say('mrsLin', "That is a coward's answer. It is also correct. Bread is five.")] },
+        { t: "...", do: () => { m.coldUntil = G.day + 3; return [say('mrsLin', "Nothing. Good. Nothing is what you should say."), narr('Mei is in the back. She heard. She does not come out, and for three days she rings you up like a stranger.')]; } })]);
+  },
+  meiNight() {
+    const m = G.chars.mei; const b = this.S(); if (!talkEnergy(4)) return; b.meiNight = true; m.portraitDone = true; if (!G.inv.drawing && !G.flags.pawned_drawing) G.inv.drawing = 1; remember('mei_night');
+    Dlg.run([narr('The store after closing. The shutter down, the lights off except the one over the counter, and the cans throwing shadows like a city.'), say('mei', "Don't pose. Don't do the thing with your hands. Just stand there like you're waiting for a bus."), narr('Forty minutes. The pencil, the rain on the shutter, her breathing when she gets something right.'), say('mei', "...Okay. Okay, that's the one. That's the portfolio. Don't look."), narr('You look. It is you, but the version of you that she sees, which is a person standing up straight in a doorway with the light behind them.'), say('mei', "It goes in first. Front of the folder. If they don't take that, they're not a school, they're a building.")]);
+  },
+  // ----- Walter -----
+  walterGrave() {
+    const b = this.S(); const w = G.chars.walter;
+    Dlg.run([narr('Walter at the door of Harlan Arms at eight, in a tie, with a paper bag of bread for the pigeons and no explanation for the tie.'), say('walter', "The long way. I'm slow. You're slower. It'll take the morning."), narr('Past the mill. Past the school. Along the river to where the city runs out of reasons and St. Bartholomew\'s begins.'), { fn: () => { UI.fadeOut(() => { goSceneNow('cemetery', 'gate'); b.cemVisit = 'walter'; UI.fadeIn(); }, 0.08); } },
+      { wait: 40 }, narr('Ruth Ashby, 1939. And beside it, a stone with a name on it and no second date.'), say('walter', "I bought it in March. The man was very kind. It's a strange thing to shop for; you find yourself asking about the weight."),
+      say('walter', "I've left the line under my name blank. I can't decide. Ruth would've decided in a minute; she'd have put something rude."),
+      choice({ t: '"He set the type."', do: () => { b.walterEpitaph = 'type'; return [say('walter', "He set the type. ...Forty-one years. Yes. That's the whole of it and it's enough."), narr('He writes it on the back of the bread bag so he will not forget, and then does not need the bag.')]; } },
+        { t: '"He waited for the 14."', do: () => { b.walterEpitaph = 'bus'; return [say('walter', "He waited for the 14."), say('walter', "..."), say('walter', "Ruth would laugh. She'd laugh and then she'd say yes. Put it down before I lose my nerve.")]; } },
+        { t: "Leave it blank.", do: () => { b.walterEpitaph = 'blank'; return [say('walter', "Blank. Let them wonder. ...No, you're right. A blank line is honest. I never did know what to put.")]; } }),
+      { fn: () => { b.walterStone = true; trust('walter', 2); w.sat++; remember('walter_grave'); } },
+      narr('He feeds the pigeons the whole bag and talks to Ruth about the thermostat. You walk to the gate and wait, which is what you are for.')]);
+  },
+  // ----- Nadia -----
+  samDad() {
+    const n = G.chars.nadia; const b = this.S(); b.samDad = true;
+    Dlg.run([narr('A man at the counter you have not seen before, in a coat too good for the diner, and Nadia holding a coffee pot like it is not a coffee pot.'), say('samDad', "Eighteen months. I know. I'm going to fix it. I want to see him first."), say('nadia', "You want. That's new. Sam's at school. You know where school is; you used to drive him."),
+      narr('He sees you looking.'), say('samDad', "This is a private conversation."),
+      choice({ t: "Stand up and go to the counter.", do: () => { b.samDadStood = true; trust('nadia', 2); remember('nadia_samdad'); return [narr('You stand beside her. You do not say anything. There is nothing to say; standing is the sentence.'), say('samDad', "...Who's this?"), say('nadia', "A regular."), narr('He leaves the way men leave who were going to leave anyway and now have a reason. Nadia puts the pot down. Her hand is steady, then it is not, then it is.'), say('nadia', "Don't say anything. Eat your soup.")]; } },
+        { t: "Stay in the booth.", do: () => [narr('You stay. It ends. He leaves twenty dollars on the counter and she leaves it there until he is gone and then puts it in the jar for Sam\'s school trip.'), say('nadia', "Thanks for not... thanks.")] },
+        { t: "Walk him out.", do: () => { trust('nadia', 1); b.samDadWalked = true; return [narr('You get up, and you put a hand on the door, and you hold it open, and that is all it takes, which tells you something about him.'), narr('At the window, with his backpack, eyes enormous: Sam, home early, who saw the whole thing.'), say('nadia', "He'll ask you about it. Tell him the truth. I've never told him anything else.")]; } })]);
+  },
+  fixWalkIn() {
+    const n = G.chars.nadia; const b = this.S(); if (G.energy < 20) { UI.toast('Too tired for the walk-in.', '#8ab0d8'); return; } useEnergy(20); addHunger(-6); markTalked(); b.nadiaFix = G.day; remember('nadia_walkin');
+    Dlg.run([narr(G.inv.tools ? "Amos's tools. The walk-in gasket has been leaking cold since the Clinton administration. Two hours on your knees in the cold with a putty knife and a roll of seal, and it closes like a door in a bank." : "Hector's tools from the shed. The walk-in gasket has been leaking cold since 1994. Two hours on your knees with a putty knife, and it closes like a door in a bank."), say('nadia', "Thursday. He'll come, he'll order the pie, he'll open the walk-in and stand there like he's looking for God. Let him look.")]);
+  },
+  thursday() {
+    const n = G.chars.nadia; const b = this.S(); b.nadiaA = true; trust('nadia', 2); remember('nadia_A');
+    Dlg.run([narr('Thursday. The inspector. He orders the pie. He opens the walk-in and stands in it a while.'), say('inspector', "...Huh."), narr('An A. Blue, laminated, the first in the building\'s history. She tapes it beside the sign where the whole street can see it and then goes into the walk-in herself for a minute.'), say('nadia', "Twenty-six years. Twenty-six years of B. Don't tell anyone I cried in a refrigerator.")]);
+  },
+  // ----- the form -----
+  formTalk() {
+    const b = this.S(); b.formTaken = true; remember('form');
+    Dlg.run([say('doctor', "The drawer. Yes. It's a health-care proxy. One page. It names a person who speaks for you when you can't, and it says what you'd want them to say."), say('doctor', "I'm not going to tell you who to put on it. I'm going to tell you that people who fill it in sleep better, and that's the only clinical thing I know about it."), narr('One page, three blanks. Your name. Their name. A line for what you want. You fold it and put it in your coat, where it stays.')]);
+  },
+  formItem(who) {
+    const b = this.S(); if (!b.formTaken || b.proxy) return null;
+    if (who === 'nora') return { t: 'The form in your coat', do: () => this.formNora() };
+    if (who === 'jo') return null;
+    return null;
+  },
+  formNora() {
+    const b = this.S(); const n = G.chars.nora; if (!talkEnergy(3)) return;
+    const jo = Jo.J();
+    Dlg.run([narr('You take it out. She knows what it is before it is unfolded; she has handed a hundred of them across a hundred beds.'), say('nora', "Okay. Okay. I'll say it once, as a nurse, and then once as the wall."), say('nora', "As a nurse: put someone. Anyone. The ones with a blank line get the worst of everything."), say('nora', "As the wall: I'll do it. I know what you'd say; I've heard you say it through the plaster. I'd say it right."),
+      choice({ t: "Nora.", do: () => { b.proxy = 'nora'; trust('nora', 3); remember('form_nora'); return [narr('She writes her own name, because your hand is not steady, and then she makes you write it again underneath so it is yours.'), say('nora', "That's done. Now it's in my pocket and I'm never off shift again. Tea.")]; } },
+        { t: "Jo. My sister.", hide: () => !(jo.stage >= 2 && !jo.stopped), do: () => { b.proxy = 'jo'; remember('form_jo'); return [say('nora', "Your sister. Good. Family first; that's not nothing, that's the form working."), say('nora', "I'll call her when it's time. I'll be the one who calls. That's the job I'm taking, if it's not on the paper.")]; } },
+        { t: "Leave it blank for now.", do: () => [say('nora', "For now. I've got a drawer of 'for now' at work. Bring it back. Bang on the wall.")] })]);
+  },
+  // ----- Emmett -----
+  storm() {
+    const e = G.chars.emmett; const b = this.S(); b.storm = true; remember('emmett_storm');
+    Dlg.run([narr('The lake is up and grey and coming over the pier. The boat has torn loose; it is forty feet out and drifting, and Emmett is in the water to his chest with a rope.'), say('emmett', "Don't come in. Take the rope. Pull when I say. Don't come in."), narr('You pull when he says. It takes a long time and all of your arms and a good deal of your chest, and then the boat is on the stones and Emmett is on the stones and neither of you says anything for a while.'), { fn: () => { useEnergy(15); addHunger(-8); } },
+      say('emmett', "The night he gave me the number I drove out here. This exact water. I sat in the truck and I decided I'd drive it in."), say('emmett', "I got out to look at the lake first. Just to look. That was the mistake, or the whole point; I've never been able to decide. I'm still looking."), narr('Rain on the cabin roof. He makes coffee that is terrible and hot, and you drink it with your hands not working right.'), { fn: () => { e.trust += 2; } }]);
+  },
+  cabin() {
+    const e = G.chars.emmett; const b = this.S(); b.cabin = true; remember('emmett_cabin');
+    Dlg.run([narr('He lets you in. It has taken weeks. One room: a stove, a bunk, a rod rack, a shelf with a photograph of a girl of eight holding a fish bigger than her arm.'), narr('Beside the photograph, a jar of grey ash with a lid.'), say('emmett', "The first letter. 2009. Nineteen pages. I burned it on the pier and then I couldn't let it go in the water, so it's there. It's been there."),
+      choice({ t: "Throw it in the lake.", do: () => { b.cabinAsh = 'lake'; e.trust += 1; return [narr('He looks at the jar a long time. Then he walks it to the end of the pier and does not say anything and tips it. The ash goes out like it was always going to.'), say('emmett', "...Huh. Lighter. The shelf's lighter. I didn't think it'd be the shelf.")]; } },
+        { t: "Leave it. It's yours.", do: () => { b.cabinAsh = 'kept'; return [say('emmett', "It's mine. Yeah. Some things you keep because they're yours and no better reason."), narr('He dusts the lid with his sleeve and puts it back exactly where it was.')]; } })]);
+  },
+  // ----- Sol -----
+  solRedeem() {
+    const s = G.chars.sol; const b = this.S(); b.solRedeem = true; s.trust += 2; remember('sol_redeem');
+    Dlg.run([narr('The bell over the door. A woman your age in a coat that has been good for a long time, with a ticket so old it has gone soft.'), say('woman', "1998. A ring. Is it... you wouldn't still..."), narr('Sol does not look at the ticket. He goes to the back, to a drawer you have never seen him open, and comes back with a small box, and puts it on the counter, and does not open it, and she does.'), say('woman', "..."), say('sol', "Ninety-one dollars and the interest, which I have not calculated and will not."), narr('She pays. She puts it on. She stands in the shop a minute with her hand out in front of her like it belongs to somebody else. Then the bell.'), say('sol', "Twenty-seven years. First one. I'm closing."), narr('He turns the sign. It is four in the afternoon. He has closed at six for forty-one years. He sits on the stool behind the cage and puts both hands flat on the ledger and you let yourself out.')]);
+  },
+  trumpetTake() {
+    const s = G.chars.sol; const b = this.S(); b.trumpet = true; G.inv.trumpet = 1; remember('sol_trumpet');
+    Dlg.run([say('sol', "The trumpet. Window, left side, since 1994. Take it."), say('sol', "Not to sell. To the boy on the corner. The guitar. It's been in a window for thirty years and a horn in a window isn't a horn, it's a shape."), say('sol', "I won't come out to hear it. Tell him that so he doesn't wait. I'll hear it; the door's thin."), narr('He hands it over the counter in its case, and his hand stays on the case one second longer than the handover needs.')]);
+  },
+  trumpetGive() {
+    const b = this.S(); b.trumpetPlayed = true; G.inv.trumpet = 0; G.flags.buskerTips = Math.max(G.flags.buskerTips || 0, 2); remember('busker_trumpet');
+    Dlg.run([say('busker', "...Sol's? From the window? He gave you Sol's trumpet?"), narr('He opens the case like it might go off. Brass, dented, gone gold at the mouthpiece where somebody\'s lips were for years.'), say('busker', "I can't really play... I mean I can. I can. My dad. Okay."), narr('Under the shelter, in the rain, one long note and then a tune you almost know, played by somebody who has not played it in ten years and has been waiting to.'), narr('Down the street, the door of the pawn shop does not open. Through the glass, Sol is standing at the window where the trumpet was, with his back to it, listening.')]);
+  },
+  // ----- Jo -----
+  micah() {
+    const b = this.S(); b.micah = true; remember('jo_micah');
+    return [narr('A rustle, a negotiation, and then a smaller voice, very close to the receiver.'), say('micah', "Hi. Is this the uncle?"), you("It's the uncle."), say('micah', "I have three questions. One: do you have a dog?"),
+      choice({ t: "Yes.", hide: () => !G.flags.dogFollows, do: () => [say('micah', "What's its name?"), you("It doesn't have one."), say('micah', "That's not allowed. I'm naming it. It's called Harlan.")] }, { t: "No.", hide: () => !!G.flags.dogFollows, do: () => [say('micah', "You should. Everyone should. That's a fact.")] }),
+      say('micah', "Two: are you sick?"), you("Yes."), say('micah', "Mom said. She said not to ask. I'm asking anyway because that's how you find out things."),
+      say('micah', "Three: will you come see us?"), narr('A long pause on your end. On hers, Jo, saying something you cannot hear.'), you("If I can."), say('micah', "That's not a yes. Okay. Bye. Mom wants the phone."), say('jo', "Sorry. Sorry. He had a list. He's had the list for a week.")];
+  },
+  // ----- Theo & Cal: Dad -----
+  theoDad() {
+    const t = G.chars.theo; const b = this.S(); b.theoDad = true; b.theoDadPending = false;
+    Dlg.run([narr('A man under the poster who is not Cal. Older, heavier, in a work coat, looking at the photograph on the wall the way you look at something you are afraid of.'), say('marsh', "You. You're around. The busker says you're around. Have you seen my boy?"), narr('Cal, ten feet away, holding the guitar by the neck, not playing, not looking at either of you.'), say('marsh', "Theo. Sixteen. Grey hoodie. I'm not... I'm not going to do anything. I just want to know he's alive."),
+      choice({ t: "He's alive. That's all I'll say.", do: () => { b.theoWarned = true; t.pushed = 0; remember('theo_warned'); return [say('marsh', "...Alive. Okay. Okay."), narr('He puts a hand flat on the poster, over the phone number that is his own, and goes.'), narr('The next morning at the river you tell Theo. He goes white and then he does not run, which is new.'), say('theo', "He came to the corner? Dad? He stood under it?"), say('theo', "...Okay. Okay. Just Cal. Still just Cal. But okay.")]; } },
+        { t: "The river. Dawn.", do: () => { t.gone = true; remember('theo_gone'); return [say('marsh', "The river. Thank you. Thank you."), narr('He is there at dawn. Theo sees him from the railing before he sees Theo, and by the time he gets to the bench there is a marker on the rail and a half-drawn bridge and nobody.'), narr('The poster stays up. Cal stops playing the rain songs.')]; } },
+        { t: "I don't know anything.", do: () => [say('marsh', "No. Nobody does."), narr('He leaves a card on the guitar case. Cal picks it up and puts it in his pocket without reading it.')] })]);
+  },
+  // ----- the stone goes in -----
+  stoneDay() {
+    const b = this.S(); remember('ortega_stone_in');
+    Dlg.run([narr('Mrs. Ortega at your door at seven, in black, with the cooler, because the cooler goes everywhere.'), say('granny', "The stone goes in today. You said you\'d come. I\'m not asking; I\'m telling you what time the van is."), { fn: () => { UI.fadeOut(() => { goSceneNow('cemetery', 'gate'); b.cemVisit = 'ortega'; G.px = 330; UI.fadeIn(); }, 0.08); } },
+      { wait: 40 }, narr('St. Bartholomew\'s. Two men from the stonemason with a hand truck, and the stone: grey, not black. Black shows the rain.'), narr('HECTOR ORTEGA. The dates. And under them, cut deep so it will last: HE FIXED THINGS.'), say('granny', "Forty-one Sundays. Sixty tamales a Sunday. That's two thousand four hundred and sixty tamales, and he\'d have said that\'s too many, and he\'d have eaten one."),
+      narr('She does not cry. She fixes the position of the stone by a quarter inch with her foot and tells the men it is good. Then she opens the cooler and feeds them, and you, and a man three rows over who did not ask.'), { fn: () => { G.flags.grannyHelped = (G.flags.grannyHelped || 0) + 1; addHunger(25); } },
+      { if: () => Beats.S().walterStone || G.chars.walter.met, then: [narr('Four rows down, a stone that says ASHBY. She sees you see it.'), say('granny', "The typesetter. Ruth. She made a pie for Hector\'s funeral that was worse than Nadia\'s. I have never forgotten it. That\'s a kind of love, remembering a bad pie.")] }]);
+  },
+  hectorBench() {
+    const b = this.S(); b.hectorBench = true; remember('hector_bench');
+    Dlg.run([narr('The bench in the shed, under a tarp, exactly where a woman who could not look at it would put it. It weighs what a bench weighs. You and Amos, or you alone in three trips, get it out into the light and set it facing the beds.'), narr('Mrs. Ortega comes the next visit and does not say anything about the bench. She sits on it. That is what she says.')]);
+  },
+  // ----- the scan -----
+  scan() {
+    const b = this.S(); if (G.energy < 15) { UI.toast('Not enough left for the walk to St. Anne\'s.', '#8ab0d8'); return; } useEnergy(15); b.scan = G.day; remember('scan');
+    const nora = G.chars.nora && G.chars.nora.met && !G.chars.nora.cold;
+    Dlg.run([narr('St. Anne\'s. A corridor, a gown, a machine that hums like the elevator, a technician who calls you "friend" and means nothing by it.'), narr('Back at the clinic, she has it up on the screen before you sit down.'), say('doctor', "I'm going to read it to you plainly, because you've earned plain. Both lungs. More than in April. The right more than the left."), say('doctor', "It's what I expected. I say that so you know I wasn't hoping for something else and hiding it. I wasn't. I looked anyway."), say('doctor', "Keep the pills up. Keep eating. If the breathing changes at night, come in, any hour."), nora ? narr('Nora is on shift at St. Anne\'s. She walks you out to the street in her scrubs, not talking, one hand on your back, the way you walk somebody who is going to be fine and somebody who is not, and she does not let on which.') : null]);
+  },
+  // ----- the four small ones -----
+  samCheckers() {
+    const b = this.S(); b.samCard = true; G.inv.card = 1; remember('sam_card');
+    Dlg.run([narr('Checkers. He does not go easy. He said he would not and he does not; he takes four of yours in one move and looks at you to see if you saw the move. You saw the move.'), say('kid', "I win. That was the deal. I win and you get the card."), narr('From his backpack, folded in four: a drawing of the diner with everybody in it. Nadia wiping. Amos in the back. You, a coat, at the counter. Along the bottom in careful capitals: GET BETTER OR DON\'T BUT COME BACK.'), say('kid', "Mom said the last part was too much. I said it was the true part.")]);
+  },
+  pryorDad() {
+    const b = this.S(); b.pryorDad = true; b.pryorDadPending = false; remember('pryor_dad');
+    Dlg.run([narr('Pryor is in his seat, third from the back. No laptop. No bag. A suit, which he has not worn on the bus before.'), say('pryor', "Tuesday. In his sleep. The home called at four; they always call at four, I don't know why four."), say('pryor', "I'm on the bus because it's Sunday. I don't know where else to be on a Sunday. Reggie's going to be at the turnout with the van and no one to lift and I thought somebody should tell him in person."), narr('He watches the trees. He does not look at his phone, which is in his pocket, which is off.'), say('pryor', "He said 'Sunday' once. On the pier. That's the last word I've got from him and it's the right one. I'm going to keep coming. I'm going to sit on the pier and be a man whose father said Sunday.")]);
+  },
+  lenaKids() {
+    const b = this.S(); b.lenaKids = true; remember('lena_kids');
+    Dlg.run([narr('Two kids on the pier, six and nine, with rods Emmett has clearly cut down himself, and Emmett behind them not fishing, not talking, standing exactly as close as he dares, which is closer than last time.'), say('lena', "I didn't tell him. He cleaned the cabin anyway. He cleans it every Sunday now; it's cleaner than my house."), narr('The six-year-old catches a perch and screams. Emmett laughs. You have not heard him laugh; nobody has, possibly, for nineteen years. It is an unpracticed, terrible sound, and the kids laugh at it, and he does it again.')]);
+  },
+  foremanName() {
+    const b = this.S(); b.foremanName = true; remember('foreman_name');
+    Dlg.run([say('worker', "Eight shifts. Never dropped a load. Never asked my name."), say('worker', "Kowalski. Ray. My father was Ray. The clipboard was his. You can use it; the name. Not the clipboard."), narr('He goes back to the trucks. Nothing changes. Something has.')]);
+  },
+  // ----- ending -----
+  endingLines() {
+    const b = this.S(); const out = [];
+    if (b.proxy === 'nora') out.push({ name: 'The form', line: "One page, three blanks. Nora's name on it, written by her because your hand would not hold still, and then by you underneath. It was in her pocket at the end." });
+    else if (b.proxy === 'jo') out.push({ name: 'The form', line: "One page, three blanks. Jo's name on it. Nora made the call, at the hour she said she would." });
+    else if (b.formTaken) out.push({ name: 'The form', line: 'One page, three blanks. You never filled in the second one. It was in your coat.', bad: true });
+    return out;
+  }
+};
+
+// ---------- hooks ----------
+{
+  const bel3 = buildEndingList; buildEndingList = function () { const out = bel3(); for (const x of Beats.endingLines()) out.splice(Math.min(3, out.length), 0, x); const b = Beats.S(); const w = out.find(x => /Walter/.test(x.name)); if (w && b.walterType) w.line += ' Four pieces of lead type on your table spell 412.'; if (w && b.walterStone) w.line += ` His stone beside Ruth's says ${b.walterEpitaph === 'type' ? 'HE SET THE TYPE' : b.walterEpitaph === 'bus' ? 'HE WAITED FOR THE 14' : 'nothing, which was honest'}.`; const n = out.find(x => /Nadia/.test(x.name)); if (n && b.nadiaA) n.line += ' There is an A taped beside the sign.'; const m = out.find(x => /Mei/.test(x.name)); if (m && b.meiNight) m.line += ' The good one was drawn after hours, with the lights off.'; const s = out.find(x => /Sol/.test(x.name)); if (s && b.trumpetPlayed) s.line += ' The trumpet is out of the window and on the corner.'; return out; };
+  // Amos: the roof
+  const am2 = Amos.menu; Amos.menu = function () { am2.call(this); const a = G.chars.amos, b = Beats.S(); if (Menu.active && a.met && a.trust >= 5 && G.rain === 0 && G.tod > 0.7 && !b.amosRoof && G.scene === 'street') Menu.items.splice(Menu.items.length - 1, 0, { t: 'Go up on the roof with him', r: '-4 energy', do: () => Beats.amosRoof() }); };
+  // Mei: Mrs. Lin at the register; after hours; the halved fee; cold days
+  const oes = onEnterScene; onEnterScene = function (sc) { oes(sc); const m = G.chars.mei, b = Beats.S(), n = G.chars.nadia; if (sc === 'store' && m.stage >= 2 && !m.applied && !m.cold && !b.meiMom && G.day >= 20 && !m.missed) setTimeout(() => Beats.mrsLin(), 500); if (sc === 'diner' && n.stage >= 1 && n.sam && G.day >= 25 && !b.samDad && !n.closed) setTimeout(() => Beats.samDad(), 500); };
+  const fee = Mei.feeNeeded; Mei.feeNeeded = function () { const f = fee.call(this); return Beats.S().meiMomWon ? Math.ceil(f / 2) : f; };
+  const mt = Mei.talk; Mei.talk = function () { const m = G.chars.mei; if (m.coldUntil && G.day < m.coldUntil) { if (!talkEnergy()) return; Dlg.run([say('mei', pick(["Bread's five.", "Mom's in the back.", "..."]))]); return; } return mt.call(this); };
+  const mm2 = Mei.menu; Mei.menu = function () { mm2.call(this); const m = G.chars.mei, b = Beats.S(); if (Menu.active && m.applied && !m.accepted && !m.cold && !b.meiNight && G.tod > 0.72) Menu.items.splice(Menu.items.length - 1, 0, { t: 'Sit for the last drawing', r: '-4 energy', do: () => Beats.meiNight() }); };
+  // Walter: Saturday invitation to Sunday
+  const wm2 = Walter.menu; Walter.menu = function () { wm2.call(this); const w = G.chars.walter, b = Beats.S(); if (Menu.active && w.met && w.stage >= 2 && w.sat >= 4 && !b.walterGrave && !b.walterGraveDay && G.day % 7 === 6 && !w.dead) Menu.items.splice(Menu.items.length - 1, 0, { t: 'Ask about Sundays', do: () => { if (!talkEnergy()) return; b.walterGraveDay = G.day + 1; Dlg.run([say('walter', "Sundays I take the long way to Ruth. St. Bartholomew's."), say('walter', "...Come. Tomorrow. Eight, at your door. Wear something; she liked people to make an effort. I'll wear the tie.")]); } }); };
+  // Nadia: the walk-in and Thursday
+  const ndm2 = Nadia.menu; Nadia.menu = function () { ndm2.call(this); const n = G.chars.nadia, b = Beats.S(); if (Menu.active && n.stage >= 1 && !n.closed && !b.nadiaFix && (G.inv.tools || (G.garden && G.garden.unlocked))) Menu.items.splice(Menu.items.length - 1, 0, { t: 'Fix the walk-in before Thursday', r: '-20 energy', do: () => Beats.fixWalkIn() }); };
+  const nadDaily = Nadia.daily; Nadia.daily = function () { nadDaily.call(this); const b = Beats.S(); if (b.nadiaFix && !b.nadiaA && G.day > b.nadiaFix && G.day % 7 === 4 && !G.chars.nadia.closed) { G.pendingDiner = 'thursday'; } };
+  const oes2 = onEnterScene; onEnterScene = function (sc) { const th = G.pendingDiner === 'thursday'; oes2(sc); if (sc === 'diner' && th) { G.pendingDiner = null; setTimeout(() => Beats.thursday(), 700); } };
+  // the form: doctor and Nora
+  const dm2 = Doctor.menu; Doctor.menu = function () { dm2.call(this); const b = Beats.S(); if (!Menu.active) return; if (G.day >= 45 && !b.formTaken) Menu.items.splice(Menu.items.length - 1, 0, { t: 'The form in the drawer', do: () => Beats.formTalk() }); if (G.day >= 50 && !b.scan) Menu.items.splice(Menu.items.length - 1, 0, { t: "The scan at St. Anne's", r: '-15 energy', do: () => Beats.scan() }); };
+  const nm2 = Nora.menu; Nora.menu = function () { nm2.call(this); const it = Beats.formItem('nora'); if (it && Menu.active && G.chars.nora.trust >= 3 && !G.chars.nora.cold) Menu.items.splice(Menu.items.length - 1, 0, it); };
+  // Emmett: the storm on arrival; the cabin door
+  const bd = Bus.door; Bus.door = function () { const out = G.busDir === 'out' && G.busArrived; bd.call(this); const e = G.chars.emmett, b = Beats.S(); if (out && e.met && e.stage >= 1 && !e.gone && G.rain > 0.6 && !b.storm) b.stormPending = true; };
+  const cd = cabinDoor; cabinDoor = function () { const e = G.chars.emmett, b = Beats.S(); if (e.met && e.stage >= 2 && e.trust >= 4 && !e.gone && !b.cabin && Emmett.present()) { Beats.cabin(); return; } return cd(); };
+  // Sol: a name comes back; the trumpet
+  const pt = Pawn.talk; Pawn.talk = function () { const s = G.chars.sol, b = Beats.S(); if (s.met && s.stage >= 2 && !s.cold && !b.solRedeem && G.day >= 30 && Math.random() < 0.35) { if (!talkEnergy()) return; Beats.solRedeem(); return; } return pt.call(this); };
+  const pm = Pawn.menu; Pawn.menu = function () { pm.call(this); const s = G.chars.sol, b = Beats.S(); if (Menu.active && s.met && s.stage >= 3 && !s.cold && !b.trumpet && G.chars.theo) Menu.items.splice(Menu.items.length - 1, 0, { t: 'The trumpet in the window', do: () => Beats.trumpetTake() }); };
+  const bm = Minor.busker; Minor.busker = function () { bm.call(this); const b = Beats.S(); if (Menu.active && G.inv.trumpet) Menu.items.splice(1, 0, { t: "Give him Sol's trumpet", do: () => Beats.trumpetGive() }); const f = G.flags; if (Menu.active && G.chars.theo && G.chars.theo.reunited && !b.theoSongHeard) { /* the song with the bus in it plays from the rotation */ } };
+  // Jo: Micah on the line
+  const jc = Jo.call; Jo.call = function (cb) { jc.call(this, cb); const j = Jo.J(), b = Beats.S(); if (j.stage >= 2 && j.calls >= 3 && !b.micah && !j.stopped && Dlg.active) { Dlg.steps.push(...Beats.micah()); } };
+  // Sam: checkers for the card
+  const oldSam = null;
+  // Pryor: on the bus
+  const pp = Passengers.pryor; Passengers.pryor = function () { const b = Beats.S(); if (b.pryorDadPending) { if (!talkEnergy(3)) return; Beats.pryorDad(); return; } return pp.call(this); };
+  const pd = Passengers.pryor; Passengers.pryor = function () { const f = G.flags; const had = f.pryorDock; pd.call(this); if (!had && f.pryorDock) f.pryorDockDay = G.day; };
+  // Lena's kids: a later Sunday at the pier
+  const lena = Emmett.checkLena; Emmett.checkLena = function () { lena.call(this); const e = this.E(), b = Beats.S(); if (e.lenaCame && !b.lenaKids && G.day >= (e.lenaDay || 0) + 7 && G.day % 7 === 0) setTimeout(() => { if (G.scene === 'lake' && !Dlg.active) Beats.lenaKids(); }, 1800); };
+  // the foreman's name, after eight clean shifts
+  const fm = foremanMenu; foremanMenu = function () { const b = Beats.S(); if (G.dockShifts >= 8 && !b.foremanName && !G.flags.foremanCut) { Beats.foremanName(); return; } return fm(); };
+}
+// Sam's checkers game (the card), Hector's bench, and the table items for the type and the cards live in the game file hooks below
+
 // ---- 10_game.js ----
 // ============================================================
 // game: state, loop, interactions, shop, sleep, ending, save
@@ -5454,12 +5787,12 @@ const SAVE_VERSION = 3;
 function freshState() {
   return {
     version: SAVE_VERSION, state: 'play', day: 1, money: 12, hunger: 62, energy: 100, maxEnergy: 100, tod: 0,
-    inv: { bread: 1, soup: 0, rice: 0, coat: 0, radioParts: 0, signParts: 0, chess: 0, bird: 0, drawing: 0, thermos: 0, tools: 0, textbook: 0, collar: 0, ruthWatch: 0, chessClock: 0, strings: 0, checkers: 0, nurseShoes: 0, amosHeater: 0, gloves: 0, frame: 0, busPass: 0, fish: 0, letter: 0, veg: 0 },
+    inv: { bread: 1, soup: 0, rice: 0, coat: 0, radioParts: 0, signParts: 0, chess: 0, bird: 0, drawing: 0, thermos: 0, tools: 0, textbook: 0, collar: 0, ruthWatch: 0, chessClock: 0, strings: 0, checkers: 0, nurseShoes: 0, amosHeater: 0, gloves: 0, frame: 0, busPass: 0, fish: 0, letter: 0, veg: 0, type: 0, cards: 0, trumpet: 0, card: 0 },
     outfit: null, wardrobe: {},
     flags: {}, bequests: {}, memories: [], chars: { amos: Amos.init(), mei: Mei.init(), walter: Walter.init(), nadia: Nadia.init(), nora: Nora.init(), theo: Theo.init(), sol: Pawn.init(), emmett: Emmett.init() },
     scene: 'apartment', px: 330, facing: -1, walking: false, frame: 0, camX: 0, rain: 0.8, wind: 0.2, weatherSeed: irnd(1, 99999),
     starveDays: 0, ateToday: false, walkers: [], dogX: 0, coughT: 600, stun: 0, dockShifts: 0, deliveries: 0, jobsToday: 0, hideHud: false,
-    pendingStreet: null, pendingDiner: null, dayCard: null, dead: false, t: 0, elevatorBroken: false, pills: 30, lastPill: 1, pillPenalty: 0, phone: Phone.init(), pass: Passing.init(), house: House.init(), garden: Garden.init(), seen: {}, busT: 0, busDir: 'out', busArrived: false,
+    pendingStreet: null, pendingDiner: null, dayCard: null, dead: false, t: 0, elevatorBroken: false, pills: 30, lastPill: 1, pillPenalty: 0, phone: Phone.init(), pass: Passing.init(), house: House.init(), garden: Garden.init(), beats: {}, seen: {}, busT: 0, busDir: 'out', busArrived: false,
   };
 }
 function newGame() { G = freshState(); rollWeather(); }
@@ -5540,10 +5873,10 @@ function buildEntities() {
     for (const p of STREET.props) { if (p.hideIf && f[p.hideIf]) continue; if (p.s === 'cardboard' && G.chars.amos.room) continue; add({ id: 'prop', x: p.x + Math.floor(SPR[p.s].width / 2), y: p.y, sprite: p.s, dir: 1, prop: true }); }
     for (const wk of G.walkers) add({ id: 'walker', x: wk.x, y: feet + wk.dy, spec: wk.spec, dir: wk.dir, walk: true, frame: wk.frame });
   }
-  if (sc === 'store') add({ id: 'mei', range: 60, x: INTERIORS.store.spots.counter, y: 212, spec: G.chars.mei.spec, dir: 1, on: () => Mei.menu(), label: G.chars.mei.met ? 'Mei' : 'Clerk' });
+  if (sc === 'store') add({ id: 'mei', range: 60, x: INTERIORS.store.spots.counter, y: 212, spec: G.flags.mrsLinDay === G.day ? 'mrsLin' : G.chars.mei.spec, dir: 1, on: () => Mei.menu(), label: G.chars.mei.met ? 'Mei' : 'Clerk' });
   if (sc === 'diner') {
     add({ id: 'nadia', range: 60, x: INTERIORS.diner.spots.counter, y: 212, spec: G.chars.nadia.spec, dir: -1, on: () => Nadia.menu(), label: G.chars.nadia.met ? 'Nadia' : 'Owner' });
-    if (G.chars.nadia.sam && G.tod > 0.5) add({ id: 'sam', x: 104, y: 215, spec: 'kid', dir: 1, sit: true, range: 40, on: () => { if (G.inv.checkers) { const gi = []; Gifts.sam(gi); gi[0].do(); return; } const ci = Theo.clueItem('sam'); if (ci) { Theo.clue('sam'); return; } talkEnergy(2) && Dlg.run([say('kid', fresh('sam', ["It's done. The homework. It's done.", "Do you know how to do fractions? Don't tell Mom I asked.", "Mom says you're sick. Are you going to be okay?", "Wanna play checkers? I always win. That's a warning."]))]); }, label: 'Sam' });
+    if (G.chars.nadia.sam && G.tod > 0.5) add({ id: 'sam', x: 104, y: 215, spec: 'kid', dir: 1, sit: true, range: 40, on: () => { if (G.inv.checkers) { const gi = []; Gifts.sam(gi); gi[0].do(); return; } if (G.chars.nadia.checkers && G.day >= 60 && !Beats.S().samCard) { if (!talkEnergy(3)) return; Beats.samCheckers(); return; } const ci = Theo.clueItem('sam'); if (ci) { Theo.clue('sam'); return; } talkEnergy(2) && Dlg.run([say('kid', fresh('sam', ["It's done. The homework. It's done.", "Do you know how to do fractions? Don't tell Mom I asked.", "Mom says you're sick. Are you going to be okay?", "Wanna play checkers? I always win. That's a warning."]))]); }, label: 'Sam' });
     if (f.buskerTips >= 3 && G.chars.nadia.saved && G.tod > 0.6) add({ id: 'busker2', x: 140, y: feet, spec: 'busker', dir: 1, label: 'Busker', on: () => Minor.busker() });
   }
   if (sc === 'pawn') add({ id: 'sol', range: 60, x: INTERIORS.pawn.spots.counter, y: 212, spec: 'sol', dir: -1, on: () => Pawn.menu(), label: G.chars.sol.met ? 'Sol' : 'Pawnbroker' });
@@ -5560,6 +5893,11 @@ function buildEntities() {
   if (sc === 'garden') {
     if (Garden.present('mei')) add({ id: 'meiG', x: 250, y: feet, spec: G.chars.mei.spec, dir: -1, range: 30, on: () => Garden.helperTalk('mei'), label: 'Mei', bubble: G.t % 400 < 200 ? null : 'exclaim' });
     if (Garden.ortegaHere()) { const s = Garden.S(); add({ id: 'ortegaG', x: s.ortegaIn ? 90 : 46, y: feet, spec: 'granny', dir: 1, sit: !!s.ortegaIn, range: 30, on: () => Garden.ortegaTalk(), label: 'Mrs. Ortega' }); }
+  }
+  if (sc === 'cemetery') {
+    const b = Beats.S();
+    if (b.cemVisit === 'walter' && !G.chars.walter.dead) add({ id: 'walterC', x: 214, y: feet, spec: G.chars.walter.spec, dir: 1, range: 30, on: () => talkEnergy(2) && Dlg.run([say('walter', fresh('walter', ["She's here. I know that's not how it works. It's how it works for me.", "Feed the pigeons. She liked the pigeons. I have never understood the pigeons.", "The stone's a good weight. The man was very kind."]))]), label: 'Walter' });
+    if (b.cemVisit === 'ortega') add({ id: 'ortegaC', x: 400, y: feet, spec: 'granny', dir: -1, range: 30, on: () => talkEnergy(2) && Dlg.run([say('granny', fresh('granny', ["Grey. Not black. I said so and I was right.", "Eat. There's a tamale for the stone men and one for you and one for him, which you'll eat because he can't."]))]), label: 'Mrs. Ortega' });
   }
   if (sc === 'clinic') add({ id: 'doctor', range: 60, x: INTERIORS.clinic.spots.desk, y: 212, spec: 'doctor', dir: -1, on: () => Doctor.menu(), label: 'Dr. Okafor' });
   if (sc === 'dock') add({ id: 'foreman', x: INTERIORS.dock.spots.boss, y: feet, spec: f.foremanCut ? 'man1' : 'worker', dir: 1, on: () => foremanMenu(), label: f.foremanCut ? 'New foreman' : 'Foreman' });
@@ -5594,6 +5932,7 @@ function nearest() {
     else if (Math.abs(G.px - sp.clocks) < 16 && bd > 14) best = { kind: 'clocks', label: 'The clocks' };
     else if (mine && Math.abs(G.px - sp.table) < 16 && bd > 14) best = { kind: 'table', label: 'Table' };
   }
+  if (G.scene === 'cemetery') { if (Math.abs(G.px - 240) < 24 && bd > 20) best = { kind: 'grave', label: 'Ruth Ashby' }; else if (Beats.S().stoneIn && Math.abs(G.px - 375) < 20 && bd > 20) best = { kind: 'grave2', label: 'Hector Ortega' }; }
   if (G.scene === 'garden') { if (Math.abs(G.px - GARDEN.spots.beds) < 70 && bd > 20) best = { kind: 'beds', label: Garden.stage() === 0 ? 'The weeds' : 'The beds' }; else if (Math.abs(G.px - GARDEN.spots.bench) < 12 && bd > 12) best = { kind: 'bench', label: "Hector's bench" }; }
   if (G.scene === 'lane' && House.S().listed && Math.abs(G.px - LANE.spots.sign) < 14 && bd > 14) best = { kind: 'sign', label: House.S().owner ? 'SOLD' : 'FOR SALE' };
   if (G.scene === 'street') { for (const p of STREET.props) if (p.bench && Math.abs(G.px - (p.x + 14)) < 12 && bd > 12) best = { kind: 'bench', label: 'Bench', p }; if (Math.abs(G.px - 1561) < 14 && bd > 14) best = { kind: 'poster', label: G.chars.theo && G.chars.theo.reunited ? 'Wall' : 'Poster' }; if (G.inv.letter && Math.abs(G.px - 648) < 14 && bd > 14) best = { kind: 'mailbox', label: 'Mail the letter' }; }
@@ -5615,6 +5954,8 @@ function interact(n) {
   if (n.kind === 'mailbox') { mailLetter(); return; }
   if (n.kind === 'sign') { House.sign(); return; }
   if (n.kind === 'beds') { Garden.menu(); return; }
+  if (n.kind === 'grave') { const b = Beats.S(); Dlg.run([narr(`RUTH ASHBY, 1939. Beside it, WALTER J. ASHBY, 1937, and a line ${b.walterEpitaph === 'type' ? 'that says HE SET THE TYPE' : b.walterEpitaph === 'bus' ? 'that says HE WAITED FOR THE 14' : 'left blank'}.${G.chars.walter.dead ? ' The second date is cut now. The stonemason spelled Ashby right the first time.' : ''}`)]); return; }
+  if (n.kind === 'grave2') { Dlg.run([narr('HECTOR ORTEGA. HE FIXED THINGS. Grey, not black. There is a tamale on the base, wrapped in foil, and a pigeon considering it.')]); return; }
   if (n.kind === 'clocks') { Dlg.run([narr(G.flags.house === 'mine' ? pick(['Seven clocks. The one you wound is still going. It is the only sound in the house that is not you.', 'Ruth, laughing, in 1962. You have started saying goodnight to the photograph. Nobody has to know.']) : G.chars.walter.dead ? 'Seven clocks, none of them wound. A photograph of a woman laughing. Somebody should dust them; nobody will.' : 'Seven clocks. Retirement gifts, mostly; one was a wedding present. He has told you which and you have already forgotten.')]); return; }
   if (n.kind === 'couch') { Menu.open("Walter's couch", [{ t: 'Sleep here tonight', r: 'the stairs are far', do: () => { House.S().couch++; remember('walter_couch'); Dlg.run([say('walter', "Blanket's on the arm. I'm up at five. I'll try not to wind anything."), { fn: () => sleep('couch') }]); } }, { t: 'Not tonight', do: () => { } }]); return; }
   if (n.kind === 'bed') { bedMenu(); return; }
@@ -5713,6 +6054,8 @@ function tableMenu() {
   if (G.inv.chess) items.push({ t: "Look at Walter's chess set", do: () => Dlg.run([narr("The board is set up mid-game. Knight first. You have not moved anything since.")]) });
   if (G.inv.drawing) items.push({ t: "Look at Mei's drawing", do: () => Dlg.run([narr("You, at the counter, hands in your pockets. Like you're waiting for a bus. It's a good stand. It's got shape.")]) });
   if (Ladder.bequestAvailable()) items.push({ t: 'The coffee can', r: () => `$${G.money}`, do: () => Ladder.coffeeCan() });
+  if (G.inv.type) items.push({ t: "Look at Walter's type", do: () => Dlg.run([narr('Four pieces of lead in cotton wool. 4, 1, 2, and a full stop. You have started setting them on the table in a row each night and putting them back each morning, which is not a ritual, which is a ritual.')]) });
+  if (G.inv.cards) items.push({ t: "Dad's cards: play a hand", do: () => { const who = G.chars.amos.met && !G.chars.amos.dead ? 'Amos' : G.chars.walter.met && !G.chars.walter.dead ? 'Walter' : G.chars.nadia.sam ? 'Sam' : null; remember('cards_hand'); Dlg.run([narr(who === 'Amos' ? 'Amos, on the chair, with the deck. He deals like a man who has dealt in worse rooms. He wins with a bent ace and looks at it a long time and does not say anything about the bend.' : who === 'Walter' ? 'Walter, at the table, with the deck. He plays gin like he set type: slowly, then all at once. He notices the aces. "Somebody loved these cards badly," he says, and it is a compliment.' : who === 'Sam' ? 'Sam, at the table, with the deck. He does not know gin; he knows war. You play war for an hour. He wins because the bent aces are the ones he can see coming.' : 'Solitaire. The bent aces come up when they come up. You lose to a deck; it happens.')]); } });
   items.push({ t: 'Wardrobe', r: () => G.outfit ? OUTFITS[G.outfit].name : 'old clothes', do: () => wardrobeMenu() });
   if (G.flags.own_radio) items.push({ t: 'Turn on the radio', do: () => Dlg.run([narr(pick(['Kessler, calling the seventh inning of something. The score does not matter. The voice does.', 'A station that plays what it wants. Somebody sings about a river.', 'Static, then a weather report: rain. You could have told them that.']))]) });
   if (G.scene === 'apartment') items.push({ t: 'Listen at the wall', do: () => Dlg.run([narr(Nora.wallListen())]) });
@@ -5894,6 +6237,7 @@ function introScene() {
 function wakeEvents() {
   const d = G.day; ladderWake();
   if (House.wake()) return;
+  if (Beats.wake()) return;
   { const j = Jo.J(); if (j.coming && !j.visited && d >= j.visitDay && !j.stopped) { Jo.visit(); return; } }
   if (d === 2 && !G.flags.w2) { G.flags.w2 = true; Dlg.run([narr("Lin's Market sells food. Nadia's diner and the freight dock pay cash for work. Everything costs energy. When you're out, you sleep, and the number goes down.")]); }
   if (d === 4 && !G.flags.w4) { G.flags.w4 = true; Dlg.run([narr("A flyer under your door: LIN'S MARKET - DELIVERY RUNNERS WANTED - CASH SAME DAY. Ask at the counter.")]); G.flags.deliveryAvailable = true; }
@@ -5926,6 +6270,10 @@ const Ending = {
       const no = G.chars.nora;
       if (no && !no.cold && (no.person || no.stage >= 2)) { V.push({ x: 282, y: feet, spec: 'nora', dir: 1, id: 'v_nora' }); lines.push(no.person ? say('nora', "Keys in my teeth. Told you. Straight from shift, I smell like the ward, sorry.") : say('nora', "I heard you through the wall. Two knocks. I'm here."), say('nora', "I'm not going to say the word. You know the word. I'm just going to sit here and hold this and you don't have to do anything."), narr('She takes your hand the way she has taken a hundred hands, and it is not less because of that. It is more.')); }
       { const j = Jo.J(); if (j.visited) { V.push({ x: 250, y: feet, spec: 'jo', dir: 1, id: 'v_jo' }); lines.push(say('jo', "I took the 10:40. I'm going to sit here and you're going to let me, and I'm not going to say one word about the room."), say('jo', "Micah drew you. It's mostly a hat. You don't wear a hat; I told him; he said you should.")); } }
+      { const b = Beats.S(); const j = Jo.J();
+        if (b.amosRoof && V.some(v => v.id === 'v_amos')) lines.push(say('amos', "The roof. Remember the roof. I'm going to go up some clear night and look for you; I don't care how that sounds."));
+        if (b.proxy === 'nora' && V.some(v => v.id === 'v_nora')) lines.push(say('nora', "The form's in my pocket. I've read it forty times. I know what it says. I'm going to say it right."));
+        if (b.proxy === 'jo' && !j.visited && !j.stopped) { V.push({ x: 250, y: feet, spec: 'jo', dir: 1, id: 'v_jo' }); lines.push(say('jo', "Nora called. Four in the morning; she said she'd call and she called. I took the first train. I've got the form. I know what it says. I'm not going to say anything about the room.")); } }
       if (f.dogFollows) { V.push({ x: 286, y: feet + 8, sprite: 'dogSit', dir: -1, id: 'v_dog' }); lines.push(narr('The dog is on the bed. It is not allowed on the bed. Nobody says anything.')); }
       if (G.inv.chess) lines.push(narr("Walter's chess set is on the table. Knight first. You never moved anything. You did not need to."));
       if (f.buskerTips >= 3) lines.push(narr('Somewhere below the window, a guitar. A song about rain. He is playing it badly and on purpose.'));
@@ -6007,7 +6355,7 @@ function playUpdate() {
     // cough
     if (G.day >= 20) { G.coughT -= (1 + (G.day - 20) / 40) * (G.day - (G.lastPill || 1) >= 3 ? 1.8 : 1) * (G.flags.own_umbrella && G.rain > 0.3 ? 0.6 : 1); if (G.coughT <= 0) { G.coughT = 500 + Math.random() * 500; G.stun = 40; G.walking = false; Audio.tone(120, 0.15, 'sawtooth', 0.03, 0.6); } }
   }
-  Phone.update(); Passing.update();
+  Phone.update(); Passing.update(); Beats.update();
   // interactions
   const n = nearest(); G.near = n;
   if (Input.hit('act') || (Input.hit('up') && n && n.kind === 'door')) { if (n && G.stun === 0) { interact(n); } }
@@ -6082,7 +6430,7 @@ World.static || buildStreetStatic(); paintLampPosts(World.static.getContext('2d'
 titleInit();
 requestAnimationFrame(loop);
 // debug hooks
-window.__99 = { get G() { return G; }, set G(v) { G = v; }, sleep, Amos, Mei, Walter, Nadia, Nora, Elevator, Ladder, Doctor, MG, readNote, Theo, VP, Pawn, Gifts, OUTFITS, PAWN_ITEMS, Dlg, Menu, startMinigame, buildEndingList, save, load, newGame, goScene, Ending, refresh: buildEntities, titleInit, Emmett, Bus, Fishing, Passengers, LAKE, busDay, Phone, Jo, Passing, House, LANE, homeScene, Song, SONGS, Garden, GARDEN };
+window.__99 = { get G() { return G; }, set G(v) { G = v; }, sleep, Amos, Mei, Walter, Nadia, Nora, Elevator, Ladder, Doctor, MG, readNote, Theo, VP, Pawn, Gifts, OUTFITS, PAWN_ITEMS, Dlg, Menu, startMinigame, buildEndingList, save, load, newGame, goScene, Ending, refresh: buildEntities, titleInit, Emmett, Bus, Fishing, Passengers, LAKE, busDay, Phone, Jo, Passing, House, LANE, homeScene, Song, SONGS, Garden, GARDEN, Beats, CEMETERY };
 
 })();
 </script>
