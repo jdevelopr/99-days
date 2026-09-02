@@ -3774,7 +3774,7 @@ const Pawn = {
   applyBuy(k) {
     const it = PAWN_ITEMS[k]; const f = G.flags; remember('pawn_' + k); Audio.coin();
     if (it.kind === 'outfit') { G.wardrobe = G.wardrobe || {}; G.wardrobe[k] = 1; Dlg.run([say('sol', pick(["Fits. Nearly. Change at home; I don't run a fitting room.", "It was a good coat on somebody. It'll be a good coat on you."])), narr('It goes in the closet at home. Change there.')]); return; }
-    if (it.kind === 'gift') { G.inv[k] = (G.inv[k] || 0) + 1; const lines = { tools: [say('sol', "Reed's tools. He pawned them in '21 and came in every week for a year to look at them. Then he stopped coming in."), say('sol', "Take them to him. Don't tell him what you paid. I never told him what I'd have taken.")], ruthWatch: [say('sol', "Ashby's. He brought it in a bad winter, 2009, and he's never come back for it, and I've never put it in the window."), say('sol', "I'm selling it to you because you're going to give it to him. If I'm wrong about that, don't come back.")], collar: [say('sol', "What's the tag say?"), choice({ t: "412.", do: () => { f.collarTag = '412'; return [say('sol', "Your apartment. So he can find his way home. Alright.")]; } }, { t: "Biscuit.", do: () => { f.collarTag = 'Biscuit'; return [say('sol', "Biscuit. Every third dog in this city is Biscuit. He'll answer to it.")]; } }, { t: "Nothing. Just the tag.", do: () => { f.collarTag = ''; return [say('sol', "Blank tag. Suit yourself. Means he's somebody's, anyway.")]; } })] }[k] || [say('sol', fresh('sol', ["Good. That one's going somewhere.", "Wrapped. Sort of.", "You've got somebody in mind. I can always tell."]))]; Dlg.run(lines); return; }
+    if (it.kind === 'gift') { G.inv[k] = (G.inv[k] || 0) + 1; if (k === 'busPass') G.flags.busPassDay = G.day; const lines = { tools: [say('sol', "Reed's tools. He pawned them in '21 and came in every week for a year to look at them. Then he stopped coming in."), say('sol', "Take them to him. Don't tell him what you paid. I never told him what I'd have taken.")], ruthWatch: [say('sol', "Ashby's. He brought it in a bad winter, 2009, and he's never come back for it, and I've never put it in the window."), say('sol', "I'm selling it to you because you're going to give it to him. If I'm wrong about that, don't come back.")], collar: [say('sol', "What's the tag say?"), choice({ t: "412.", do: () => { f.collarTag = '412'; return [say('sol', "Your apartment. So he can find his way home. Alright.")]; } }, { t: "Biscuit.", do: () => { f.collarTag = 'Biscuit'; return [say('sol', "Biscuit. Every third dog in this city is Biscuit. He'll answer to it.")]; } }, { t: "Nothing. Just the tag.", do: () => { f.collarTag = ''; return [say('sol', "Blank tag. Suit yourself. Means he's somebody's, anyway.")]; } })] }[k] || [say('sol', fresh('sol', ["Good. That one's going somewhere.", "Wrapped. Sort of.", "You've got somebody in mind. I can always tell."]))]; Dlg.run(lines); return; }
     // self items
     f['own_' + k] = true;
     const lines = { watch: [say('sol', "Keeps time. That's all a watch can do for you, and it's not nothing."), narr('A clock, top right. You will know what time it is now, whether you want to or not.')], bed: [say('sol', "I'll have Danny and his cousin bring it up. They'll complain about the stairs. Let them."), narr('That night the cot goes out to the curb and a real bed goes where it was.')], radio: [narr('Kessler is calling a ball game the moment you turn it on. Somebody, somewhere, is winning.')] }[k] || [narr(it.desc)];
@@ -4174,7 +4174,12 @@ const Bus = {
     Menu.open('The 14 back to the city', [{ t: 'Ride back', r: 'return ticket', do: () => { if (G.inv.fish) UI.toast(`${G.inv.fish} fish in the bucket.`, '#8ae88a'); this.ride('back'); } }, { t: 'Stay a while', do: () => { } }], { sub: G.tod > 0.75 ? 'Last bus. The driver is already looking at his watch.' : 'It idles at the turnout for as long as it takes.' });
   },
   offer() {
-    Menu.open('The 14 to the lake', [{ t: 'Buy a ticket and ride', r: '$10', disabled: () => G.money < 10 || G.energy < 30, do: () => { spend(10); remember('bus'); this.ride('out'); } }, { t: 'Not today', do: () => { } }], { sub: G.chars.walter.dead ? 'The 14 runs again. Nobody told the bench.' : 'The bench is empty. Sundays, Walter takes the long way to Ruth.' });
+    const passOk = G.inv.busPass > 0 && G.day - (G.flags.busPassDay || 0) <= 30;
+    const items = [];
+    if (passOk) items.push({ t: 'Show the pass and ride', r: `pass, ${30 - (G.day - (G.flags.busPassDay || 0))} days left`, disabled: () => G.energy < 30, do: () => { remember('bus'); G.flags.busPassRides = (G.flags.busPassRides || 0) + 1; if (G.flags.busPassRides === 1) UI.toast('The driver looks at the pass, then at you, then waves you on.', '#c8ccd8'); this.ride('out'); } });
+    else if (G.inv.busPass > 0) items.push({ t: 'Show the pass', r: 'expired', disabled: () => true, do: () => { } });
+    items.push({ t: 'Buy a ticket and ride', r: '$10', disabled: () => G.money < 10 || G.energy < 30, do: () => { spend(10); remember('bus'); this.ride('out'); } }, { t: 'Not today', do: () => { } });
+    Menu.open('The 14 to the lake', items, { sub: G.chars.walter.dead ? 'The 14 runs again. Nobody told the bench.' : 'The bench is empty. Sundays, Walter takes the long way to Ruth.' });
   }
 };
 Emmett.checkLena = function () { const e = this.E(); if (e.stage >= 3 && !e.lenaCame && e.lenaDay && G.day >= e.lenaDay) setTimeout(() => this.lenaScene(), 1500); };
@@ -5942,6 +5947,377 @@ function displayName(id, name) {
   const bl = Minor.busker; Minor.busker = function () { bl.call(this); if (Menu.active && Menu.title === 'Cal') G.flags.calKnown = true; };
 }
 
+// ---- 09s_story_casino.js ----
+// ============================================================
+// The room under the plain door. Dutch runs it. Blackjack, slots, hold'em against two regulars. Cash in, cash out.
+// Cal gives you the words after the third song.
+// ============================================================
+SPECS.dutch = { skin: '#d8b090', hair: '#c8c8d0', hairStyle: 'short', shirt: '#2a2a34', pants: '#2a2a34', shoes: '#1a1a1e', coat: '#5a2a3a', old: true, glasses: true };
+SPECS.dealer = { skin: '#c8a080', hair: '#1a1a20', hairStyle: 'short', shirt: '#e8e8f0', pants: '#1a1a24', shoes: '#1a1a1e', tie: '#2a2a34' };
+SPECS.lou = { skin: '#e8c0a0', hair: '#4a3a2a', hairStyle: 'thin', shirt: '#8a6a3a', pants: '#3a3a44', shoes: '#2a2420', coat: '#6a4a2a', stubble: true };
+SPECS.widow = { skin: '#c89a78', hair: '#2a2a2a', hairStyle: 'bun', shirt: '#1a1a24', pants: '#1a1a24', shoes: '#1a1a1e', coat: '#3a3a44', old: true };
+SPEAKERS.dutch = { name: 'Dutch', color: '#d8a0b0', spec: 'dutch' };
+SPEAKERS.dealer = { name: 'Dealer', color: '#c8c8d8', spec: 'dealer' };
+SPEAKERS.lou = { name: 'Lou', color: '#d8b070', spec: 'lou' };
+SPEAKERS.widow = { name: 'The Widow', color: '#b0b0c0', spec: 'widow' };
+S('slot', [
+  '..kkkkkkkkkkkk..',
+  '.kKKKKKKKKKKKKk.',
+  'kKkkkkkkkkkkkkKk',
+  'kKkwwwkwwwkwwwKk',
+  'kKkwrwkwywkwgwKk',
+  'kKkwwwkwwwkwwwKk',
+  'kKkkkkkkkkkkkkKk',
+  'kKKKKKKKKKKKKKKk',
+  'kKKKyKKKKKKKKKKk',
+  'kKKKKKKKKKKKKKKk',
+  'kKkkkkkkkkkkkkKk',
+  'kKKKKKKKKKKKKKKk',
+  '.kkkkkkkkkkkkkk.',
+  '...kk......kk...',
+  '...kk......kk...'], { k: '#2a2230', K: '#8a3a3a', w: '#f0f0e8', r: '#d84a3a', y: '#e8c84a', g: '#4a9a4a' });
+
+// ---------- cards ----------
+const SUITS = ['h', 'd', 'c', 's']; const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
+function newDeck() { const d = []; for (const s of SUITS) for (let r = 0; r < 13; r++) d.push({ r, s }); for (let i = d.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [d[i], d[j]] = [d[j], d[i]]; } return d; }
+function drawCard(g, c, x, y, faceDown) {
+  px(g, x, y, 15, 21, faceDown ? '#3a4a8a' : '#f4f0e8'); px(g, x, y, 15, 1, faceDown ? '#5a6aaa' : '#ffffff'); px(g, x, y + 20, 15, 1, '#a8a498'); px(g, x + 14, y, 1, 21, '#b8b4a8');
+  if (faceDown) { for (let yy = 3; yy < 19; yy += 4) for (let xx = 3; xx < 13; xx += 4) px(g, x + xx, y + yy, 2, 2, '#2a3a6a'); return; }
+  const red = c.s === 'h' || c.s === 'd'; const col = red ? '#c83a3a' : '#20222a';
+  drawText(g, RANKS[c.r], x + 2, y + 2, col);
+  const sx = x + 5, sy = y + 11;
+  if (c.s === 'h') { px(g, sx, sy, 2, 2, col); px(g, sx + 3, sy, 2, 2, col); px(g, sx - 1, sy + 1, 7, 2, col); px(g, sx, sy + 3, 5, 1, col); px(g, sx + 1, sy + 4, 3, 1, col); px(g, sx + 2, sy + 5, 1, 1, col); }
+  else if (c.s === 'd') { px(g, sx + 2, sy, 1, 1, col); px(g, sx + 1, sy + 1, 3, 1, col); px(g, sx, sy + 2, 5, 2, col); px(g, sx + 1, sy + 4, 3, 1, col); px(g, sx + 2, sy + 5, 1, 1, col); }
+  else if (c.s === 'c') { px(g, sx + 1, sy, 3, 2, col); px(g, sx - 1, sy + 2, 3, 2, col); px(g, sx + 3, sy + 2, 3, 2, col); px(g, sx + 2, sy + 2, 1, 4, col); px(g, sx + 1, sy + 5, 3, 1, col); }
+  else { px(g, sx + 2, sy, 1, 1, col); px(g, sx + 1, sy + 1, 3, 1, col); px(g, sx, sy + 2, 5, 2, col); px(g, sx - 1, sy + 3, 7, 1, col); px(g, sx + 2, sy + 4, 1, 2, col); px(g, sx + 1, sy + 5, 3, 1, col); }
+}
+// 5-card rank: returns [category, ...kickers] comparable lexicographically; 7-card best via combos
+function rank5(cs) {
+  const rs = cs.map(c => c.r).sort((a, b) => b - a); const flush = cs.every(c => c.s === cs[0].s);
+  const uniq = [...new Set(rs)]; let straightHi = -1;
+  if (uniq.length === 5) { if (uniq[0] - uniq[4] === 4) straightHi = uniq[0]; else if (uniq[0] === 12 && uniq[1] === 3 && uniq[4] === 0) straightHi = 3; }
+  const counts = {}; for (const r of rs) counts[r] = (counts[r] || 0) + 1;
+  const groups = Object.keys(counts).map(r => [counts[r], +r]).sort((a, b) => b[0] - a[0] || b[1] - a[1]);
+  if (straightHi >= 0 && flush) return [8, straightHi];
+  if (groups[0][0] === 4) return [7, groups[0][1], groups[1][1]];
+  if (groups[0][0] === 3 && groups[1][0] === 2) return [6, groups[0][1], groups[1][1]];
+  if (flush) return [5, ...rs];
+  if (straightHi >= 0) return [4, straightHi];
+  if (groups[0][0] === 3) return [3, groups[0][1], groups[1][1], groups[2][1]];
+  if (groups[0][0] === 2 && groups[1][0] === 2) return [2, groups[0][1], groups[1][1], groups[2][1]];
+  if (groups[0][0] === 2) return [1, groups[0][1], groups[1][1], groups[2][1], groups[3][1]];
+  return [0, ...rs];
+}
+function cmpRank(a, b) { for (let i = 0; i < Math.max(a.length, b.length); i++) { const d = (a[i] || 0) - (b[i] || 0); if (d) return d; } return 0; }
+function best7(cs) { let best = null; const n = cs.length; for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) for (let c = b + 1; c < n; c++) for (let d = c + 1; d < n; d++) for (let e = d + 1; e < n; e++) { const r = rank5([cs[a], cs[b], cs[c], cs[d], cs[e]]); if (!best || cmpRank(r, best) > 0) best = r; } return best; }
+const HAND_NAMES = ['high card', 'a pair', 'two pair', 'three of a kind', 'a straight', 'a flush', 'a full house', 'four of a kind', 'a straight flush'];
+
+// ---------- the room ----------
+INTERIORS.casino = {
+  id: 'casino', outdoor: false, floorY: FEET_Y, x0: 60, x1: 430, ceil: GROUND_Y - 58, ambient: [70, 52, 58], cool: false,
+  lamp: { x: 250, y: GROUND_Y - 40 }, window: null,
+  doors: [{ x: 74, w: 22, to: 'street', label: 'Up to the street', at: 'casino' }], spawnX: 104, spawnDir: 1, spawns: { stairs: 104 },
+  spots: { slots: 132, blackjack: 196, poker: 290, bar: 380, lou: 270, widow: 312 },
+  paint(g) {
+    const I = this; const ceil = I.ceil;
+    paintRoom(g, I, '#3a2228', '#2a2226', gg => { for (let x = I.x0; x < I.x1; x += 10) px(gg, x, GROUND_Y, 1, 64, 'rgba(0,0,0,0.2)'); });
+    // wallpaper: dark red flock; a mirror, a curtain, a sign with nothing on it
+    for (let y = ceil + 3; y < GROUND_Y - 4; y += 7) for (let x = I.x0 + 3; x < I.x1 - 3; x += 9) if (((x - I.x0) / 9 + (y - ceil) / 7) % 2 === 0) px(g, x, y, 4, 3, 'rgba(255,200,200,0.05)');
+    px(g, 62, ceil, 40, GROUND_Y - ceil, '#1a1418'); for (let i = 0; i < 7; i++) px(g, 66 + i * 4, GROUND_Y - 8 - i * 7, 30 - i * 4, 3, '#2a2228');   // stairs up, at the left
+    px(g, 140, ceil + 8, 60, 26, '#1a1a20'); px(g, 142, ceil + 10, 56, 22, '#6a7a8a'); px(g, 144, ceil + 12, 12, 8, 'rgba(255,255,255,0.15)');           // mirror
+    px(g, 408, ceil, 20, GROUND_Y - ceil, '#5a1a2a'); for (let y = ceil; y < GROUND_Y; y += 6) px(g, 408, y, 20, 1, '#4a1020');                              // curtain
+    // the slot machine
+    g.drawImage(SPR.slot, 124, GROUND_Y - 26);
+    // bottles behind the bar
+    for (let i = 0; i < 6; i++) px(g, 356 + i * 8, ceil + 26, 3, 10, ['#6a3a2a', '#3a6a3a', '#c8a84a', '#6a3a2a', '#8a8a92', '#3a3a6a'][i]); px(g, 352, ceil + 36, 52, 2, '#4a2a1a');
+    // green-shaded pendants over the tables
+    for (const x of [198, 290]) { px(g, x, ceil, 1, 14, '#2a2a30'); px(g, x - 9, ceil + 14, 19, 5, '#2a6a3a'); px(g, x - 7, ceil + 19, 15, 2, '#c8e8b0'); }
+    px(g, 380, ceil, 1, 12, '#2a2a30'); px(g, 380 - 6, ceil + 12, 13, 4, '#6a2a3a'); px(g, 380 - 4, ceil + 16, 9, 2, '#f0c0c0');
+  },
+  fg(g) {
+    // blackjack table (green felt), the dealer stands behind it
+    px(g, 170, GROUND_Y - 10, 56, 18, '#1e5a34'); px(g, 170, GROUND_Y - 10, 56, 1, '#3a8a54'); px(g, 168, GROUND_Y + 6, 60, 3, '#4a3020'); px(g, 174, GROUND_Y + 9, 4, 6, '#3a2a1a'); px(g, 218, GROUND_Y + 9, 4, 6, '#3a2a1a');
+    drawText(g, 'BLACKJACK', 198, GROUND_Y - 6, '#8ac8a0', { align: 'center' });
+    // poker table (oval), chips
+    px(g, 246, GROUND_Y - 6, 88, 16, '#1e5a34'); px(g, 246, GROUND_Y - 6, 88, 1, '#3a8a54'); px(g, 244, GROUND_Y + 8, 92, 3, '#4a3020'); px(g, 250, GROUND_Y + 11, 4, 6, '#3a2a1a'); px(g, 326, GROUND_Y + 11, 4, 6, '#3a2a1a');
+    for (let i = 0; i < 5; i++) px(g, 262 + i * 12, GROUND_Y - 4, 4, 2, ['#d84a3a', '#4a6ad8', '#2a2a2a', '#d84a3a', '#e8e8e8'][i]);
+    // the bar
+    fCounter(g, 350, 404, '#4a2a1a', '#3a2016', {});
+  }
+};
+
+const Casino = {
+  init() { return { known: false, entered: false, net: 0, won: 0, lost: 0, visits: 0, barred: false, barredDay: 0, hands: 0, bjHands: 0, pulls: 0, lou: { met: false, talks: 0, down: 0, gave: false, gone: false, watch: false }, widowTalks: 0, dutchTalks: 0, samDadPot: 0, samDadNights: 0, best: null, bigWin: 0, session: 0 }; },
+  S() { if (!G.casino) G.casino = this.init(); return G.casino; },
+  open() { return G.tod >= 0.5; },
+  // the plain door on the street
+  door() {
+    const c = this.S();
+    if (!c.known) { Dlg.run([narr('A plain steel door with no number, between the alley and Harlan Arms. You knock. Nothing. You knock again, and somewhere behind it somebody laughs at something that is not you.')]); return; }
+    if (c.barred) { Dlg.run([narr('The slot opens. Closes. It does not open again. Dutch said the door would not know you anymore, and the door is a good employee.')]); return; }
+    if (!this.open()) { Dlg.run([narr('The slot in the door opens an inch.'), say('dutch', "Dark. Come back when it's dark."), narr('The slot closes.')]); return; }
+    if (c.entered) { goScene('casino', 'stairs'); return; }
+    Dlg.run([narr('You knock twice. A slot opens at eye level; an eye, then a mouth.'), say('dutch', "Yeah?"),
+      choice({ t: '"Twelve minutes."', do: () => { c.entered = true; return [say('dutch', "...Cal. That kid. He'll owe me for you."), narr('Bolts. Three of them. Stairs going down, and at the bottom a room the color of the inside of a cigar box.'), { fn: () => { remember('casino'); setTimeout(() => goScene('casino', 'stairs'), 400); } }]; } },
+        { t: '"Let me in."', do: () => [say('dutch', "No."), narr('The slot closes.')] },
+        { t: '"Sorry. Wrong door."', do: () => [say('dutch', "Yeah."), narr('The slot closes.')] })]);
+  },
+  arrive() {
+    const c = this.S(); c.visits++;
+    if (c.visits === 1) Dlg.run([narr('Three tables, a bar, a slot machine older than you, and eleven people who do not look up. Green lamps. No clock anywhere; you look, and there is not one.'), say('dutch', "House rules. Cash on the table, nobody plays on a promise. You win, you leave with it. You lose, you leave. No crying at my bar; I've got a mop for that and it's the mop's night off."), say('dutch', "Blackjack's Rennie. Poker's whoever's sitting. The machine's the machine. Go on.")]);
+  },
+  // ----- Dutch -----
+  dutchMenu() {
+    const c = this.S(); const items = [{ t: 'Talk', r: '-2 energy', do: () => this.dutchTalk() }, { t: 'Cash out and go', do: () => Dlg.run([narr(c.session > 0 ? `Up ${c.session} tonight. Dutch counts it out without looking at you, which is a courtesy.` : c.session < 0 ? `Down ${-c.session} tonight. Dutch does not count anything. She nods at the stairs.` : 'Even. Dutch says that is the rarest thing in the room.'), { fn: () => { c.session = 0; goScene('street', 'casino'); } }]) }, { t: 'Leave', do: () => { } }];
+    Menu.open('Dutch', items, { sub: `Tonight: ${c.session >= 0 ? '+' : '-'}$${Math.abs(c.session)}.  All time: ${c.net >= 0 ? '+' : '-'}$${Math.abs(c.net)}.` });
+  },
+  dutchTalk() {
+    const c = this.S(); if (!talkEnergy(2)) return; c.dutchTalks++;
+    const L = [];
+    if (c.dutchTalks === 1) L.push(say('dutch', "Dutch. Nobody's called me anything else since 1981 and I've stopped correcting it."), say('dutch', "Forty years down here. I've seen every kind of face come down those stairs. Yours is the kind that's got a number on it. I don't ask what number."));
+    else if (c.net >= 4000 && !c.warned1) { c.warned1 = true; L.push(say('dutch', "Four thousand. I keep a book. Four is where I start reading it twice."), say('dutch', "Twelve. That's the number. Anybody takes twelve off my tables, the door forgets them. I'm telling you now so it's not a surprise, because I don't like surprises and I don't think you do either.")); }
+    else L.push(say('dutch', fresh('dutch', ["Lou's here every night. Lou's been here every night for eleven years. I've stopped charging him for the coffee; it seemed cruel.", "The Widow's not a widow. She just plays like one.", "No clocks. People ask. If you need a clock you need to go home, and I'm not in the business of telling people that.", "The machine pays out when it wants. I've never once fixed it. I've never once needed to.", "Cal's sister used to deal here. Long time ago. Don't ask him; he'll tell you the wrong story.", "Rent's a hundred a week up there, I hear. Down here it's whatever you bring, and I don't send notes.", G.flags.vp ? "That's a good suit. I've had a lot of good suits at that table. They leave in worse ones." : "You look like a man who counts. Don't. It won't help and Rennie will notice."])));
+    Dlg.run(L);
+  },
+  // ----- Lou -----
+  louTalk() {
+    const c = this.S(); const l = c.lou; if (!talkEnergy(2)) return; l.talks++; l.met = true;
+    const L = [];
+    if (l.talks === 1) L.push(say('lou', "Lou. Sit. You play? Everybody plays. Sit."), say('lou', "Eleven years I've been coming down here. I'm up, overall. Overall I'm up. Don't ask Dutch; Dutch's book is wrong."));
+    else if (l.talks === 3 && !l.told) { l.told = true; L.push(say('lou', "My daughter's at Ohio State. Second year. I told her I'd cover the spring. I've got it, mostly. I've got most of it."), say('lou', "I'll have it Friday. Friday's a good night. Fridays I'm up."), narr('He is not up. You have watched him not be up for three nights.')); }
+    else if (l.down >= 600 && !l.watch) { l.watch = true; remember('lou_watch'); L.push(say('lou', "Pawned the watch. Sol's. Fourth time; he doesn't even write it down anymore, he just points at the line."), say('lou', "It's a good watch. It always comes back. That's what I tell my daughter about everything.")); }
+    else if (l.gave) L.push(say('lou', fresh('lou', ["I haven't been back to the table. I sit at the bar. Dutch says the coffee's still free.", "Sent it to Ohio State. All of it. She doesn't know where it came from and I'm not going to tell her, and neither are you.", "Sit with me. Don't play. Watch the Widow take somebody else apart for once."])));
+    else L.push(say('lou', fresh('lou', ["Fridays I'm up. Tonight's Tuesday. Tuesday's a building night.", "The Widow's got a tell. I've been looking for it eleven years. It's in there somewhere.", "You've got a face. Everybody's got a face. Mine's just louder.", "Dutch's coffee's free. That's the only free thing in this room, and I've paid for it a hundred times over."])));
+    Dlg.run(L);
+  },
+  louGive() {
+    const c = this.S(); const l = c.lou; const amt = Math.min(l.down, G.money); if (amt <= 0) return;
+    Menu.open('Lou', [{ t: `Give him back what you took ($${amt})`, disabled: () => G.money < amt, do: () => { addMoney(-amt); c.net -= amt; l.gave = true; l.down = 0; remember('lou_gave'); Dlg.run([narr('You push it across the felt. Lou looks at it the way a man looks at a dog that has come back.'), say('lou', "...I can't. ...Yeah, I can. Spring semester. Okay. Okay."), say('lou', "I'm going to sit at the bar. I'm going to sit at the bar for a while."), narr('He does. He is at the bar every night after, with the free coffee, and does not sit down at the table again while you are there.')]); } }, { t: 'Keep it', do: () => { } }], { sub: `He is down $${l.down} to you, over the nights.` });
+  },
+  widowTalk() {
+    const c = this.S(); if (!talkEnergy(2)) return; c.widowTalks++;
+    Dlg.run([say('widow', fresh('widow', [c.widowTalks === 1 ? "Sit or don't. Talking's for the bar." : "...", "Lou has a tell. It's that he's Lou.", "I don't play for money. I play for the quiet. The money's how you keep score of the quiet.", "You're sick. I can see it in how you hold the cards. Doesn't matter; the cards can't.", "Dutch and I came up together. She went behind the bar. I stayed at the table. Same job."]))]);
+  },
+  // ----- tables -----
+  slotsMenu() {
+    const c = this.S();
+    const items = [{ t: 'Pull ($20)', disabled: () => G.money < 20, do: () => this.startGame(new SlotsGame(20)) }, { t: 'Pull ($100)', disabled: () => G.money < 100, do: () => this.startGame(new SlotsGame(100)) }, { t: 'Walk away', do: () => { } }];
+    Menu.open('The machine', items, { sub: 'Three reels. Sevens pay fifty to one. It has never once been fixed.' });
+  },
+  blackjackMenu() {
+    const c = this.S(); const bets = [25, 100, 250, 500]; if (G.day >= 40 || c.won >= 2000) bets.push(1000);
+    const items = bets.map(b => ({ t: `Bet $${b}`, disabled: () => G.money < b, do: () => this.startGame(new BlackjackGame(b)) })); items.push({ t: 'Not now', do: () => { } });
+    Menu.open("Rennie's table", items, { sub: 'Dealer stands on seventeen. Blackjack pays three to two. Double on anything.' });
+  },
+  pokerMenu() {
+    const c = this.S(); const ins = [500, 1000, 2500].filter(b => b <= 1000 || G.day >= 40 || c.won >= 2000);
+    const items = ins.map(b => ({ t: `Buy in for $${b}`, r: 'blinds ' + (b >= 2500 ? '$50/$100' : '$25/$50'), disabled: () => G.money < b, do: () => this.startGame(new HoldemGame(b)) })); items.push({ t: 'Not now', do: () => { } });
+    Menu.open('The poker table', items, { sub: this.samDadTonight() ? 'Lou, and a man in a coat too good for the room. You have seen him before, at a diner.' : 'Lou and the Widow. Nobody else sits down; nobody else is asked.' });
+  },
+  samDadTonight() { const b = Beats.S(); return !!b.samDad && G.day % 6 === 3 && !G.chars.nadia.closed && !(G.beats && G.beats.samDadDone); },
+  startGame(game) { this.cur = game; game.start(); G.state = 'casino'; },
+  settle(delta, kind) {
+    const c = this.S(); c.net += delta; c.session += delta; if (delta > 0) { c.won += delta; if (delta > c.bigWin) c.bigWin = delta; } else c.lost -= delta;
+    if (delta !== 0) addMoney(delta); if (kind) remember('casino_' + kind);
+    if (c.net >= 12000 && !c.barred) { c.barred = true; c.barredDay = G.day; remember('casino_barred'); setTimeout(() => Dlg.run([say('dutch', "Twelve. That's the number."), say('dutch', "Take it. All of it; I don't hold winnings, I'm not a bank. And then the stairs, and then the door, and the door doesn't know you anymore. That's not personal. It's the only rule I've got that's kept me open forty years."), narr('Eleven people do not look up. You climb the stairs with more money than you have ever carried, and the bolts go home behind you, three of them.'), { fn: () => { c.session = 0; goScene('street', 'casino'); } }]), 600); }
+  },
+  update() { if (this.cur) this.cur.update(); },
+  draw(g, t) { buildEntities(); renderInterior(g, t); if (this.cur) this.cur.draw(g, t); UI.drawHud(g, t); },
+  endingLine() {
+    const c = this.S(); if (!c.entered) return c.known ? { name: 'The plain door', line: 'Cal gave you the words. You never said them.', bad: false } : null;
+    const l = c.lou; let line = c.barred ? `You took twelve thousand off Dutch's tables and the door forgot you on day ${c.barredDay}. ` : c.net >= 0 ? `Up $${c.net} over ${c.visits} nights under the plain door. ` : `Down $${-c.net} over ${c.visits} nights under the plain door. `;
+    if (l.gave) line += 'You gave Lou back what you took. He sat at the bar after that, with the free coffee, and his daughter finished the spring.'; else if (l.down >= 600) line += 'Lou pawned the watch a fourth time. You had most of it.'; else if (l.met) line += 'Lou is still there every night. Overall he is up; ask him.';
+    if (c.samDadPot > 0) line += ` You took $${c.samDadPot} off Sam's father at the table${G.beats && G.beats.samDadDone ? ' and put it on the diner counter' : ''}.`;
+    return { name: 'The room under the plain door', line, bad: c.net < -1000 && !l.gave };
+  }
+};
+
+// ---------- a little action bar all three games share ----------
+const Bar = {
+  draw(g, actions, sel, y) { let x = 10; const y0 = y || H - 16; for (let i = 0; i < actions.length; i++) { const a = actions[i]; const w = textWidth(a.t) + 12; UI.panel(g, x, y0 - 2, w, 13, i === sel ? 0.9 : 0.6); drawText(g, a.t, x + 6, y0 + 1, a.off ? '#5a6070' : i === sel ? '#f8f0d8' : '#c8ccd8'); x += w + 4; } },
+  nav(actions, sel) { if (Input.hit('left')) { sel = (sel + actions.length - 1) % actions.length; Audio.blip(); } if (Input.hit('right')) { sel = (sel + 1) % actions.length; Audio.blip(); } return sel; }
+};
+function panelBox(g, x, y, w, h, title) { UI.panel(g, x, y, w, h, 0.85); if (title) drawText(g, title, x + w / 2, y + 4, '#e8c84a', { align: 'center' }); }
+
+// ---------- SLOTS ----------
+class SlotsGame {
+  constructor(bet) { this.bet = bet; }
+  start() { this.reels = [0, 0, 0]; this.t = 0; this.spinning = [true, true, true]; this.stopAt = [50, 80, 110]; this.result = null; addMoney(-this.bet); const c0 = Casino.S(); c0.pulls++; c0.net -= this.bet; c0.session -= this.bet; c0.lost += this.bet; this.sym = ['7', 'BAR', 'BELL', 'CHERRY', 'LEMON', 'PLUM']; this.final = [0, 1, 2].map(() => this.pickSym()); this.done = false; this.sel = 0; }
+  pickSym() { const r = Math.random(); return r < 0.06 ? 0 : r < 0.16 ? 1 : r < 0.32 ? 2 : r < 0.6 ? 3 : r < 0.8 ? 4 : 5; }
+  payout(f) { const b = this.bet; if (f[0] === f[1] && f[1] === f[2]) return [50, 20, 10, 6, 4, 3][f[0]] * b; const ch = f.filter(x => x === 3).length; if (ch >= 2) return 2 * b; if (ch === 1) return b; return 0; }
+  update() {
+    this.t++;
+    for (let i = 0; i < 3; i++) { if (this.spinning[i]) { if (this.t % 4 === 0) this.reels[i] = (this.reels[i] + 1) % 6; if (this.t >= this.stopAt[i]) { this.spinning[i] = false; this.reels[i] = this.final[i]; Audio.tone(300 + i * 120, 0.06, 'square', 0.03); } } }
+    if (!this.spinning.some(x => x) && !this.done) { this.done = true; const pay = this.payout(this.final); this.pay = pay; if (pay > 0) { Audio.good(); Casino.settle(pay, pay >= this.bet * 10 ? 'jackpot' : null); } else Audio.bad(); if (pay >= this.bet * 50) remember('casino_sevens'); }
+    if (this.done) { const acts = [{ t: `Pull again ($${this.bet})`, off: G.money < this.bet }, { t: 'Walk away' }]; this.sel = Bar.nav(acts, this.sel); if (Input.hit('act')) { if (this.sel === 0 && G.money >= this.bet) this.start(); else { Casino.cur = null; G.state = 'play'; } } if (Input.hit('back')) { Casino.cur = null; G.state = 'play'; } }
+  }
+  draw(g, t) {
+    panelBox(g, 140, 60, 200, 110, 'THE MACHINE');
+    const cols = ['#c83a3a', '#20222a', '#b08a20', '#c83a3a', '#8a9a20', '#7a3a9a'];
+    for (let i = 0; i < 3; i++) { const x = 160 + i * 60; px(g, x, 84, 50, 44, '#f4f0e8'); px(g, x, 84, 50, 1, '#ffffff'); const s = this.sym[this.reels[i]]; drawText(g, s, x + 25, 102, cols[this.reels[i]], { align: 'center' }); if (this.spinning[i]) { px(g, x, 84 + (t * 6) % 44, 50, 2, 'rgba(0,0,0,0.12)'); } }
+    drawText(g, `$${this.bet} a pull`, 240, 140, '#8a92a4', { align: 'center' });
+    if (this.done) { drawText(g, this.pay > 0 ? `PAYS $${this.pay}` : 'Nothing.', 240, 154, this.pay > 0 ? '#8ae88a' : '#8a92a4', { align: 'center' }); Bar.draw(g, [{ t: `Pull again ($${this.bet})`, off: G.money < this.bet }, { t: 'Walk away' }], this.sel); }
+  }
+}
+
+// ---------- BLACKJACK ----------
+class BlackjackGame {
+  constructor(bet) { this.bet = bet; }
+  start() { this.deck = newDeck(); this.you = [this.deck.pop(), this.deck.pop()]; this.dealer = [this.deck.pop(), this.deck.pop()]; this.phase = 'play'; this.sel = 0; this.doubled = false; this.msg = ''; this.t = 0; addMoney(-this.bet); this.wager = this.bet; Casino.S().bjHands++; if (this.val(this.you) === 21) this.finish(); }
+  val(h) { let v = 0, aces = 0; for (const c of h) { if (c.r === 12) { aces++; v += 11; } else v += Math.min(10, c.r + 2); } while (v > 21 && aces > 0) { v -= 10; aces--; } return v; }
+  finish() {
+    this.phase = 'done'; const y = this.val(this.you); let d = this.val(this.dealer);
+    const bjYou = this.you.length === 2 && y === 21, bjD = this.dealer.length === 2 && d === 21;
+    if (y > 21) { this.msg = `Bust. ${y}.`; this.delta = -this.wager; }
+    else { if (!bjYou) while (d < 17) { this.dealer.push(this.deck.pop()); d = this.val(this.dealer); }
+      if (bjYou && !bjD) { this.msg = 'Blackjack. Three to two.'; this.delta = Math.floor(this.wager * 1.5); }
+      else if (bjD && !bjYou) { this.msg = 'Dealer blackjack.'; this.delta = -this.wager; }
+      else if (d > 21) { this.msg = `Dealer busts on ${d}.`; this.delta = this.wager; }
+      else if (y > d) { this.msg = `${y} beats ${d}.`; this.delta = this.wager; }
+      else if (y < d) { this.msg = `${d} beats ${y}.`; this.delta = -this.wager; }
+      else { this.msg = `Push on ${y}.`; this.delta = 0; } }
+    // the wager was already taken; settle the difference against the table
+    const back = this.delta > 0 ? this.wager + this.delta : this.delta === 0 ? this.wager : 0;
+    if (back > 0) addMoney(back); const c = Casino.S(); c.net += this.delta; c.session += this.delta; if (this.delta > 0) { c.won += this.delta; if (this.delta > c.bigWin) c.bigWin = this.delta; Audio.good(); } else if (this.delta < 0) { c.lost -= this.delta; Audio.bad(); }
+    if (this.delta > 0) remember('casino_blackjack'); if (c.net >= 12000 && !c.barred) Casino.settle(0);
+  }
+  update() {
+    this.t++;
+    if (this.phase === 'play') {
+      const acts = [{ t: 'Hit' }, { t: 'Stand' }, { t: 'Double', off: this.you.length !== 2 || G.money < this.wager }]; this.sel = Bar.nav(acts, this.sel);
+      if (Input.hit('act')) {
+        if (this.sel === 0) { this.you.push(this.deck.pop()); Audio.tone(500, 0.04, 'square', 0.03); if (this.val(this.you) > 21) this.finish(); }
+        else if (this.sel === 1) this.finish();
+        else if (!acts[2].off) { addMoney(-this.wager); this.wager *= 2; this.doubled = true; this.you.push(this.deck.pop()); this.finish(); }
+      }
+    } else {
+      const acts = [{ t: `Again ($${this.bet})`, off: G.money < this.bet }, { t: 'Leave the table' }]; this.sel = Bar.nav(acts, this.sel);
+      if (Input.hit('act')) { if (this.sel === 0 && G.money >= this.bet) this.start(); else { Casino.cur = null; G.state = 'play'; } }
+      if (Input.hit('back')) { Casino.cur = null; G.state = 'play'; }
+    }
+  }
+  draw(g, t) {
+    panelBox(g, 110, 46, 260, 128, "RENNIE'S TABLE");
+    drawText(g, 'Dealer', 122, 60, '#8a92a4'); this.dealer.forEach((c, i) => drawCard(g, c, 122 + i * 18, 70, this.phase === 'play' && i === 1));
+    if (this.phase !== 'play') drawText(g, `${this.val(this.dealer)}`, 122 + this.dealer.length * 18 + 4, 78, '#c8ccd8');
+    drawText(g, 'You', 122, 100, '#8a92a4'); this.you.forEach((c, i) => drawCard(g, c, 122 + i * 18, 110, false)); drawText(g, `${this.val(this.you)}`, 122 + this.you.length * 18 + 4, 118, '#f0ead8');
+    drawText(g, `Wager $${this.wager}`, 356, 60, '#e8c84a', { align: 'right' });
+    if (this.phase === 'done') drawText(g, this.msg + (this.delta > 0 ? `  +$${this.delta}` : this.delta < 0 ? `  -$${-this.delta}` : ''), 240, 150, this.delta > 0 ? '#8ae88a' : this.delta < 0 ? '#e86a6a' : '#c8ccd8', { align: 'center' });
+    Bar.draw(g, this.phase === 'play' ? [{ t: 'Hit' }, { t: 'Stand' }, { t: 'Double', off: this.you.length !== 2 || G.money < this.wager }] : [{ t: `Again ($${this.bet})`, off: G.money < this.bet }, { t: 'Leave the table' }], this.sel);
+  }
+}
+
+// ---------- TEXAS HOLD'EM (you, Lou, the Widow) ----------
+class HoldemGame {
+  constructor(buyin) { this.buyin = buyin; this.bb = buyin >= 2500 ? 100 : 50; }
+  start() {
+    addMoney(-this.buyin); Casino.S().session -= this.buyin; Casino.S().net -= this.buyin; Casino.S().lost += this.buyin; this.cashed = false;
+    const sd = Casino.samDadTonight();
+    this.players = [{ id: 'you', name: 'You', stack: this.buyin, ai: null }, { id: 'lou', name: 'Lou', stack: this.buyin, ai: 'loose' }, { id: sd ? 'samDad' : 'widow', name: sd ? 'The man' : 'The Widow', stack: this.buyin, ai: sd ? 'wild' : 'tight' }];
+    this.button = 0; this.hand = 0; this.log = []; this.newHand();
+  }
+  newHand() {
+    const P = this.players; for (const p of P) { p.hole = []; p.bet = 0; p.contrib = 0; p.folded = p.stack <= 0; p.allin = false; p.acted = false; }
+    if (P.filter(p => !p.folded).length < 2 || P[0].stack <= 0) { this.phase = 'over'; this.sel = 0; return; }
+    this.deck = newDeck(); this.board = []; this.pot = 0; this.hand++; this.button = (this.button + 1) % 3; while (P[this.button].folded) this.button = (this.button + 1) % 3;
+    for (const p of P) if (!p.folded) p.hole = [this.deck.pop(), this.deck.pop()];
+    this.street = 0; this.msg = ''; this.showdown = null;
+    const sb = this.nextActive(this.button), bbp = this.nextActive(sb);
+    this.post(P[sb], Math.floor(this.bb / 2)); this.post(P[bbp], this.bb); this.toCall = this.bb; this.lastRaiser = bbp;
+    this.turn = this.nextActive(bbp); this.phase = 'bet'; this.sel = 1; this.wait = 0; this.raises = 0;
+    this.actedSet = new Set();
+  }
+  nextActive(i) { let j = i; for (let n = 0; n < 3; n++) { j = (j + 1) % 3; const p = this.players[j]; if (!p.folded && !p.allin) return j; } return i; }
+  post(p, amt) { const a = Math.min(amt, p.stack); p.stack -= a; p.bet += a; p.contrib = (p.contrib || 0) + a; this.pot += a; if (p.stack === 0) p.allin = true; }
+  live() { return this.players.filter(p => !p.folded); }
+  strength(p) {
+    // crude equity: rank of best hand with the board, plus preflop heuristics
+    const hole = p.hole; if (this.board.length === 0) { const hi = Math.max(hole[0].r, hole[1].r), lo = Math.min(hole[0].r, hole[1].r); let s = (hi + lo) / 24 * 0.6; if (hole[0].r === hole[1].r) s += 0.35 + hi / 40; if (hole[0].s === hole[1].s) s += 0.05; if (hi - lo <= 2) s += 0.03; return clamp(s, 0.05, 0.98); }
+    const r = best7(hole.concat(this.board)); const cat = r[0]; const base = [0.15, 0.35, 0.55, 0.7, 0.8, 0.86, 0.92, 0.97, 0.99][cat]; const kick = (r[1] || 0) / 13 * 0.1; return clamp(base + kick + (cat === 0 ? Math.max(hole[0].r, hole[1].r) / 13 * 0.15 : 0), 0.05, 0.99);
+  }
+  aiAct(p) {
+    const s = this.strength(p); const need = this.toCall - p.bet; const potOdds = need / (this.pot + need + 0.001);
+    const style = p.ai; const noise = (Math.random() - 0.5) * (style === 'wild' ? 0.5 : style === 'loose' ? 0.3 : 0.12);
+    const v = s + noise; const bluff = style === 'loose' ? 0.12 : style === 'wild' ? 0.2 : 0.04;
+    if (need === 0) { if (v > (style === 'tight' ? 0.62 : 0.5) || Math.random() < bluff) return this.raise(p, this.bb * (v > 0.85 ? 4 : 2)); return this.check(p); }
+    if (v > 0.82 && this.raises < 3 && p.stack > need * 2) return this.raise(p, this.bb * 3);
+    if (v > potOdds + (style === 'tight' ? 0.22 : style === 'loose' ? 0.05 : 0.0) || Math.random() < bluff * 0.5) return this.call(p);
+    return this.fold(p);
+  }
+  check(p) { p.acted = true; this.msg = `${p.name} checks.`; }
+  call(p) { const need = this.toCall - p.bet; this.post(p, need); p.acted = true; this.msg = `${p.name} calls.`; }
+  raise(p, amt) { const need = this.toCall - p.bet; const total = Math.min(need + amt, p.stack); this.post(p, total); this.toCall = Math.max(this.toCall, p.bet); this.raises++; for (const q of this.players) q.acted = false; p.acted = true; this.msg = `${p.name} ${need > 0 ? 'raises' : 'bets'} to $${p.bet}.`; }
+  fold(p) { p.folded = true; p.acted = true; this.msg = `${p.name} folds.`; }
+  roundDone() { const L = this.live(); return L.every(p => p.acted || p.allin) && L.every(p => p.allin || p.bet === this.toCall); }
+  advance() {
+    const L = this.live();
+    if (L.length === 1) { this.win([L[0]], `${L[0].name} takes $${this.pot}.`); return; }
+    for (const p of this.players) { p.bet = 0; p.acted = false; } this.toCall = 0; this.raises = 0;
+    if (this.street === 3) { this.showdownNow(); return; }
+    if (L.filter(p => !p.allin).length <= 1) { while (this.board.length < 5) this.board.push(this.deck.pop()); this.street = 3; this.showdownNow(); return; }
+    this.street++; if (this.street === 1) this.board.push(this.deck.pop(), this.deck.pop(), this.deck.pop()); else this.board.push(this.deck.pop());
+    this.turn = this.nextActive(this.button); this.phase = 'bet'; this.wait = 20; this.sel = 0;
+  }
+  showdownNow() {
+    const L = this.live(); const ranked = L.map(p => ({ p, r: best7(p.hole.concat(this.board)) })); ranked.sort((a, b) => cmpRank(b.r, a.r));
+    const winners = ranked.filter(x => cmpRank(x.r, ranked[0].r) === 0).map(x => x.p);
+    this.showdown = ranked; this.win(winners, `${winners.map(w => w.name).join(' and ')} ${winners.length > 1 ? 'split' : 'takes'} $${this.pot} with ${HAND_NAMES[ranked[0].r[0]]}.`);
+  }
+  win(winners, msg) {
+    const share = Math.floor(this.pot / winners.length); for (const w of winners) w.stack += share; const c = Casino.S();
+    if (winners.includes(this.players[0])) { const sd = this.players.find(p => p.id === 'samDad'); if (sd && !winners.includes(sd)) c.samDadPot += sd.contrib || 0; const lou = this.players[1]; if (!winners.includes(lou)) c.lou.down += lou.contrib || 0; }
+    c.hands++; this.pot = 0; this.msg = msg; this.phase = 'handover'; this.sel = 0; this.wait = 0;
+  }
+  cashOut() {
+    if (this.cashed) return; this.cashed = true; const stack = this.players[0].stack; const c = Casino.S(); c.session += stack; c.net += stack; if (stack > this.buyin) { c.won += stack - this.buyin; remember('casino_poker'); } if (stack > 0) addMoney(stack);
+    if (c.net >= 12000 && !c.barred) Casino.settle(0);
+    Casino.cur = null; G.state = 'play';
+    if (c.samDadPot >= 300 && !c.samDadTold) { c.samDadTold = true; setTimeout(() => Dlg.run([narr('The man in the good coat leaves before you do, with less than he came with. You know where a good part of it belongs.')]), 400); }
+    if (c.lou.down >= 600 && !c.lou.gave && !c.lou.offered) { c.lou.offered = true; setTimeout(() => Casino.louGive(), 500); }
+  }
+  update() {
+    this.wait = Math.max(0, this.wait - 1);
+    if (this.phase === 'over') { if (Input.hit('act') || Input.hit('back')) this.cashOut(); return; }
+    if (this.phase === 'handover') { const acts = [{ t: 'Next hand' }, { t: `Cash out ($${this.players[0].stack})` }]; this.sel = Bar.nav(acts, this.sel); if (Input.hit('act')) { if (this.sel === 0) this.newHand(); else this.cashOut(); } if (Input.hit('back')) this.cashOut(); return; }
+    if (this.wait > 0) return;
+    if (this.roundDone()) { this.advance(); return; }
+    const p = this.players[this.turn];
+    if (p.folded || p.allin) { this.turn = this.nextActive(this.turn); return; }
+    if (p.ai) { this.aiAct(p); this.turn = this.nextActive(this.turn); this.wait = 28; return; }
+    const need = this.toCall - p.bet; const acts = this.actions(p, need); this.sel = Math.min(this.sel, acts.length - 1); this.sel = Bar.nav(acts, this.sel);
+    if (Input.hit('act')) { const a = acts[this.sel]; if (a.off) { Audio.bad(); return; } if (a.k === 'check') this.check(p); else if (a.k === 'call') this.call(p); else if (a.k === 'raise') this.raise(p, a.amt); else this.fold(p); this.turn = this.nextActive(this.turn); this.wait = 16; }
+  }
+  actions(p, need) { const out = []; if (need === 0) out.push({ t: 'Check', k: 'check' }); else out.push({ t: `Call $${Math.min(need, p.stack)}`, k: 'call' }); if (p.stack > need) { out.push({ t: `${need ? 'Raise' : 'Bet'} $${this.bb * 2}`, k: 'raise', amt: this.bb * 2, off: this.raises >= 4 }); out.push({ t: `${need ? 'Raise' : 'Bet'} $${this.bb * 6}`, k: 'raise', amt: this.bb * 6, off: this.raises >= 4 || p.stack < need + this.bb * 6 }); out.push({ t: 'All in', k: 'raise', amt: p.stack }); } out.push({ t: 'Fold', k: 'fold' }); return out; }
+  draw(g, t) {
+    panelBox(g, 40, 30, 400, 156, `HOLD'EM   blinds $${this.bb / 2}/$${this.bb}   pot $${this.pot}`);
+    const P = this.players; const showAll = this.phase === 'handover' && this.showdown;
+    // opponents across the top
+    [1, 2].forEach((i, k) => { const p = P[i]; const x = 60 + k * 200; drawText(g, `${p.name}  $${p.stack}${p.folded ? '  (folded)' : p.allin ? '  (all in)' : ''}`, x, 44, p.folded ? '#5a6070' : this.turn === i && this.phase === 'bet' ? '#e8c84a' : '#c8ccd8'); if (p.hole.length) p.hole.forEach((c, j) => drawCard(g, c, x + j * 18, 54, !(showAll && !p.folded))); if (p.bet) drawText(g, `$${p.bet}`, x + 44, 62, '#e8c84a'); });
+    // board
+    this.board.forEach((c, i) => drawCard(g, c, 150 + i * 18, 88, false)); for (let i = this.board.length; i < 5; i++) px(g, 150 + i * 18, 88, 15, 21, 'rgba(255,255,255,0.05)');
+    // you
+    const y = P[0]; drawText(g, `You  $${y.stack}${y.folded ? '  (folded)' : ''}`, 60, 124, this.turn === 0 && this.phase === 'bet' ? '#e8c84a' : '#f0ead8'); y.hole.forEach((c, j) => drawCard(g, c, 60 + j * 18, 134, false)); if (y.bet) drawText(g, `$${y.bet}`, 104, 142, '#e8c84a');
+    if (y.hole.length && this.board.length >= 3 && !y.folded) drawText(g, HAND_NAMES[best7(y.hole.concat(this.board))[0]], 104, 152, '#8a92a4');
+    drawText(g, this.msg, 240, 168, '#c8ccd8', { align: 'center' });
+    if (this.phase === 'bet' && this.turn === 0 && this.wait === 0) Bar.draw(g, this.actions(y, this.toCall - y.bet), this.sel);
+    else if (this.phase === 'handover') Bar.draw(g, [{ t: 'Next hand' }, { t: `Cash out ($${y.stack})` }], this.sel);
+    else if (this.phase === 'over') { drawText(g, y.stack > 0 ? 'The table is done for the night.' : 'Felted. The Widow does not look up.', 240, 200, '#c8ccd8', { align: 'center' }); UI.drawHint(g, `${UI.keyName('act')} cash out`); }
+  }
+}
+
+// ---------- hooks ----------
+{
+  STREET.doors.push({ x: 10, w: 22, to: 'casino', label: 'A plain door' });
+  STREET.spots.casino = 21;
+  // after the third song, Cal tells you the words
+  const ss = Song.stop; Song.stop = function (early) { ss.call(this, early); const c = Casino.S(); if (!early && (G.flags.songsHeard || 0) >= 3 && !c.known) { c.known = true; remember('casino_words'); Dlg.steps.push(say('busker', "You've heard three now. That's more than anybody on this street's sat through."), say('busker', "The plain door. No number, between the alley and your building. Knock twice and say 'twelve minutes.' Dutch'll let you down."), say('busker', "Don't tell her I said. She'll take it out of my case, and my case can't afford it.")); } };
+  const bel5 = buildEndingList; buildEndingList = function () { const out = bel5(); const cl = Casino.endingLine(); if (cl) out.push(cl); return out; };
+  // Nadia: what you took off him
+  const ndm3 = Nadia.menu; Nadia.menu = function () { ndm3.call(this); const c = Casino.S(); if (Menu.active && c.samDadPot >= 300 && !(G.beats && G.beats.samDadDone)) Menu.items.splice(Menu.items.length - 1, 0, { t: `Put $${c.samDadPot} on the counter`, disabled: () => G.money < c.samDadPot, do: () => { addMoney(-c.samDadPot); G.beats.samDadDone = true; trust('nadia', 3); remember('nadia_samdad_money'); Dlg.run([narr('You put it on the counter. You do not say where it came from. She looks at it and then at you and then, for a long moment, at the door.'), say('nadia', "...He was at a table. Wasn't he. Downstairs somewhere, in that coat."), say('nadia', "I'm not going to ask. I'm going to put it in the jar for Sam's school and I'm not going to ask, and if he ever comes in here again I'm going to know exactly what he's worth at a table.")]); } }); };
+  // Sol notices Lou's watch
+  const pt2 = Pawn.talk; Pawn.talk = function () { const c = G.casino; if (c && c.lou.watch && !c.lou.solSaid && G.chars.sol.met) { c.lou.solSaid = true; if (!talkEnergy()) return; Dlg.run([say('sol', "Marchetti's watch came in again. Fourth time. I've stopped writing the date; I just point at the line and he signs."), say('sol', "You've been down there. I can tell; people come back from Dutch's with a face. It's the same face going down and coming up, that's the thing about it.")]); return; } return pt2.call(this); };
+}
+
 // ---- 10_game.js ----
 // ============================================================
 // game: state, loop, interactions, shop, sleep, ending, save
@@ -5958,7 +6334,7 @@ function freshState() {
     flags: {}, bequests: {}, memories: [], chars: { amos: Amos.init(), mei: Mei.init(), walter: Walter.init(), nadia: Nadia.init(), nora: Nora.init(), theo: Theo.init(), sol: Pawn.init(), emmett: Emmett.init() },
     scene: 'apartment', px: 330, facing: -1, walking: false, frame: 0, camX: 0, rain: 0.8, wind: 0.2, weatherSeed: irnd(1, 99999),
     starveDays: 0, ateToday: false, walkers: [], dogX: 0, coughT: 600, stun: 0, dockShifts: 0, deliveries: 0, jobsToday: 0, hideHud: false,
-    pendingStreet: null, pendingDiner: null, dayCard: null, dead: false, t: 0, elevatorBroken: false, pills: 30, lastPill: 1, pillPenalty: 0, phone: Phone.init(), pass: Passing.init(), house: House.init(), garden: Garden.init(), beats: {}, rent: Rent.init(), seen: {}, busT: 0, busDir: 'out', busArrived: false,
+    pendingStreet: null, pendingDiner: null, dayCard: null, dead: false, t: 0, elevatorBroken: false, pills: 30, lastPill: 1, pillPenalty: 0, phone: Phone.init(), pass: Passing.init(), house: House.init(), garden: Garden.init(), beats: {}, rent: Rent.init(), casino: Casino.init(), seen: {}, busT: 0, busDir: 'out', busArrived: false,
   };
 }
 function newGame() { G = freshState(); rollWeather(); }
@@ -6065,6 +6441,14 @@ function buildEntities() {
     if (b.cemVisit === 'walter' && !G.chars.walter.dead) add({ id: 'walterC', x: 214, y: feet, spec: G.chars.walter.spec, dir: 1, range: 30, on: () => talkEnergy(2) && Dlg.run([say('walter', fresh('walter', ["She's here. I know that's not how it works. It's how it works for me.", "Feed the pigeons. She liked the pigeons. I have never understood the pigeons.", "The stone's a good weight. The man was very kind."]))]), label: 'Walter' });
     if (b.cemVisit === 'ortega') add({ id: 'ortegaC', x: 400, y: feet, spec: 'granny', dir: -1, range: 30, on: () => talkEnergy(2) && Dlg.run([say('granny', fresh('granny', ["Grey. Not black. I said so and I was right.", "Eat. There's a tamale for the stone men and one for you and one for him, which you'll eat because he can't."]))]), label: 'Mrs. Ortega' });
   }
+  if (sc === 'casino') {
+    const c = Casino.S(); const sp = INTERIORS.casino.spots; const sd = Casino.samDadTonight();
+    add({ id: 'dutch', range: 40, x: sp.bar - 2, y: 212, spec: 'dutch', dir: -1, on: () => Casino.dutchMenu(), label: 'Dutch' });
+    add({ id: 'dealer', range: 16, x: sp.blackjack, y: 212, spec: 'dealer', dir: 1, on: () => Casino.blackjackMenu(), label: 'Rennie' });
+    if (!c.lou.gone) add({ id: 'lou', range: 14, x: c.lou.gave ? sp.bar - 30 : sp.lou, y: c.lou.gave ? feet : 212, spec: 'lou', dir: 1, sit: !c.lou.gave, on: () => (c.lou.down >= 600 && !c.lou.gave ? Casino.louGive() : Casino.louTalk()), label: c.lou.met ? 'Lou' : 'A regular' });
+    if (sd) add({ id: 'samDadC', range: 14, x: sp.widow, y: 212, spec: 'samDad', dir: -1, sit: true, on: () => talkEnergy(2) && Dlg.run([say('samDad', pick(["...Do I know you? I know you. The diner.", "Eighteen months. I've got it covered. I've got it covered tonight, watch."]))]), label: 'The man from the diner' });
+    else add({ id: 'widow', range: 14, x: sp.widow, y: 212, spec: 'widow', dir: -1, sit: true, on: () => Casino.widowTalk(), label: 'The Widow' });
+  }
   if (sc === 'clinic') add({ id: 'doctor', range: 60, x: INTERIORS.clinic.spots.desk, y: 212, spec: 'doctor', dir: -1, on: () => Doctor.menu(), label: 'Dr. Okafor' });
   if (sc === 'dock') add({ id: 'foreman', x: INTERIORS.dock.spots.boss, y: feet, spec: f.foremanCut ? 'man1' : 'worker', dir: 1, on: () => foremanMenu(), label: f.foremanCut ? 'New foreman' : 'Foreman' });
   if (sc === homeScene()) { const P = G.phone || {}; const pp = INTERIORS[sc].phone || { x: PHONE_X, y: PHONE_Y }; add({ id: 'phone', x: pp.x, y: pp.y, sprite: 'phone', dir: 1, noShadow: true, range: 14, bubble: P.ringing ? 'ring' : null, bubbleY: pp.y - 24, on: () => (P.ringing ? Phone.answer() : Phone.menu()), label: P.ringing ? 'Answer' : 'Phone' }); }
@@ -6098,6 +6482,7 @@ function nearest() {
     else if (Math.abs(G.px - sp.clocks) < 16 && bd > 14) best = { kind: 'clocks', label: 'The clocks' };
     else if (mine && Math.abs(G.px - sp.table) < 16 && bd > 14) best = { kind: 'table', label: 'Table' };
   }
+  if (G.scene === 'casino') { const sp = INTERIORS.casino.spots; if (Math.abs(G.px - sp.slots) < 14 && bd > 14) best = { kind: 'slots', label: 'The machine' }; else if (Math.abs(G.px - sp.poker) < 12 && bd > 12) best = { kind: 'poker', label: 'The poker table' }; }
   if (G.scene === 'cemetery') { if (Math.abs(G.px - 240) < 24 && bd > 20) best = { kind: 'grave', label: 'Ruth Ashby' }; else if (Beats.S().stoneIn && Math.abs(G.px - 375) < 20 && bd > 20) best = { kind: 'grave2', label: 'Hector Ortega' }; }
   if (G.scene === 'garden') { if (Math.abs(G.px - GARDEN.spots.beds) < 70 && bd > 20) best = { kind: 'beds', label: Garden.stage() === 0 ? 'The weeds' : 'The beds' }; else if (Math.abs(G.px - GARDEN.spots.bench) < 12 && bd > 12) best = { kind: 'bench', label: "Hector's bench" }; }
   if (G.scene === 'lane' && House.S().listed && Math.abs(G.px - LANE.spots.sign) < 14 && bd > 14) best = { kind: 'sign', label: House.S().owner ? 'SOLD' : 'FOR SALE' };
@@ -6113,13 +6498,15 @@ function nearest() {
 function interact(n) {
   if (!n) return;
   if (n.kind === 'ent') { n.e.on(); return; }
-  if (n.kind === 'door') { if (n.d.bus) Bus.door(); else if (n.d.to === 'house') House.enter(); else if (n.d.to === 'garden' && !Garden.S().unlocked) Dlg.run([narr(G.day < 6 ? 'A chain-link gate across the alley, padlocked. Weeds behind it to the fence, and the backs of buildings.' : 'Padlocked. Through the wire: weeds, a shed, a hand-painted sign you cannot read from here. Somebody kept this once.')]); else if (G.scene === 'hall') hallDoor(n.d); else if (n.d.to === 'hall' && G.scene === 'street') enterBuilding(); else goScene(n.d.to, n.d.at); return; }
+  if (n.kind === 'door') { if (n.d.bus) Bus.door(); else if (n.d.to === 'house') House.enter(); else if (n.d.to === 'casino' && G.scene === 'street') Casino.door(); else if (n.d.to === 'garden' && !Garden.S().unlocked) Dlg.run([narr(G.day < 6 ? 'A chain-link gate across the alley, padlocked. Weeds behind it to the fence, and the backs of buildings.' : 'Padlocked. Through the wire: weeds, a shed, a hand-painted sign you cannot read from here. Somebody kept this once.')]); else if (G.scene === 'hall') hallDoor(n.d); else if (n.d.to === 'hall' && G.scene === 'street') enterBuilding(); else goScene(n.d.to, n.d.at); return; }
   if (n.kind === 'lakebus') { Bus.back(); return; }
   if (n.kind === 'fish') { if (G.energy < 25) { UI.toast('Too tired to hold a rod.', '#8ab0d8'); return; } Fishing.start(); return; }
   if (n.kind === 'cabin') { cabinDoor(); return; }
   if (n.kind === 'mailbox') { mailLetter(); return; }
   if (n.kind === 'sign') { House.sign(); return; }
   if (n.kind === 'beds') { Garden.menu(); return; }
+  if (n.kind === 'slots') { Casino.slotsMenu(); return; }
+  if (n.kind === 'poker') { Casino.pokerMenu(); return; }
   if (n.kind === 'grave') { const b = Beats.S(); Dlg.run([narr(`RUTH ASHBY, 1939. Beside it, WALTER J. ASHBY, 1937, and a line ${b.walterEpitaph === 'type' ? 'that says HE SET THE TYPE' : b.walterEpitaph === 'bus' ? 'that says HE WAITED FOR THE 14' : 'left blank'}.${G.chars.walter.dead ? ' The second date is cut now. The stonemason spelled Ashby right the first time.' : ''}`)]); return; }
   if (n.kind === 'grave2') { Dlg.run([narr('HECTOR ORTEGA. HE FIXED THINGS. Grey, not black. There is a tamale on the base, wrapped in foil, and a pigeon considering it.')]); return; }
   if (n.kind === 'clocks') { Dlg.run([narr(G.flags.house === 'mine' ? pick(['Seven clocks. The one you wound is still going. It is the only sound in the house that is not you.', 'Ruth, laughing, in 1962. You have started saying goodnight to the photograph. Nobody has to know.']) : G.chars.walter.dead ? 'Seven clocks, none of them wound. A photograph of a woman laughing. Somebody should dust them; nobody will.' : 'Seven clocks. Retirement gifts, mostly; one was a wedding present. He has told you which and you have already forgotten.')]); return; }
@@ -6148,6 +6535,7 @@ function onEnterScene(sc) {
   if (sc === 'diner' && G.pendingDiner) { G.pendingDiner = null; }
   if (sc === 'diner' && G.chars.nadia.saved && !G.chars.nadia.savedStory) { setTimeout(() => Nadia.talk(), 400); }
   if (sc === 'store' && G.day === 1 && !G.flags.storeIntro) { G.flags.storeIntro = true; }
+  if (sc === 'casino') setTimeout(() => Casino.arrive(), 400);
 }
 function streetEvent(p) {
   if (p === 'amosGone') Dlg.run([narr('The cardboard is there. The blanket is folded, which it never was.'), narr('Someone has put a candle in a jar beside it, and a bunch of flowers from Lin\'s, still in the paper. The wind has already put the candle out.'), narr(G.chars.amos.met ? 'Mrs. Ortega tells you later. Pneumonia. The ambulance came at four in the morning and nobody rode with him.' : 'You never asked his name. You walked past him fourteen times.')]);
@@ -6574,6 +6962,7 @@ function tick() {
     case 'elevator': Elevator.update(); break;
     case 'fishing': Fishing.update(); break;
     case 'song': Song.update(); break;
+    case 'casino': Casino.update(); break;
     case 'ending': Ending.update(); break;
   }
 }
@@ -6587,6 +6976,7 @@ function render() {
     case 'minigame': buildEntities(); renderScene(g, t); if (MG.cur) MG.cur.draw(g, t); UI.drawFade(g); return;
     case 'fishing': buildEntities(); renderLake(g, t); UI.drawHud(g, t); Fishing.drawHud(g, t); UI.drawFade(g); return;
     case 'song': Song.draw(g, t); UI.drawFade(g); return;
+    case 'casino': Casino.draw(g, t); UI.drawFade(g); return;
     case 'elevator': Elevator.draw(g, t); UI.drawFade(g); return;
     default:
       playDraw(g, t);
@@ -6599,7 +6989,7 @@ World.static || buildStreetStatic(); paintLampPosts(World.static.getContext('2d'
 titleInit();
 requestAnimationFrame(loop);
 // debug hooks
-window.__99 = { get G() { return G; }, set G(v) { G = v; }, sleep, Amos, Mei, Walter, Nadia, Nora, Elevator, Ladder, Doctor, MG, readNote, Theo, VP, Pawn, Gifts, OUTFITS, PAWN_ITEMS, Dlg, Menu, startMinigame, buildEndingList, save, load, newGame, goScene, Ending, refresh: buildEntities, titleInit, Emmett, Bus, Fishing, Passengers, LAKE, busDay, Phone, Jo, Passing, House, LANE, homeScene, Song, SONGS, Garden, GARDEN, Beats, CEMETERY, Rent };
+window.__99 = { get G() { return G; }, set G(v) { G = v; }, sleep, Amos, Mei, Walter, Nadia, Nora, Elevator, Ladder, Doctor, MG, readNote, Theo, VP, Pawn, Gifts, OUTFITS, PAWN_ITEMS, Dlg, Menu, startMinigame, buildEndingList, save, load, newGame, goScene, Ending, refresh: buildEntities, titleInit, Emmett, Bus, Fishing, Passengers, LAKE, busDay, Phone, Jo, Passing, House, LANE, homeScene, Song, SONGS, Garden, GARDEN, Beats, CEMETERY, Rent, Casino, best7, rank5, newDeck };
 
 })();
 </script>
