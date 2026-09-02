@@ -1,0 +1,11 @@
+const fs = require('fs'), path = require('path');
+const src = path.join(__dirname, 'src');
+const files = fs.readdirSync(src).sort();
+const head = fs.readFileSync(path.join(src, files.find(f => f.endsWith('.html'))), 'utf8');
+const js = files.filter(f => f.endsWith('.js')).map(f => `// ---- ${f} ----\n` + fs.readFileSync(path.join(src, f), 'utf8')).join('\n');
+const body = head + '\n<script>\n(function(){\n"use strict";\n' + js + '\n})();\n</script>\n';
+fs.mkdirSync(path.join(__dirname, 'dist'), { recursive: true });
+fs.writeFileSync(path.join(__dirname, 'dist', '99days_artifact.html'), body);
+const full = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n' + body.replace(/<div id="wrap">/, '</head>\n<body>\n<div id="wrap">') + '</body>\n</html>\n';
+fs.writeFileSync(path.join(__dirname, 'dist', '99days.html'), full);
+console.log('built', (body.length / 1024).toFixed(1), 'KB');
