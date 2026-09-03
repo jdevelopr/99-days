@@ -6379,6 +6379,182 @@ function paintCasinoDoor(g) {
   const pt2 = Pawn.talk; Pawn.talk = function () { const c = G.casino; if (c && c.lou.watch && !c.lou.solSaid && G.chars.sol.met) { c.lou.solSaid = true; if (!talkEnergy()) return; Dlg.run([say('sol', "Marchetti's watch came in again. Fourth time. I've stopped writing the date; I just point at the line and he signs."), say('sol', "You've been down there. I can tell; people come back from Dutch's with a face. It's the same face going down and coming up, that's the thing about it.")]); return; } return pt2.call(this); };
 }
 
+// ---- 09t_story_cello.js ----
+// ============================================================
+// 410: Signe, who plays the cello and does not talk. Cal, who does. Sol, with a horn and no wind.
+// The Harlan Street Three, Fridays under the shelter.
+// ============================================================
+SPECS.signe = { skin: '#f0dcc8', hair: '#e8d8a8', hairStyle: 'long', shirt: '#2a2a34', pants: '#2a2a34', shoes: '#1a1a1e', coat: '#3a3a4a', tall: true };
+SPEAKERS.signe = { name: 'Signe', color: '#d8d0b0', spec: 'signe' };
+S('cello', ['..kkk..', '.kKKKk.', 'kKKKKKk', 'kKKKKKk', '.kKKKk.', 'kKKKKKk', 'kKKKKKk', 'kKKKKKk', '.kKKKk.', '..kkk..', '...k...'], { k: '#2a1a12', K: '#6a3a22' });
+const CELLO_DAY = 40;
+const Cello = {
+  init() { return { arrived: false, arrivedDay: 0, met: false, talks: 0, listens: 0, trust: 0, askedPiece: false, toldCal: false, toldSigne: false, refused: 0, duetDay: 0, duet: false, solAsked: false, bandDay: 0, band: false, bandNights: 0, dating: false, datingDay: 0, auditionDay: 0, playedThrough: false, audition: null, toldWhy: false, cold: false }; },
+  S() { if (!G.chars.signe) G.chars.signe = this.init(); return G.chars.signe; },
+  here() { const s = this.S(); return s.arrived; },
+  // what is coming through the walls, by how long she has been here
+  stage() { const s = this.S(); const d = G.day - s.arrivedDay; return !s.arrived ? -1 : d < 5 ? 0 : d < 12 ? 1 : d < 19 ? 2 : 3; },
+  practicing() { return this.here() && G.tod > 0.42 && G.tod < 0.62; },
+  inHall() { const s = this.S(); if (!s.arrived) return false; return (G.tod >= 0.62 && G.tod < 0.9) || (G.tod > 0.1 && G.tod < 0.2); },
+  wake() {
+    const s = this.S(); const d = G.day;
+    if (!s.arrived && d >= CELLO_DAY) { s.arrived = true; s.arrivedDay = d; remember('cello_arrived'); Dlg.run([narr('A cello case in the hall, taller than a person, leaning by 410 like it is waiting to be let in. The door is open. Nobody is in it.'), narr(G.chars.nora && G.chars.nora.met ? 'Nora, going past in scrubs: "410\'s let. Girl with a cello. She said four words to Morrow and one of them was sorry."' : 'The super\'s voice on the stairs, and a second voice, low, that says "yes" and then nothing else.')]); return true; }
+    if (s.band && !s.dating && d >= s.bandDay + 5 && G.day % 3 === 0) { s.dating = true; s.datingDay = d; remember('cello_cal'); Dlg.run([narr('Early. Voices in the hall, one of them doing all the talking. Through the spyhole: Cal, at the door of 410, with a coffee in each hand and no guitar, which you have never seen.'), narr('She takes one. She does not say anything. He keeps talking. The door closes with both of them behind it, and the talking goes on, muffled, and then stops, and then the cello starts, and then, very badly, a guitar tries to keep up.')]); return true; }
+    if (s.band && d >= 80 && !s.auditionDay && !s.cold) { s.auditionDay = d + 4; remember('cello_audition'); Dlg.run([narr('A note under your door. Small square handwriting.'), narr('"The symphony has a sub list. Audition Thursday. I have not played for a room since I left. Would you sit in the room, the night before. You do not have to say anything. - S."'), narr('Signe has never written you more than one line. This is four.')]); return true; }
+    if (s.auditionDay && d === s.auditionDay - 1 && !s.playedThrough) { s.playedThrough = true; this.playThrough(); return true; }
+    if (s.auditionDay && d === s.auditionDay + 1 && s.audition === null) { s.audition = s.playedThrough && s.trust >= 3 ? 'yes' : 'no'; remember('cello_result_' + s.audition); Dlg.run(s.audition === 'yes' ? [narr('Through two walls, at seven in the morning: the third suite. All of it. Fast, and then slow, and then, near the end, a sound you have not heard from 410 before, which is somebody laughing while they play.'), narr('The note under the door says one word. "Yes." Underneath, smaller: "Thank you for the chair."')] : [narr('Quiet from 410 all morning. At noon, one line of the piece, stopped in the middle. Then nothing.'), narr('The note under your door says: "I did not go. I stood outside. I am sorry."')]); return true; }
+    return false;
+  },
+  playThrough() {
+    const s = this.S();
+    Dlg.run([narr('410. You have never been inside. A mattress on the floor, a music stand, a chair for you, one lamp. The cello is the only thing in the room that looks like it lives there.'), say('signe', "Sit. Please."), narr('She plays it through. The third suite. Twenty-two minutes. Her bow shakes at the same place it must have shaken at the audition she walked out of, and she stops, and looks at the wall, and starts the bar again, and gets past it.'),
+      say('signe', "That is the place. I stopped there. In Copenhagen. I put the bow down and I walked out and I did not play for a year."), say('signe', "I could play it for you. I do not know why."),
+      choice({ t: "Because I don't say anything.", do: () => { s.trust += 2; return [say('signe', "Yes."), narr('The nearest thing to a smile you have seen on her.')]; } },
+        { t: "You'll play it for them tomorrow.", do: () => { s.trust += 1; return [say('signe', "...Maybe."), narr('She puts the cello in the case the way you would put a person to bed.')]; } },
+        { t: "Play it again.", do: () => { s.trust += 2; return [narr('She plays it again. Twenty-two minutes. This time the bow does not shake, or you do not see it.')]; } })]);
+  },
+  // ----- talking to her (she does not, much) -----
+  menu() {
+    const s = this.S();
+    const items = [{ t: 'Talk', r: '-3 energy', do: () => this.talk() }];
+    if (s.met && s.listens >= 1 && !s.askedPiece) items.push({ t: 'Ask about the piece', do: () => this.askPiece() });
+    if (s.met && s.toldCal && !s.toldSigne) items.push({ t: 'Tell her about the busker on the corner', do: () => this.tellSigne() });
+    if (s.met && s.band) items.push({ t: 'Ask about Cal', do: () => { if (!talkEnergy(2)) return; Dlg.run([say('signe', s.dating ? fresh('signe', ["He talks enough for both of us. It is restful.", "He plays wrong on purpose so I will correct him. I know that. I correct him.", "He said the corner is ours now. I said corners are nobody's. He said that is what he meant."]) : "He plays wrong. On purpose, I think. It is interesting.")]); } });
+    items.push({ t: 'Leave', do: () => { } });
+    Menu.open(s.met ? 'Signe' : 'The woman from 410', items, { sub: this.practicing() ? 'A sign on the door: PRACTICING 4-6. SORRY.' : '' });
+  },
+  talk() {
+    const s = this.S(); if (!talkEnergy(3)) return; s.talks++; const L = [];
+    if (!s.met) { s.met = true; clearPortrait('signe'); L.push(narr('Tall, pale, a coat too thin for the city. The cello case is on her back like a second person.'), say('signe', "Signe. Four-ten. I play. I am sorry for it."), you("It's fine."), say('signe', "It is not. But thank you.")); }
+    else L.push(say('signe', fresh('signe', s.trust >= 3 ? ["...", "Yes.", "Good evening.", "The wall is thin. I know. I am sorry.", "You cough at night. I hear it. I play quieter, after.", "Denmark. Copenhagen. It rains there also. Less."] : ["...", "Good evening.", "Yes.", "The wall is thin. I am sorry."])));
+    if (s.talks === 4 && s.trust < 1) { s.trust = 1; L.push(narr('Four conversations, eleven words. She nods at the end of this one, which is new.')); }
+    Dlg.run(L);
+  },
+  askPiece() {
+    const s = this.S(); if (!talkEnergy(3)) return; s.askedPiece = true; s.trust += 1; remember('cello_piece');
+    Dlg.run([say('signe', "Bach. The third suite, in C. The prelude first, then the sarabande, then I stop, because the sarabande is where it is."), say('signe', "It is a piece for one person in a room. That is why it is played by one person in a room. Everything else is people pretending it is for them."), say('signe', "You asked. Nobody asks. They knock and say quieter."), narr('It is the most she has said in a row. She looks surprised by it, and goes in, and shuts the door, and a minute later plays the sarabande, quietly, which is an answer.')]);
+  },
+  listen() {
+    const s = this.S(); s.listens++; const st = this.stage(); if (s.listens === 1) remember('cello_listen');
+    const lines = [
+      'Scales, through two doors and Nora\'s apartment. Up, down, up. The same scale forty times, and each time the top note is a little less afraid.',
+      'A piece now. Bach, you think; something that walks. It gets to a certain place and stops and goes back and gets there again.',
+      'The same eight bars. She has played the same eight bars for a week. You know them the way you know the crack in the ceiling.',
+      'The whole thing, start to finish, for the first time. Somewhere in Nora\'s apartment a kettle stops, because Nora is listening too.'];
+    Dlg.run([narr(lines[Math.max(0, st)]), st === 3 && s.listens === 4 ? narr('You stand in the hall until it ends. So does somebody on the stairs, who leaves before you see them.') : null]);
+    if (s.listens >= 3) s.trust = Math.max(s.trust, 1);
+  },
+  // ----- Cal -----
+  tellCal() {
+    const s = this.S(); if (!talkEnergy(2)) return; s.toldCal = true; remember('cello_told_cal');
+    Dlg.run([say('busker', "A cello. On Harlan Street. A real one, with a person?"), say('busker', "Bring her down. I mean it. I'll play under it; a guitar's supposed to be under something. I've been the top of the sandwich for six years."), say('busker', "Tell her the corner's here every evening. Tell her nothing else, or she won't come; I know the type. I'm the type.")]);
+  },
+  tellSigne() {
+    const s = this.S(); if (!talkEnergy(2)) return;
+    if (s.refused === 0) { s.refused = 1; Dlg.run([say('signe', "No."), narr('That is the whole conversation. But she does not go in.')]); return; }
+    s.toldSigne = true; s.duetDay = G.day + 1 + (G.day % 2); remember('cello_told_signe');
+    Dlg.run([say('signe', "...Which corner."), you("By the pawn shop. Under the shelter."), say('signe', "I will not play. I will stand."), narr('She goes in. The sarabande, once, very fast, like a person pacing.')]);
+  },
+  duet() {
+    const s = this.S(); s.duet = true; remember('cello_duet');
+    Dlg.run([narr('Under the shelter, in the rain that has decided to be light about it: Cal, playing something slow, and beside him, on a crate from the dock, Signe, with the cello, not playing.'), narr('Then playing. Under him, the way he said. Two notes, held, and the guitar finds a place to sit on them and the whole corner changes shape.'), narr('A woman with a stroller stops. Amos, if he is anywhere, is at the edge of the light. The dock workers going home slow down without knowing why.'),
+      say('busker', "...Okay. Okay. Same time tomorrow. I'm not asking. I'm telling the corner."), say('signe', "..."), narr('She nods once. She has never nodded at anyone that you have seen.')]);
+  },
+  // ----- Sol -----
+  askSol() {
+    const s = this.S(); if (!talkEnergy(3)) return; s.solAsked = true; s.bandDay = G.day + ((5 - G.day % 7) + 7) % 7 || 7; remember('cello_sol');
+    Dlg.run([say('sol', "I heard it from the doorway. The cello, and that boy's guitar. A horn would sit under that like a floor."), say('sol', "I'm seventy-three. I've got a horn and no wind."),
+      choice({ t: "Then bring the horn and we'll see about the wind.", do: () => [say('sol', "..."), say('sol', "Friday. Under the shelter. If I don't come, I didn't come, and you don't mention it, and neither does the ledger.")] },
+        { t: "The horn's been in a window thirty years. Let it out.", do: () => [say('sol', "Thirty-one. ...Friday. If I don't come, I didn't come.")] })]);
+  },
+  bandNight() {
+    const s = this.S(); s.band = true; s.bandNights++; remember('cello_band');
+    Dlg.run([narr('Friday. Under the shelter: Cal with the guitar, Signe on the dock crate with the cello, and, at seven minutes past the hour, Sol, in a coat you have never seen him in, with a case you have.'), say('sol', "I'm not warmed up. I haven't been warmed up since 1994."), narr('He is not warmed up. The first note cracks. The second holds. By the fourth the cello has moved under it and the guitar has moved under that, and Harlan Street, for eleven minutes, has a band.'),
+      narr('Nadia comes out of the diner with a towel over her shoulder. Amos, if he is anywhere near, is on the stoop. A window opens on the fourth floor of Harlan Arms and does not close.'), say('busker', "The Harlan Street Three. I'm naming it. Nobody else is going to."), say('sol', "Nobody asked you to."), say('signe', "..."), narr('She is looking at Cal when she says nothing. Sol sees it. Sol has been reading faces across a counter for forty-one years.'),
+      { fn: () => { s.trust += 2; if (G.chars.sol) G.chars.sol.trust += 2; G.flags.buskerTips = Math.max(G.flags.buskerTips || 0, 3); } },
+      choice({ t: 'Stay and listen', do: () => { const sp = SONGS.find(x => x.id === 'three'); if (sp) Song.play(sp); } }, { t: 'Head in; the window is open', do: () => { } })]);
+  },
+  // later Fridays: the busker's menu offers the band's number
+  bandItem(items) {
+    const s = this.S(); if (!this.bandTonight() || s.bandNights < 1) return;
+    items.splice(1, 0, { t: 'Listen to the Three', r: '-3 energy', do: () => { if (!talkEnergy(3)) return; s.bandNights++; const sp = SONGS.find(x => x.id === 'three'); Song.play(sp); } });
+  },
+  update() {
+    const s = this.S();
+    if (s.toldSigne && !s.duet && G.day >= s.duetDay && G.scene === 'street' && G.state === 'play' && G.tod > 0.6 && G.tod < 0.92 && Math.abs(G.px - STREET.spots.busker) < 120 && !Dlg.active) { this.duet(); return; }
+    if (s.solAsked && !s.band && G.day >= s.bandDay && G.day % 7 === 5 && G.scene === 'street' && G.state === 'play' && G.tod > 0.6 && G.tod < 0.92 && Math.abs(G.px - STREET.spots.busker) < 120 && !Dlg.active) { this.bandNight(); return; }
+  },
+  bandTonight() { const s = this.S(); return s.band && G.day % 7 === 5 && G.tod > 0.6 && G.tod < 0.92; },
+  // Cal at the door of 410, evenings, once they are a thing
+  calInHall() {
+    const s = this.S(); if (!talkEnergy(1)) return;
+    Dlg.run([say('busker', fresh('busker', ["Two coffees. One of them's mine. Don't look at me like that.", "She's going to play me the sarabande. I don't know what a sarabande is. I've been told I'll know.", "Sol says we're a band. I say we're three people and a crate. She says nothing, which is a yes.", "You know she reads? Danish. Books this thick. I bring the coffee and shut up. It's a system."]))]);
+  },
+  solStreet() {
+    if (!talkEnergy(2)) return;
+    Dlg.run([say('sol', fresh('sol', ["Forty-one years behind a counter and I'm standing in the rain with a horn. Don't say anything.", "The lip goes first. Then the wind. Then you find out neither of them went as far as you thought.", "She counts us in with her eyebrows. I've been counted in by worse.", "The shop's closed Fridays now. Sign in the window says so. Best sign I ever made."]))]);
+  },
+  // Signe on the corner, band nights and some evenings besides
+  streetTalk() {
+    const s = this.S(); if (!talkEnergy(2)) return;
+    Dlg.run([say('signe', fresh('signe', this.bandTonight() ? ["Friday.", "He is late. He is always late. The trumpet is on time.", "Sit. You do not have to sit. But you can.", "The crate is from the dock. I did not steal it. Amos said I could."] : ["...", "He is buying strings. He buys the wrong ones. I let him.", "The corner is dry, under here. That is all. That is why.", "Go inside. It is cold. I am used to it; you are not."]))]);
+  },
+  endingLines() {
+    const s = this.S(); const out = [];
+    if (!s.arrived) return out;
+    if (!s.met) out.push({ name: 'The woman in 410', line: 'A cello through two walls, every evening from four to six. You never learned her name. You knew the piece.', bad: true });
+    else if (s.audition === 'yes') out.push({ name: 'Signe Holm', line: 'Cellist, 410. She played it through for you the night before, and then for them. The symphony sub list has a Danish name on it now. ' + (s.dating ? 'Cal comes up the stairs with two coffees and no guitar.' : '') });
+    else if (s.band) out.push({ name: 'Signe', line: 'She said eleven words to you in a month and then played under a guitar on a corner in the rain. ' + (s.audition === 'no' ? 'She stood outside the audition and did not go in. She will, next year; Cal has already said so, to everyone.' : s.dating ? 'Cal has a key to 410. Nobody has ever had a key to 410.' : 'The corner is hers now too.') });
+    else if (s.listens >= 3) out.push({ name: 'Signe', line: 'The girl in 410 with the cello. You stood in the hall and listened, which is the only thing she ever asked of anybody.' });
+    else out.push({ name: 'Signe', line: 'Four words in the hall, and a nod. She played the third suite at four every day and you were mostly out.', bad: s.talks < 2 });
+    if (s.band) out.push({ name: 'The Harlan Street Three', line: `Sol on a horn he said he had no wind for, Cal on the guitar, Signe on a crate from the dock. Fridays under the shelter, ${s.bandNights} of them. The window on the fourth floor of Harlan Arms stays open for it.` });
+    return out;
+  }
+};
+
+// the band's number: cello underneath, the horn on top, no words
+SONGS.push({
+  id: 'three', title: 'Under the Shelter', bpm: 92, bar: 4, key: 48, unlock: () => Cello.S().band && Cello.bandTonight(), band: true,
+  chords: [[0, 'M'], [5, 'M'], [9, 'm'], [7, 'M'], [0, 'M'], [5, 'M'], [2, 'm'], [7, 'M'], [9, 'm'], [4, 'm'], [5, 'M'], [7, 'M'], [0, 'M'], [0, 'M']],
+  melody: [[[7, 2], [4, 1], [5, 1]], [[7, 3], [9, 1]], [[12, 2], [9, 1], [7, 1]], [[7, 3], [null, 1]], [[4, 1], [7, 1], [12, 2]], [[11, 2], [9, 1], [7, 1]], [[5, 2], [7, 1], [9, 1]], [[7, 3], [null, 1]],
+    [[12, 1], [12, 1], [14, 1], [16, 1]], [[14, 2], [12, 2]], [[9, 1], [12, 1], [14, 1], [12, 1]], [[11, 2], [7, 2]], [[12, 4]], [[null, 4]]],
+  lyrics: [[0, '(the cello, under everything)'], [16, '(the horn, cracking once and then not)'], [32, '(nobody sings; nobody needs to)']],
+  outro: 'Eleven minutes. When it ends nobody claps, because the street does not know that it is allowed to, and then Nadia does, once, with the towel still over her shoulder, and then it is allowed.',
+});
+{
+  // instruments for the band: sustained cello under the chords, a horn on the melody's long notes
+  const sp = Song.play; Song.play = function (spec) {
+    sp.call(this, spec); if (!spec.band || !Audio._unlocked || Audio.muted) return;
+    const c = Audio.ctx; const t0 = this.startAt; const beat = this.beatLen;
+    const bow = (m, t, len, vol, type, cutoff) => { const o = c.createOscillator(), g = c.createGain(), fl = c.createBiquadFilter(); o.type = type; o.frequency.value = midiHz(m); fl.type = 'lowpass'; fl.frequency.value = cutoff; g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.12); g.gain.setValueAtTime(vol, t + len * 0.8); g.gain.exponentialRampToValueAtTime(0.0001, t + len); o.connect(fl); fl.connect(g); g.connect(Audio.master); o.start(t); o.stop(t + len + 0.05); this.nodes.push(o, g); };
+    spec.chords.forEach((ch, bi) => { const root = spec.key + ch[0]; const tb = t0 + bi * spec.bar * beat; bow(root - 12, tb, beat * spec.bar, 0.05, 'sawtooth', 500); bow(root - 5, tb + beat * 2, beat * 2, 0.03, 'sawtooth', 600); });
+    let tm = t0; spec.melody.forEach((bar, bi) => { bar.forEach(([n, b]) => { if (n !== null && b >= 2 && bi >= 2) bow(spec.key + 24 + n, tm + 0.03, b * beat * 0.9, bi === 2 ? 0.02 : 0.035, 'square', 1800); tm += b * beat; }); });
+  };
+  // hooks
+  const nr = { id: 'signe', re: /\bSigne(?: Holm)?('s)?\b/g, sub: 'the woman in 410' }; NAME_RULES.push(nr);
+  const nk = nameKnown; nameKnown = function (id) { if (id === 'signe') return !!(G.chars.signe && G.chars.signe.met); return nk(id); };
+  const dn = displayName; displayName = function (id, name) { if (id === 'signe' && !nameKnown('signe')) return 'Woman'; return dn(id, name); };
+  const bm2 = Minor.busker; Minor.busker = function () { bm2.call(this); const s = Cello.S(); if (Menu.active) Cello.bandItem(Menu.items); if (Menu.active && s.met && s.listens >= 2 && !s.toldCal) Menu.items.splice(1, 0, { t: 'Tell him about the cellist in 410', do: () => Cello.tellCal() }); };
+  const pm2 = Pawn.menu; Pawn.menu = function () { pm2.call(this); const s = Cello.S(); if (Menu.active && s.duet && !s.solAsked && G.chars.sol.met && G.chars.sol.stage >= 2 && !G.chars.sol.cold) Menu.items.splice(Menu.items.length - 1, 0, { t: 'Ask him to bring the horn', do: () => Cello.askSol() }); };
+  const bel6 = buildEndingList; buildEndingList = function () { const out = bel6(); const cl = Cello.endingLines(); for (const x of cl) out.splice(Math.min(6, out.length), 0, x); return out; };
+  // Nora is the wall between
+  if (FRESH.nora) FRESH.nora.push(L_("The cello. It comes through my wall and out yours. I'm the middle of a sandwich and I have never minded anything less.", () => Cello.S().arrived), L_("410 said four words to me on the stairs. Three were 'sorry.' I told her to stop; she said sorry.", () => Cello.S().arrived));
+  if (FRESH.busker) FRESH.busker.push(L_("She corrected my fingering. Without talking. She just moved my hand. I've been thinking about it for three days.", () => Cello.S().duet), L_("Sol's wind came back. He says it didn't. Ask the fourth floor window.", () => Cello.S().band));
+  if (FRESH.sol) FRESH.sol.push(L_("Friday. I've got the horn out of the case on Thursdays now. It sits on the counter. Customers ask. I say it's not for sale, which is a sentence I've never once said in here.", () => Cello.S().band));
+}
+{
+  INTERIORS.hall.doors.push({ x: 168, w: 20, to: null, label: '410', knock410: true });
+  const hdC = hallDoor; hallDoor = function (d) {
+    if (d && d.knock410) {
+      if (!Cello.here()) { Dlg.run([narr(G.day < 20 ? '410. Empty since spring. A strip of masking tape over the bell, same as the one that was on 411.' : '410. Empty. Somebody has scraped the tape off the bell; nobody has replaced it with a name.')]); return; }
+      if (Cello.inHall()) { Cello.menu(); return; }
+      if (Cello.practicing()) { Dlg.run([narr('A sign on the door, block capitals in a careful foreign hand: PRACTICING 4-6. SORRY. Through the door, the piece, going on without you.')]); return; }
+      Dlg.run([narr(Cello.S().met ? 'No answer. Signe keeps hours the way the building keeps heat: not reliably.' : 'No answer from 410. A cello case, a music stand, a shadow under the door that does not move.')]); return;
+    }
+    return hdC(d);
+  };
+}
+
 // ---- 10_game.js ----
 // ============================================================
 // game: state, loop, interactions, shop, sleep, ending, save
@@ -6392,7 +6568,7 @@ function freshState() {
     version: SAVE_VERSION, state: 'play', day: 1, money: 12, hunger: 62, energy: 100, maxEnergy: 100, tod: 0,
     inv: { bread: 1, soup: 0, rice: 0, coat: 0, radioParts: 0, signParts: 0, chess: 0, bird: 0, drawing: 0, thermos: 0, tools: 0, textbook: 0, collar: 0, ruthWatch: 0, chessClock: 0, strings: 0, checkers: 0, nurseShoes: 0, amosHeater: 0, gloves: 0, frame: 0, busPass: 0, fish: 0, letter: 0, veg: 0, type: 0, cards: 0, trumpet: 0, card: 0 },
     outfit: null, wardrobe: {},
-    flags: {}, bequests: {}, memories: [], chars: { amos: Amos.init(), mei: Mei.init(), walter: Walter.init(), nadia: Nadia.init(), nora: Nora.init(), theo: Theo.init(), sol: Pawn.init(), emmett: Emmett.init() },
+    flags: {}, bequests: {}, memories: [], chars: { amos: Amos.init(), mei: Mei.init(), walter: Walter.init(), nadia: Nadia.init(), nora: Nora.init(), theo: Theo.init(), sol: Pawn.init(), emmett: Emmett.init(), signe: Cello.init() },
     scene: 'apartment', px: 330, facing: -1, walking: false, frame: 0, camX: 0, rain: 0.8, wind: 0.2, weatherSeed: irnd(1, 99999),
     starveDays: 0, ateToday: false, walkers: [], dogX: 0, coughT: 600, stun: 0, dockShifts: 0, deliveries: 0, jobsToday: 0, hideHud: false,
     pendingStreet: null, pendingDiner: null, dayCard: null, dead: false, t: 0, elevatorBroken: false, pills: 30, lastPill: 1, pillPenalty: 0, phone: Phone.init(), pass: Passing.init(), house: House.init(), garden: Garden.init(), beats: {}, rent: Rent.init(), casino: Casino.init(), seen: {}, busT: 0, busDir: 'out', busArrived: false,
@@ -6517,6 +6693,12 @@ function buildEntities() {
   // Nora (411)
   const nw = Nora.where();
   if (nw && nw.scene === sc) add({ id: 'nora', x: nw.x, y: nw.sit ? feet : (sc === 'diner' ? feet : feet), spec: nw.spec, dir: nw.x > G.px ? -1 : 1, sit: !!nw.sit, range: 40, on: () => (sc === 'hall' ? Nora.menu() : Nora.cameoTalk(sc)), label: G.chars.nora.met ? 'Nora' : 'Neighbor', bubble: (sc === 'hall' && G.day <= 9 && !G.chars.nora.boxes) ? 'exclaim' : null });
+  if (sc === 'hall') {
+    if (Cello.here() && Cello.inHall()) { const cs = Cello.S(); add({ id: 'signe', x: 200, y: feet, spec: 'signe', dir: G.px < 200 ? -1 : 1, range: 30, on: () => Cello.menu(), label: cs.met ? 'Signe' : 'Woman' }); }
+    if (Cello.here() && Cello.S().dating && G.day % 3 === 0 && G.tod > 0.62 && G.tod < 0.9) add({ id: 'calHall', x: 150, y: feet, spec: 'busker', dir: 1, range: 30, on: () => Cello.calInHall(), label: 'Cal' });
+  }
+  if (sc === 'street' && Cello.bandTonight()) add({ id: 'solStreet', x: STREET.spots.busker - 24, y: feet, spec: 'sol', dir: 1, range: 30, on: () => Cello.solStreet(), label: 'Sol' });
+  if (sc === 'street' && Cello.here() && (Cello.bandTonight() || (Cello.S().dating && G.tod > 0.6 && G.tod < 0.92 && G.day % 2 === 1))) add({ id: 'signeStreet', x: STREET.spots.busker + 22, y: feet, spec: 'signe', dir: -1, range: 30, on: () => Cello.streetTalk(), label: 'Signe' });
   // dog follower
   if (f.dogFollows && (sc === 'street' || sc === 'apartment' || sc === 'hall' || sc === 'lane' || sc === 'house' || sc === 'garden')) add({ id: 'dogF', x: G.dogX, y: feet, sprite: Math.abs(G.dogX - G.px) > 26 ? 'dog' : 'dogSit', dir: G.dogX > G.px ? -1 : 1, on: () => Minor.dog(), label: 'Dog' });
   // ending visitors
@@ -6537,6 +6719,7 @@ function nearest() {
     else if (Math.abs(G.px - sp.sink) < 16 && bd > 14) best = { kind: 'note', label: G.flags.noteRead ? 'Post-it' : 'A note' };
   }
   if (G.scene === 'basement' && Math.abs(G.px - INTERIORS.basement.spots.chair) < 14 && bd > 14) best = { kind: 'chair', label: 'The chair' };
+  if (G.scene === 'hall' && Cello.practicing() && Math.abs(G.px - 178) < 22 && (!best || best.kind === 'door')) best = { kind: 'listen410', label: 'Listen at 410' };
   if (G.scene === 'house') {
     const sp = INTERIORS.house.spots; const mine = G.flags.house === 'mine';
     if (Math.abs(G.px - sp.bed) < 30 && bd > 20) best = mine ? { kind: 'bed', label: 'Sleep' } : (House.walterHere() && G.tod > 0.6 ? { kind: 'couch', label: 'The couch' } : { kind: 'clocks', label: 'The daybed' });
@@ -6559,6 +6742,7 @@ function nearest() {
 function interact(n) {
   if (!n) return;
   if (n.kind === 'ent') { n.e.on(); return; }
+  if (n.kind === 'listen410') { Cello.listen(); return; }
   if (n.kind === 'door') { if (n.d.bus) Bus.door(); else if (n.d.to === 'house') House.enter(); else if (n.d.to === 'casino' && G.scene === 'street') Casino.door(); else if (n.d.to === 'garden' && !Garden.S().unlocked) Dlg.run([narr(G.day < 6 ? 'A chain-link gate across the alley, padlocked. Weeds behind it to the fence, and the backs of buildings.' : 'Padlocked. Through the wire: weeds, a shed, a hand-painted sign you cannot read from here. Somebody kept this once.')]); else if (G.scene === 'hall') hallDoor(n.d); else if (n.d.to === 'hall' && G.scene === 'street') enterBuilding(); else goScene(n.d.to, n.d.at); return; }
   if (n.kind === 'lakebus') { Bus.back(); return; }
   if (n.kind === 'fish') { if (G.energy < 25) { UI.toast('Too tired to hold a rod.', '#8ab0d8'); return; } Fishing.start(); return; }
@@ -6856,6 +7040,7 @@ function wakeEvents() {
   if (Rent.wake()) return;
   if (House.wake()) return;
   if (Beats.wake()) return;
+  if (Cello.wake()) return;
   { const j = Jo.J(); if (j.coming && !j.visited && d >= j.visitDay && !j.stopped) { Jo.visit(); return; } }
   if (d === 2 && !G.flags.w2) { G.flags.w2 = true; Dlg.run([narr("Lin's Market sells food. Nadia's diner and the freight dock pay cash for work. Everything costs energy. When you're out, you sleep, and the number goes down.")]); }
   if (d === 4 && !G.flags.w4) { G.flags.w4 = true; Dlg.run([narr("A flyer under your door: LIN'S MARKET - DELIVERY RUNNERS WANTED - CASH SAME DAY. Ask at the counter.")]); G.flags.deliveryAvailable = true; }
@@ -6894,6 +7079,7 @@ const Ending = {
         if (b.proxy === 'jo' && !j.visited && !j.stopped) { V.push({ x: 250, y: feet, spec: 'jo', dir: 1, id: 'v_jo' }); lines.push(say('jo', "Nora called. Four in the morning; she said she'd call and she called. I took the first train. I've got the form. I know what it says. I'm not going to say anything about the room.")); } }
       if (f.dogFollows) { V.push({ x: 286, y: feet + 8, sprite: 'dogSit', dir: -1, id: 'v_dog' }); lines.push(narr('The dog is on the bed. It is not allowed on the bed. Nobody says anything.')); }
       if (G.inv.chess) lines.push(narr("Walter's chess set is on the table. Knight first. You never moved anything. You did not need to."));
+      { const cs = G.chars.signe; if (cs && cs.arrived && cs.trust >= 2 && G.flags.house !== 'mine') lines.push(narr(cs.band ? 'Down the hall, through two walls, a cello. The third suite, all the way through, and under the window a guitar and a trumpet finding it. They are playing it for the building. They are playing it for you.' : 'Down the hall, through two walls, a cello. The third suite. She plays it all the way through.')); }
       if (f.buskerTips >= 3) lines.push(narr('Somewhere below the window, a guitar. A song about rain. He is playing it badly and on purpose.'));
       if (V.length === 0) lines.push(narr('Nobody comes. You did not expect anybody. The room is very quiet.'), narr('Through the wall, a kettle. Down on the street, somebody laughing at something. The building goes on around you.'));
       else lines.push(narr(V.length >= 3 ? 'The room is full. It is a small room and it is full.' : 'It is a small room. Somebody is in it.'));
@@ -6973,7 +7159,7 @@ function playUpdate() {
     // cough
     if (G.day >= 20) { G.coughT -= (1 + (G.day - 20) / 40) * (G.day - (G.lastPill || 1) >= 3 ? 1.8 : 1) * (G.flags.own_umbrella && G.rain > 0.3 ? 0.6 : 1); if (G.coughT <= 0) { G.coughT = 500 + Math.random() * 500; G.stun = 40; G.walking = false; Audio.tone(120, 0.15, 'sawtooth', 0.03, 0.6); } }
   }
-  Phone.update(); Passing.update(); Beats.update();
+  Phone.update(); Passing.update(); Beats.update(); Cello.update();
   // interactions
   const n = nearest(); G.near = n;
   if (Input.hit('act') || (Input.hit('up') && n && n.kind === 'door')) { if (n && G.stun === 0) { interact(n); } }
@@ -7050,7 +7236,7 @@ World.static || buildStreetStatic(); paintLampPosts(World.static.getContext('2d'
 titleInit();
 requestAnimationFrame(loop);
 // debug hooks
-window.__99 = { get G() { return G; }, set G(v) { G = v; }, sleep, Amos, Mei, Walter, Nadia, Nora, Elevator, Ladder, Doctor, MG, readNote, Theo, VP, Pawn, Gifts, OUTFITS, PAWN_ITEMS, Dlg, Menu, startMinigame, buildEndingList, save, load, newGame, goScene, Ending, refresh: buildEntities, titleInit, Emmett, Bus, Fishing, Passengers, LAKE, busDay, Phone, Jo, Passing, House, LANE, homeScene, Song, SONGS, Garden, GARDEN, Beats, CEMETERY, Rent, Casino, best7, rank5, newDeck };
+window.__99 = { get G() { return G; }, set G(v) { G = v; }, sleep, Amos, Mei, Walter, Nadia, Nora, Elevator, Ladder, Doctor, MG, readNote, Theo, VP, Pawn, Gifts, OUTFITS, PAWN_ITEMS, Dlg, Menu, startMinigame, buildEndingList, save, load, newGame, goScene, Ending, refresh: buildEntities, titleInit, Emmett, Bus, Fishing, Passengers, LAKE, busDay, Phone, Jo, Passing, House, LANE, homeScene, Song, SONGS, Garden, GARDEN, Beats, CEMETERY, Rent, Casino, best7, rank5, newDeck, Cello, gateNames, nameKnown };
 
 })();
 </script>
