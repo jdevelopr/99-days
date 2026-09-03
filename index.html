@@ -2119,9 +2119,9 @@ const UI = {
     if (G.hideHud) return;
     const PW = 150;                                                   // hud panel width
     this.panel(g, 4, 4, PW, 40, 0.7);
-    const dayStr = `DAY ${G.day}`; drawText(g, dayStr, 10, 9, '#f0ead8');
-    const wdX = 10 + textWidth(dayStr) + 5; const wd = weekdayName(G.day); drawText(g, wd, wdX, 9, G.day % 7 === 0 ? '#c8b070' : '#9aa4b8');
-    drawText(g, `${99 - G.day} left`, wdX + textWidth(wd) + 6, 9, '#8a92a4');
+    const x = CAL.dateOf(G.day); const wd = CAL.WDS[x.wd]; drawText(g, wd, 10, 9, CAL.dockClosed(G.day) ? '#c8b070' : '#f0ead8');
+    drawText(g, `${CAL.SHORT[x.m]} ${x.d}`, 10 + textWidth(wd) + 5, 9, '#9aa4b8');
+    { const wk = G.weather === 'snow' ? '*' : G.weather === 'clear' ? 'o' : ''; if (wk) drawText(g, wk, 10 + textWidth(wd) + 5 + textWidth(`${CAL.SHORT[x.m]} ${x.d}`) + 5, 9, wk === '*' ? '#e8f0ff' : '#e8c84a'); }
     drawText(g, `$${G.money}`, PW - 2, 9, '#e8c84a', { align: 'right' });
     const BW = PW - 42;                                                // bar width
     drawText(g, 'FOOD', 10, 21, '#8a92a4'); this.bar(g, 38, 22, BW, 5, G.hunger / 100, G.hunger < 25 ? '#d84a4a' : '#c8843a');
@@ -7171,6 +7171,646 @@ Song.solo = function (spec, t0, beat) {
   };
 }
 
+// ---- 09x_story_calendar.js ----
+// ============================================================
+// The calendar: day 1 is Monday, December 27. Winter into spring. Snow some days, rain some days, sun some days.
+// ============================================================
+const CAL = {
+  MONTHS: ['December', 'January', 'February', 'March', 'April'], LEN: [31, 31, 28, 31, 30], START: 27,
+  SHORT: ['DEC', 'JAN', 'FEB', 'MAR', 'APR'], WD: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], WDS: ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'],
+  dateOf(day) { let m = 0, d = this.START + day - 1; while (d > this.LEN[m]) { d -= this.LEN[m]; m++; } return { m, d, wd: day % 7 }; },
+  dayOf(m, d) { let day = 1 - this.START + 1; for (let i = 0; i < m; i++) day += this.LEN[i]; return day + d - 1; },
+  long(day) { const x = this.dateOf(day); return `${this.WD[x.wd]}, ${this.MONTHS[x.m]} ${x.d}`; },
+  short(day) { const x = this.dateOf(day); return `${this.WDS[x.wd]} ${this.SHORT[x.m]} ${x.d}`; },
+  md(day) { const x = this.dateOf(day); return `${this.MONTHS[x.m]} ${x.d}`; },
+  // the days that are somebody's
+  HOLIDAYS: { 6: "New Year's Day", 22: 'Martin Luther King Day', 57: "Presidents' Day" },
+  EVENTS: { 5: "New Year's Eve", 6: "New Year's Day", 10: 'Twelfth Night', 22: 'Martin Luther King Day', 38: 'Groundhog Day', 43: 'Your birthday', 50: "Valentine's Day", 57: "Presidents' Day", 81: "St. Patrick's Day", 84: 'First day of spring', 91: 'The first Sunday of spring', 96: "April Fools' Day" },
+  holiday(day) { return this.HOLIDAYS[day] || null; },
+  event(day) { return this.EVENTS[day] || null; },
+  weekend(day) { return day % 7 === 0 || day % 7 === 6; },
+  dockClosed(day) { return this.weekend(day) || !!this.HOLIDAYS[day]; },
+  closedWhy(day) { return this.HOLIDAYS[day] ? this.HOLIDAYS[day] : day % 7 === 0 ? 'Sunday' : 'Saturday'; },
+};
+// the weekday name the rest of the game already uses
+weekdayName = function (day) { return CAL.WDS[day % 7]; };
+
+// ---------- weather ----------
+const Weather = {
+  // kind for a day: snow | sleet | rain | grey | clear
+  kind(day) {
+    const R = seeded(G.weatherSeed + day * 131); const r = R();
+    const forced = { 1: 'snow', 5: 'clear', 6: 'grey', 10: 'clear', 22: 'snow', 43: 'rain', 50: 'snow', 76: 'snow', 84: 'clear', 91: 'clear', 96: 'rain', 99: 'clear' };
+    if (forced[day]) return forced[day];
+    const kindness = Math.min(0.12, (G.memories ? G.memories.length : 0) * 0.004);
+    let P;
+    if (day < 36) P = { snow: 0.38, sleet: 0.10, rain: 0.14, grey: 0.22, clear: 0.16 };
+    else if (day < 64) P = { snow: 0.28, sleet: 0.10, rain: 0.24, grey: 0.16, clear: 0.22 };
+    else if (day < 84) P = { snow: 0.10, sleet: 0.06, rain: 0.40, grey: 0.16, clear: 0.28 };
+    else P = { snow: 0, sleet: 0, rain: 0.38, grey: 0.14, clear: 0.48 };
+    P.clear += kindness; P.snow = Math.max(0, P.snow - kindness / 2); P.rain = Math.max(0, P.rain - kindness / 2);
+    let acc = 0; for (const k of ['snow', 'sleet', 'rain', 'grey', 'clear']) { acc += P[k]; if (r < acc) return k; }
+    return 'clear';
+  },
+  label(kind) { return { snow: 'Snow', sleet: 'Sleet', rain: 'Rain', grey: 'Overcast', clear: 'Clear' }[kind] || ''; },
+  // called when the day changes (and at new game)
+  roll() {
+    const R = seeded(G.weatherSeed + G.day * 131 + 7); R();
+    const k = this.kind(G.day); G.weather = k;
+    G.rain = k === 'rain' ? 0.45 + R() * 0.55 : k === 'sleet' ? 0.2 + R() * 0.25 : 0;
+    G.snowing = k === 'snow' ? 0.5 + R() * 0.5 : k === 'sleet' ? 0.3 : 0;
+    if (G.day === 1) { G.rain = 0; G.snowing = 0.8; }
+    G.wind = R() * 0.8;
+    G.elevatorBroken = G.day >= 3 && R() < 0.22;
+    // the ground: what is on it
+    if (G.snow === undefined) G.snow = 0;
+    if (G.day === 1) G.snow = 0.55;
+    else if (k === 'snow') G.snow = Math.min(1, G.snow + 0.3);
+    else if (k === 'sleet') G.snow = Math.min(1, G.snow + 0.05);
+    else if (k === 'rain') G.snow = Math.max(0, G.snow - (G.day < 64 ? 0.18 : 0.3));
+    else if (k === 'grey') G.snow = Math.max(0, G.snow - (G.day < 64 ? 0.04 : 0.1));
+    else G.snow = Math.max(0, G.snow - (G.day < 64 ? 0.08 : 0.2));
+    if (G.day >= 84) G.snow = 0;
+    G.cold = G.day < 70 ? k !== 'clear' || G.day < 40 : k === 'snow' || k === 'sleet';
+    // snowmen: the kids build them on snow days, and the sun takes them
+    G.snowmen = G.snowmen || [];
+    if (k === 'snow' && G.snow >= 0.3 && G.day >= 2) { for (const x of [1985, 610]) if (!G.snowmen.some(s => s.x === x)) G.snowmen.push({ x, built: G.day, hat: R() < 0.5 }); }
+    G.snowmen = G.snowmen.filter(s => G.snow > 0.12 && G.day - s.built < 12);
+    G.prints = [];
+  }
+};
+rollWeather = function () { Weather.roll(); };
+
+// ---------- the days that are somebody's: mornings, and one night ----------
+const Season = {
+  S() { if (!G.season) G.season = { nye: false, lights: false, lightsSeen: false, cake: false, card: null, spring: false, dinner: false }; return G.season; },
+  wake() {
+    const s = this.S(); const d = G.day; const c = G.chars;
+    if (d === 5) { Dlg.run([narr("December 31st. The last day of the year, which the street treats like the last day of anything: Lin's has a sign up that says OPEN LATE, and Nadia has a sign up that says OPEN LATER."), narr('At midnight there are fireworks over the river, Mrs. Ortega says, if the rain lets them. You could be at the railing for it.')]); return true; }
+    if (d === 6) { Dlg.run([narr(`January 1st. ${s.nye ? 'The fireworks are still in your eyes a little.' : 'You heard the fireworks from the bed and did not get up, which is a thing you have done every year and will not do again.'} The dock is closed; the street is very quiet, and the few people on it are walking carefully.`), narr(c.walter.met ? 'Walter, on the bench, with a paper cup that is not coffee: "Happy new year. Ruth used to say it to the bus. I say it to the bus."' : 'Somebody has left a paper hat on the bench under the bus sign.')]); return true; }
+    if (d === 10 && !s.lights) { Dlg.run([narr('January 5th. Twelfth Night; the lights come down today, Mrs. Ortega says, or the year goes badly. She is on the sidewalk with a stepladder and the boy from the diner, and neither of them can reach.')]); return true; }
+    if (d === 11 && !s.lights) { s.lights = true; Dlg.run([narr('The lights are gone from the street. Mrs. Ortega and the boy did it without you, in the dark, and there is a box on the stoop with the string spilling out of it like something that lost.')]); return true; }
+    if (d === 22) { Dlg.run([narr("Martin Luther King Day. The dock is closed and the clinic is closed and Birdie, last night, played the whole speech, and then said nothing for the length of it again, which she has never done."), narr('A day with nothing in it. The rarest kind.')]); return true; }
+    if (d === 38) { Dlg.run([narr('February 2nd. Groundhog Day. Cal, on the corner, has been saying "six more weeks" to everybody since seven. Nobody has asked him six more weeks of what.')]); return true; }
+    if (d === 43) { Dlg.run([narr("February 7th. You did not tell anybody. You did not write it on the calendar. The pills do not know and the rain does not know."), narr(c.nadia.met ? 'There is a note under the door in a child\'s handwriting: "MOM SAYS COME TO THE DINER TODAY. DON\'T ASK WHY. - SAM." Nadia knows. Nadia knows everything; it is on the form the first time you ate there and she read the form.' : "Somebody's birthday. Yours. It goes on being yours for about an hour and then it is a Thursday.")]); return true; }
+    if (d === 50) { Dlg.run([narr("February 14th. Nadia's window has a heart in it cut out of a pie box. Lin's has a rack of cards by the register that Mei has hand-lettered over, because the printed ones were, in her words, cowardly."), narr('You could buy one. You could give it to somebody. That is the whole holiday and it is enough.')]); return true; }
+    if (d === 57) { Dlg.run([narr("Presidents' Day. The dock is closed, the bank is closed, and Sol has a sign in the window that says OPEN, BECAUSE WHY WOULDN'T I BE.")]); return true; }
+    if (d === 81) { Dlg.run([narr("March 17th. Nadia's pie is green and she will not say what makes it green. Cal is playing something that is not Irish and saying it is.")]); return true; }
+    if (d === 84 && !s.spring) { s.spring = true; G.snow = 0; remember('spring'); Dlg.run([narr('March 20th. The first day of spring, and the street has taken it literally: the last of the snow went in the night, and the sidewalk is a sidewalk again, and the puddles are water.'), narr(c.signe && c.signe.arrived ? 'From 410, through an open window for the first time, the cello. She is playing it to the street. The street has stopped to listen, some of it.' : 'Somebody on the fourth floor has opened a window for the first time since December. It was you.')]); return true; }
+    if (d === 91) { Dlg.run([narr("Sunday. The first Sunday of spring. Mrs. Ortega has the kitchen going since six; you can smell it on the stairs. Everybody on the street is invited, she says, which she says every Sunday, and means today.")]); return true; }
+    if (d === 96) { Dlg.run([narr("April 1st. Cal has told four people the bus is running again. Two of them believed him. Walter would have been the third.")]); return true; }
+    return false;
+  },
+  // New Year's Eve: midnight at the railing
+  update() {
+    const s = this.S();
+    if (G.day === 5 && !s.nye && G.scene === 'street' && G.state === 'play' && G.tod > 0.8 && G.px > 2140 && !Dlg.active) { s.nye = true; G.fireworks = 900; remember('nye_fireworks'); Audio.tone(80, 0.6, 'sine', 0.06); Dlg.run([narr('Midnight, or near enough that the street decides it is. Over the river, from somewhere on the far bank, the first one goes up, and the second, and the water throws them back doubled.'), narr(pick(['Somebody behind you counts down from ten and gets to four and forgets the rest, and everybody laughs, and the year turns over anyway.', 'A woman you do not know puts a paper cup in your hand. It is not coffee. You drink it.'])), narr(G.chars.amos.met && !G.chars.amos.dead ? 'Amos, on the stoop, three hundred feet back, with his hands in his armpits, looking up. He sees you see him. He nods, once, at the sky, like it was his idea.' : 'You are the only one at the railing who came alone, and for four minutes it does not matter at all.')]); }
+  },
+  // the lights, and helping with them
+  lightsUp() { return G.day <= 10 && !this.S().lights; },
+  helpItem() {
+    const s = this.S(); if (G.day !== 10 || s.lights) return null;
+    return { t: 'Help take the lights down', r: '-6 energy', do: () => { if (G.energy < 6) { UI.toast('Not enough in you for a ladder.', '#8ab0d8'); return; } useEnergy(6); s.lights = true; G.flags.grannyHelped = (G.flags.grannyHelped || 0) + 1; remember('lights_down'); Dlg.run([say('granny', "You. Up the ladder. I'm seventy-eight and the boy's nine and between us that's one person who can reach."), narr('You unhook the string from the fire escape one bulb at a time, and hand it down to Sam, who winds it around his elbow the way he has seen somebody do. The awning at Lin\'s. The lamp post. The window at Sol\'s, where Sol holds the ladder and says nothing and does not need to.'), say('granny', "There. Now the year can start. Go inside; you're blue."), narr("Twelfth Night. The street is darker and looks, for the first time, like January.")]); } };
+  },
+  // a card, and who it goes to
+  cardItem(id, line) {
+    const s = this.S(); if (!G.inv.vcard || s.card) return null;
+    return { t: 'Give them the card', do: () => { G.inv.vcard = 0; s.card = id; remember('card_' + id); if (G.chars[id] && typeof G.chars[id].trust === 'number') G.chars[id].trust += 2; Dlg.run([narr("Mei's lettering on the front, which says nothing about love and everything about it. Inside, your handwriting, which is worse."), say(id, line)]); } };
+  },
+  endingLines() {
+    const s = this.S(); const out = [];
+    if (s.card) out.push({ name: "February 14th", line: `A card from Lin's, hand-lettered by Mei, given to ${Home.photoName(s.card).split(' ')[0]}. ${s.card === 'nora' ? 'It is on the refrigerator in 411.' : s.card === 'signe' ? 'It is on the music stand in 410.' : s.card === 'birdie' ? 'She read it on air. Not the inside. The front.' : 'It is somewhere it was kept.'}` });
+    if (s.nye) out.push({ name: "New Year's Eve", line: 'Fireworks over the river, from the railing, with a paper cup. The year turned over and you were outside for it.' });
+    return out;
+  }
+};
+{
+  // mornings, in order: the calendar first, then everybody else
+  const weS = wakeEvents; wakeEvents = function () { if (Season.wake()) return; weS.apply(this, arguments); };
+  const puS = playUpdate; playUpdate = function () { puS.apply(this, arguments); Season.update(); };
+  // the dock keeps hours
+  const goS = goScene; goScene = function (to, at) {
+    if (to === 'dock' && G.scene === 'street' && CAL.dockClosed(G.day)) { Dlg.run([narr(`The roll-up doors are down and the chain is on. A sign on the middle one, stencil on cardboard: CLOSED SAT-SUN & HOLIDAYS. ${CAL.closedWhy(G.day)}.`), narr(G.flags.vp ? 'Even vice presidents, it turns out.' : G.chars.amos.job ? 'Amos has the day too. He will not know what to do with it either.' : 'Lin\'s still needs runners. Nadia still needs dishes done. The city does not close.')]); return; }
+    return goS(to, at);
+  };
+  const awS = Amos.where; Amos.where = function () { const a = G.chars.amos; if (a.job === 'dock' && CAL.dockClosed(G.day)) { a.job = 'off'; const r = awS.call(this); a.job = 'dock'; return r; } return awS.call(this); };
+  // Mrs. Ortega, on the day the lights come down and the first Sunday of spring
+  const gmS = Minor.granny; Minor.granny = function () {
+    if (G.day === 91 && !Season.S().dinner) { Season.S().dinner = true; G.flags.grannyHelped = (G.flags.grannyHelped || 0) + 1; G.hunger = 100; G.ateToday = true; remember('sunday_dinner'); Dlg.run([say('granny', "Sit. Sit! Don't look at the chair, sit in it."), narr("Her kitchen, on the second floor, which you have never seen: a table for four with nine people at it. Amos, if he is anywhere, is at the end with a plate he is guarding. The boy from the diner is under the table, by choice."), narr('Rice and beans and a pork shoulder that has been in the oven since before you woke, and a flan, and a second flan, because the first one, she says, was for practice.'), say('granny', "Hector did the carving. Now nobody does, so I do. Hold the plate. Hold it! There."), narr('You leave full in a way you had forgotten was available.')]); return; }
+    gmS.call(this); const it = Season.helpItem(); if (it && Menu.active) Menu.items.splice(Menu.items.length - 1, 0, it);
+  };
+  // Valentine's: Mei sells the card, and four people can be given it
+  const mmS = Mei.menu; Mei.menu = function () { mmS.call(this); if (Menu.active && G.day >= 50 && G.day <= 52 && !G.inv.vcard && !Season.S().card) Menu.items.splice(Menu.items.length - 1, 0, { t: 'Buy a card', r: '$3', disabled: () => G.money < 3, do: () => { if (!spend(3)) return; G.inv.vcard = 1; Dlg.run([say('mei', "That one. I did that one at two in the morning. It doesn't say 'be mine,' because nobody is anybody's. It says 'you're here.' Which is better."), narr('A card, hand-lettered. It could go to somebody.')]); } }); };
+  const CV = (obj, key, id, line) => { const f0 = obj[key]; obj[key] = function () { f0.apply(this, arguments); const it = Season.cardItem(id, line); if (it && Menu.active) Menu.items.splice(Menu.items.length - 1, 0, it); }; };
+  CV(Nora, 'menu', 'nora', "...'You're here.' Yeah. I am. I'm going to put this on the fridge and I'm not going to explain it to anybody who asks.");
+  CV(Nadia, 'menu', 'nadia', "A card. From you. Sam! Look, a card. ...Don't look, Sam. Go do fractions. ...Thank you. It goes over the pie case, with Dad.");
+  if (typeof Cello !== 'undefined') CV(Cello, 'menu', 'signe', "...");
+  if (typeof Radio !== 'undefined') CV(Radio, 'menu', 'birdie', "A card. Thirty-one years on the overnight and a card. I'm going to read the front on air. Not the inside. The inside's mine.");
+  // the birthday: Nadia's cake, and a call
+  const oesS = onEnterScene; onEnterScene = function (sc) { oesS(sc); if (sc === 'diner' && G.day === 43 && G.chars.nadia.met && !G.chars.nadia.closed && !Season.S().cake) { Season.S().cake = true; G.hunger = Math.min(100, G.hunger + 40); trust('nadia', 2); remember('birthday_cake'); Dlg.run([narr('The diner has a sign on the door that says CLOSED FOR A PRIVATE FUNCTION and the private function is you.'), say('nadia', "Sit down. Don't say anything. Sam, the candles."), narr('One candle. She says the number is nobody\'s business, including yours. The cake is a diner cake, which is to say it is the best cake, and Sam sings, badly, and Nadia does not sing and looks at the pie case while he does.'), say('kid', "Make a wish. You have to. It's the law."), narr('You make one. It is not the one you would have made in December.')]); } };
+  const pdS = Phone.daily; Phone.daily = function () { pdS.call(this); const P = this.P(); const j = Jo.J(); if (G.day === 43 && (j.stage >= 1 || j.calls > 0) && !j.stopped && !P.doneToday) { P.callToday = 'jo_birthday'; P.delay = 120 + irnd(0, 100); P.attempts = 0; } };
+  const paS = Phone.answer; Phone.answer = function () { const P = this.P(); if (P.callToday !== 'jo_birthday') return paS.call(this); P.ringing = false; P.doneToday = true; P.log.push({ day: G.day, who: 'jo' }); useEnergy(2); Audio.sel(); const j = Jo.J(); j.calls++; j.missedRow = 0; j.callDay = G.day; remember('jo_birthday'); Dlg.run([say('jo', "I wasn't going to call. I called. Happy birthday."), say('jo', "The kids made a card. It's a drawing of a house with rain on it, because I told them it rains where you are, and now they think that's all it does."), you("It is."), say('jo', "...Okay. Okay. Happy birthday. I'll put it in the mail. I'll call Thursday. Don't be weird about it.")]); };
+  // Birdie and the calendar
+  if (typeof Radio !== 'undefined') { const bsS = Radio.buildShow; Radio.buildShow = function () { const segs = bsS.call(this); if (G.day === 5) segs.splice(1, 0, { who: 'birdie', text: "It's the last night of the year. I'm going to count it down at midnight, alone, into a microphone, the way I have for thirty-one years, and if you're at the railing you can count with me. Ten. I'll start at ten. I always start at ten." }); if (G.day === 21 || G.day === 22) segs.splice(1, 0, { who: 'rec', text: '(a record: a man\'s voice, from 1963, all of it, and then nothing for the length of it again)' }); return segs; }; }
+  FRESH.busker = FRESH.busker || []; FRESH.busker.push(L_("Six more weeks. Of what? Don't ask me of what. Six more.", () => G.day === 38, 38, 38), L_("The 14's running again. Starting today. ...April Fools. Sorry. Sorry. Walter would've laughed. Would he? He'd have hit me with the cane.", () => G.day === 96, 96, 96), L_("It's Irish. It's not Irish. It's green, which is the important part.", () => G.day === 81, 81, 81));
+  FRESH.walter = FRESH.walter || []; FRESH.walter.push(L_("Groundhog Day. Six more weeks of winter, the boy says. Six more weeks. I'd take them. I'd take six more of anything.", () => G.day === 38, 38, 38), L_("New year. Ruth counted them. I stopped at forty-one. It's a good number; I'll stay there.", () => G.day >= 6 && G.day <= 8, 6, 8));
+  FRESH.amos = FRESH.amos || []; FRESH.amos.push(L_("Happy birthday. Don't ask how I know; Nadia. Nadia knows everything. I got you nothing; I've got nothing. I've got this coffee, which is yours anyway.", () => G.day === 43, 43, 43), L_("The 14's running. Cal said. ...It's April first, isn't it. That kid.", () => G.day === 96, 96, 96), L_("Snow. I like snow. Nobody believes that. It's quieter than rain and it doesn't get in the cardboard the same.", () => G.weather === 'snow'), L_("Sun. Look at that. I forgot the color of the building across the street.", () => G.weather === 'clear' && G.day < 60));
+  FRESH.nadia = FRESH.nadia || []; FRESH.nadia.push(L_("Green pie. Don't ask. Sam did the green. I did the pie.", () => G.day === 81, 81, 81), L_("The heart in the window's a pie box. Sam cut it. He cut it twice, the first one was a kidney.", () => G.day === 50, 50, 50));
+  FRESH.sol = FRESH.sol || []; FRESH.sol.push(L_("Presidents' Day. I've been open every Presidents' Day since 1983. The presidents have never once come in.", () => G.day === 57, 57, 57), L_("Snow on the sign. I'll get the ladder. I won't get the ladder. Somebody will do it for me by not doing it.", () => G.weather === 'snow'));
+  FRESH.nora = FRESH.nora || []; FRESH.nora.push(L_("Snow day. The ward's full of people who fell on the ice and one who fell off a roof getting the lights down. Don't fall off anything.", () => G.weather === 'snow' && G.day > 3), L_("Sun. Actual sun. I stood in it on the ward roof for eleven minutes and got written up. Worth it.", () => G.weather === 'clear' && G.day < 70));
+  FRESH.mei = FRESH.mei || []; FRESH.mei.push(L_("I drew the snow. You can't draw snow, it turns out. You draw everything else and leave the snow.", () => G.weather === 'snow'), L_("The cards. I did forty. My mom said 'who buys a card that says you're here.' Everybody, Mom. Everybody who's here.", () => G.day >= 50 && G.day <= 52, 50, 52));
+  const belS = buildEndingList; buildEndingList = function () { return belS().concat(Season.endingLines()); };
+}
+
+// ---- 09xb_story_snow.js ----
+// ============================================================
+// Snow: on the roofs and the sills and the awnings and the lamps, on the sidewalk with tracks in it, on the cars.
+// Flakes instead of rain. Snowmen the kids leave. Lights on the street until Twelfth Night. Fireworks, once.
+// ============================================================
+const Snow = {
+  layer: null, painted: -1, flakes: [], sparks: [],
+  level() { return G.snow || 0; },
+  ensure() {
+    const lv = Math.round(this.level() * 20) / 20; if (this.layer && this.painted === lv) return;
+    if (!this.layer) { const [c, g] = mkCanvas(STREET.w, H); this.layer = c; this.lg = g; }
+    this.paint(this.lg, lv); this.painted = lv;
+  },
+  // the static part: everything that does not move gets a cap
+  paint(g, lv) {
+    g.clearRect(0, 0, STREET.w, H); if (lv <= 0.02) return;
+    const a = clamp(lv * 1.5, 0, 1); const th = lv < 0.3 ? 1 : lv < 0.65 ? 2 : 3; const gy = GROUND_Y;
+    const white = `rgba(236,240,248,${a})`, whiteD = `rgba(236,240,248,${a * 0.85})`, shade = `rgba(180,190,210,${a * 0.6})`;
+    const cap = (x, y, w, t) => { px(g, x, y - t, w, t, white); px(g, x, y - t + (t - 1), w, 1, shade); };
+    const icicles = (x, y, w) => { if (lv < 0.4) return; const R = seeded(x * 3 + y); for (let ix = x + 2; ix < x + w - 2; ix += 4 + Math.floor(R() * 5)) { const h = 2 + Math.floor(R() * 4); px(g, ix, y, 1, h, `rgba(210,225,245,${a * 0.8})`); } };
+    // the sidewalk, with a trampled path along it, and the road with the plow's leavings and the tracks
+    px(g, 0, gy + 1, STREET.w, 18, `rgba(236,240,248,${a * 0.8})`);
+    { const R = seeded(77 + Math.round(lv * 100)); for (let x = 0; x < STREET.w; x += 6 + Math.floor(R() * 10)) { const w = 4 + Math.floor(R() * 8); px(g, x, gy + 12 + Math.floor(R() * 8), w, 1, `rgba(90,96,112,${a * 0.35})`); if (R() < 0.3) px(g, x + 1, gy + 14 + Math.floor(R() * 6), 2, 1, `rgba(90,96,112,${a * 0.5})`); } }
+    px(g, 0, gy + 20, STREET.w, 6, `rgba(230,234,242,${a * 0.65})`); px(g, 0, 262, STREET.w, 8, `rgba(230,234,242,${a * 0.6})`);
+    px(g, 0, gy + 26, STREET.w, 36, `rgba(220,226,236,${a * 0.22})`);
+    for (const ty of [239, 243, 251, 255]) px(g, 0, ty, STREET.w, 1, `rgba(40,42,52,${a * 0.35})`);
+    // buildings
+    for (const b of STREET.buildings) {
+      const top = gy - b.h; cap(b.x - 1, top - 3, b.w + 2, th);
+      const kind = b.kind || 'plain';
+      if (kind === 'apartment') { const dx = b.door, dw = 22; cap(dx - 3, gy - 58, dw + 6, th); px(g, dx - 6, gy - 7, dw + 12, 1, whiteD); }
+      if (kind === 'store') { const sx = b.x + 10, sw = b.w - 20, aw = sw + 8, ax = sx - 4, ay = gy - 58; cap(ax, ay - 18, aw, th); icicles(ax, ay + 12, aw); }
+      if (kind === 'diner') { const sx = b.x + 8, sw = b.w - 16; cap(sx - 4, gy - 52, sw + 8, th); const nx = b.x + b.w / 2, ny = gy - 74; cap(nx - 50, ny - 4, 100, th); icicles(sx - 4, gy - 48, sw + 8); }
+      if (kind === 'clinic') { const dx = b.door; cap(dx - 32, gy - 76, 94, th); cap(dx + 4, gy - 62, 18, 1); }
+      if (kind === 'warehouse') { for (let i = 0; i < 3; i++) { const dx = b.x + 30 + i * 110; cap(dx - 3, gy - 60, 66, th); } cap(b.x + b.w / 2 - 62, top + 6, 124, th); }
+      if (kind === 'laundry') { const sx = b.x + 10, sw = b.w - 20; cap(sx - 4, gy - 62, sw + 8, th); icicles(sx - 4, gy - 50, sw + 8); }
+      if (kind === 'pawn') { cap(b.x + 4, gy - 76, b.w - 8, th); cap(b.x + 6, gy - 46, 30, 1); }
+      if (b.fireEscape) { const fx = b.x + b.w - 34; const floors = b.floors || 0; for (let f = 0; f < floors; f++) { const fy = gy - GF_H - (f + 1) * FLOOR_H + 12 + 24 + 3; px(g, fx, fy - 1, 30, 1, whiteD); } }
+    }
+    // sills
+    for (const L of World.lights) { if (L.store || L.diner || L.dock || L.door) continue; cap(L.x - 2, L.y + L.h + 2, L.w + 4, Math.min(th, 2)); }
+    // lamp heads, and the railing at the river end
+    for (const x of STREET.lamps) cap(x - 1, gy - 78, 17, th);
+    for (let x = 2140; x < 2460; x += 16) px(g, x, gy - 29, 12, 1, whiteD);
+    // the KHRL mast base
+    px(g, 2116, gy - 154 - 4, 18, 1, whiteD);
+  },
+  // the moving parts: props and cars get caps drawn after they are
+  caps(g, camX) {
+    const lv = this.level(); if (lv <= 0.05 || G.scene !== 'street') return; const a = clamp(lv * 1.5, 0, 1); const th = lv < 0.3 ? 1 : lv < 0.65 ? 2 : 3;
+    g.fillStyle = `rgba(236,240,248,${a * 0.9})`;
+    for (const p of STREET.props) {
+      if (p.hideIf && G.flags[p.hideIf]) continue; if (p.s === 'cardboard' && (G.chars.amos.room || G.flags.amosGone)) continue; if (p.s === 'blanket') continue;
+      const spr = SPR[p.s]; if (!spr) continue; const sx = p.x - camX; if (sx + spr.width < 0 || sx > W) continue;
+      const t = p.s === 'cardboard' ? 1 : th; g.fillRect(sx + 1, p.y - spr.height, spr.width - 2, t);
+    }
+    for (const car of STREET.cars) { const spr = SPR[car.red ? 'carRed' : 'car']; const sx = car.x - camX; if (sx + spr.width < 0 || sx > W) continue; g.fillRect(sx + 26, 266 - spr.height, spr.width - 52, th); g.fillRect(sx + 6, 266 - spr.height + 9, spr.width - 12, 1); }
+  },
+  // the kids' snowmen
+  snowmen(g, camX) {
+    if (G.scene !== 'street' || !G.snowmen) return;
+    for (const s of G.snowmen) {
+      const sx = s.x - camX; if (sx < -30 || sx > W + 30) continue;
+      const age = G.day - s.built; const slump = clamp(age / 9 + (this.level() < 0.3 ? 0.35 : 0), 0, 1);
+      const base = FEET_Y + 1; const r1 = 7 * (1 - slump * 0.3), r2 = 5 * (1 - slump * 0.35), r3 = 4 * (1 - slump * 0.4); const lean = Math.round(slump * 3);
+      const ball = (cx, cy, r) => { g.fillStyle = '#f0f4fa'; g.beginPath(); g.ellipse(cx, cy, r, r * (1 - slump * 0.25), 0, 0, Math.PI * 2); g.fill(); g.fillStyle = 'rgba(170,180,200,0.6)'; g.beginPath(); g.ellipse(cx + r * 0.3, cy + r * 0.3, r * 0.6, r * 0.4, 0, 0, Math.PI); g.fill(); };
+      const y1 = base - r1, y2 = y1 - r1 * 0.8 - r2 * 0.8, y3 = y2 - r2 * 0.8 - r3 * 0.8;
+      ball(sx, y1, r1); ball(sx + lean, y2, r2); ball(sx + lean * 2, y3, r3);
+      px(g, sx + lean * 2 - 2, Math.round(y3 - 1), 1, 1, '#2a2a30'); px(g, sx + lean * 2 + 1, Math.round(y3 - 1), 1, 1, '#2a2a30'); px(g, sx + lean * 2, Math.round(y3 + 1), 3, 1, '#e88a3a');
+      px(g, sx + lean - r2 - 4, Math.round(y2 - 1), 5, 1, '#5a3a22'); px(g, sx + lean + r2, Math.round(y2 - 2), 5, 1, '#5a3a22');
+      px(g, sx + lean - r2 + 1, Math.round(y2 - r2 * 0.8), r2 * 2 - 1, 2, '#c83a3a');
+      if (s.hat) { px(g, sx + lean * 2 - 3, Math.round(y3 - r3 - 1), 7, 1, '#3a3a44'); px(g, sx + lean * 2 - 2, Math.round(y3 - r3 - 5), 5, 4, '#3a3a44'); }
+      for (let i = 0; i < 3; i++) px(g, sx - 1, Math.round(y1 - r1 * 0.5 + i * 3), 1, 1, '#2a2a30');
+    }
+  },
+  prints(g, camX) { if (!G.prints || G.scene !== 'street') return; g.fillStyle = 'rgba(70,76,92,0.5)'; for (const p of G.prints) { const sx = p.x - camX; if (sx < -4 || sx > W + 4) continue; g.fillRect(sx, p.y, 2, 1); } },
+  trackPrints() {
+    if (G.scene !== 'street' || this.level() < 0.25 || !G.walking) return; G.prints = G.prints || [];
+    const last = G.prints[G.prints.length - 1]; if (last && Math.abs(last.x - G.px) < 7) return;
+    G.prints.push({ x: Math.round(G.px + (G.prints.length % 2 ? 3 : -3)), y: FEET_Y - 1 + (G.prints.length % 2) }); if (G.prints.length > 90) G.prints.shift();
+  },
+  // frozen puddles
+  ice(g, camX, pal) {
+    for (const p of STREET.puddles) { const [wx, wy, rw, rh] = p; const sx = wx - camX; if (sx + rw < 0 || sx - rw > W) continue; g.fillStyle = 'rgba(205,218,236,0.42)'; g.beginPath(); g.ellipse(sx, wy, rw, rh, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = 'rgba(240,246,255,0.5)'; g.lineWidth = 1; g.beginPath(); g.moveTo(sx - rw * 0.5, wy - rh * 0.3); g.lineTo(sx + rw * 0.1, wy + rh * 0.2); g.lineTo(sx + rw * 0.5, wy - rh * 0.4); g.stroke(); }
+  },
+  // flakes
+  initFlakes() { this.flakes.length = 0; for (let i = 0; i < 240; i++) this.flakes.push({ x: Math.random() * (W + 40) - 20, y: Math.random() * H, v: 0.35 + Math.random() * 0.7, z: Math.random(), ph: Math.random() * 6.28, s: Math.random() < 0.3 ? 2 : 1 }); },
+  fall(g, t, clipRect) {
+    const amt = G.snowing || 0; if (amt <= 0.01) return; if (!this.flakes.length) this.initFlakes();
+    const n = Math.floor(this.flakes.length * amt);
+    g.save(); if (clipRect) { g.beginPath(); g.rect(...clipRect); g.clip(); }
+    for (let i = 0; i < n; i++) {
+      const f = this.flakes[i]; if (!clipRect) { f.y += f.v * (0.6 + f.z * 0.7); f.x += Math.sin(f.ph + t * 0.02) * 0.35 - (G.wind || 0) * 0.5 * (0.5 + f.z); if (f.y > H) { f.y = -4; f.x = Math.random() * (W + 40) - 20; } if (f.x < -20) f.x += W + 40; if (f.x > W + 20) f.x -= W + 40; }
+      g.fillStyle = `rgba(240,244,252,${0.45 + f.z * 0.45})`; g.fillRect(Math.round(f.x), Math.round(f.y), f.s, f.s);
+    }
+    g.restore();
+  },
+  // breath in the cold
+  breath(g, camX, t) {
+    if (!G.cold || !isOutdoor(G.scene) || !G.entities) return;
+    for (const e of G.entities) { if (e.sprite || e.hidden || e.lying) continue; const ph = (t + Math.round(e.x * 7)) % 170; if (ph > 34) continue; const sx = Math.round(e.x - camX) + (e.dir || 1) * 6; const y = e.y - HUMAN_H + 7 - ph / 5; const r = 1 + ph / 10; g.fillStyle = `rgba(230,236,246,${0.32 * (1 - ph / 34)})`; g.beginPath(); g.ellipse(sx + (e.dir || 1) * ph / 6, y, r * 1.4, r, 0, 0, Math.PI * 2); g.fill(); }
+  },
+  // the lights, until Twelfth Night
+  lights(g, camX, t, pal) {
+    if (!Season.lightsUp() || G.scene !== 'street') return; const night = pal ? pal.night : 0;
+    const cols = ['#ff4a4a', '#4ae86a', '#ffd84a', '#4a8aff', '#ff8ae8']; let i = 0;
+    const bulb = (x, y) => { const sx = x - camX; if (sx < -4 || sx > W + 4) { i++; return; } const c = cols[i % cols.length]; const tw = night > 0.05 ? (Math.sin(t * 0.09 + i * 1.7) > -0.2 ? 1 : 0.3) : 0.55; g.globalAlpha = tw; g.fillStyle = c; g.fillRect(sx, y, 2, 2); if (night > 0.05 && tw > 0.5) { g.globalAlpha = 0.22 * night; g.fillRect(sx - 1, y - 1, 4, 4); } g.globalAlpha = 1; i++; };
+    const gy = GROUND_Y; const B = STREET.buildings;
+    // Harlan Arms: the roofline, the door, the fire escape
+    { const b = B.find(x => x.kind === 'apartment'); const top = gy - b.h; for (let x = b.x + 2; x < b.x + b.w; x += 6) bulb(x, top - 6); const dx = b.door; for (let x = dx - 8; x <= dx + 30; x += 5) bulb(x, gy - 62); const fx = b.x + b.w - 34; for (let f = 0; f < 3; f++) { const fy = gy - GF_H - (f + 1) * FLOOR_H + 12 + 24 + 3; for (let x = fx; x < fx + 30; x += 5) bulb(x, fy + 1); } }
+    // Lin's awning
+    { const b = B.find(x => x.kind === 'store'); const sx = b.x + 10, sw = b.w - 20, ax = sx - 4, aw = sw + 8, ay = gy - 58; for (let x = ax; x < ax + aw; x += 6) bulb(x, ay + 13); }
+    // Nadia's
+    { const b = B.find(x => x.kind === 'diner'); const sx = b.x + 8, sw = b.w - 16; for (let x = sx - 4; x < sx + sw + 4; x += 6) bulb(x, gy - 50); }
+    // Sol's window
+    { const b = B.find(x => x.kind === 'pawn'); for (let x = b.x + 6; x <= b.x + 36; x += 5) bulb(x, gy - 48); for (let y = gy - 44; y < gy - 8; y += 5) { bulb(b.x + 6, y); bulb(b.x + 34, y); } }
+    // wreaths on the lamp posts
+    for (const x of STREET.lamps) { const sx = x + 1 - camX; if (sx < -10 || sx > W + 10) continue; g.strokeStyle = '#2a6a34'; g.lineWidth = 3; g.beginPath(); g.arc(sx, gy - 58, 5, 0, Math.PI * 2); g.stroke(); g.fillStyle = '#c83a3a'; g.fillRect(sx - 1, gy - 64, 2, 2); g.fillRect(sx - 5, gy - 57, 2, 2); g.fillRect(sx + 3, gy - 57, 2, 2); g.fillRect(sx - 2, gy - 53, 4, 3); }
+  },
+  // fireworks over the river
+  fireworks(g, camX, t) {
+    if (!G.fireworks || G.scene !== 'street') return; G.fireworks--;
+    if (G.fireworks % 42 === 0 && G.fireworks > 60) { const cx = 2200 + Math.random() * 240, cy = 40 + Math.random() * 60; const col = pick(['#ff6a4a', '#ffd84a', '#8ad8ff', '#ff8ae8', '#c8ffb0', '#ffffff']); for (let k = 0; k < 26; k++) { const an = (k / 26) * Math.PI * 2; const sp = 0.8 + Math.random() * 0.9; this.sparks.push({ x: cx, y: cy, vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, life: 50 + Math.random() * 25, col }); } Audio.tone(60 + Math.random() * 40, 0.4, 'sine', 0.05); }
+    for (const s of this.sparks) { s.x += s.vx; s.y += s.vy; s.vy += 0.018; s.vx *= 0.985; s.life--; const sx = s.x - camX; if (sx < 0 || sx > W) continue; g.globalAlpha = clamp(s.life / 40, 0, 1); g.fillStyle = s.col; g.fillRect(Math.round(sx), Math.round(s.y), 2, 2); }
+    g.globalAlpha = 1; this.sparks = this.sparks.filter(s => s.life > 0);
+    // reflected in the river
+    g.globalAlpha = 0.25; for (const s of this.sparks) { const sx = s.x - camX; if (sx < 0 || sx > W) continue; g.fillStyle = s.col; g.fillRect(Math.round(sx), Math.round(2 * 232 - s.y), 2, 1); } g.globalAlpha = 1;
+  }
+};
+{
+  // under everything that stands: the snow layer, the ice, the snowmen, the footprints
+  const dpW = drawPuddles; drawPuddles = function (g, ents, camX, pal, t) {
+    if (G.scene === 'street') { Snow.ensure(); if (Snow.level() > 0.02) g.drawImage(Snow.layer, -camX, 0); }
+    const frozen = G.scene === 'street' && Snow.level() > 0.3;
+    if (frozen) { const keep = STREET.puddles; STREET.puddles = []; try { dpW(g, ents, camX, pal, t); } finally { STREET.puddles = keep; } Snow.ice(g, camX, pal); }
+    else dpW(g, ents, camX, pal, t);
+    Snow.prints(g, camX); Snow.snowmen(g, camX);
+  };
+  // over everything: caps on the props and cars, the lights, the flakes, the breath, the fireworks
+  const drW = drawRain; drawRain = function (g, t, camX, clipRect) {
+    if (!clipRect) { Snow.caps(g, camX); Snow.lights(g, camX, t, G.pal); Snow.breath(g, camX, t); }
+    drW(g, t, camX, clipRect);
+    Snow.fall(g, t, clipRect);
+    if (!clipRect) Snow.fireworks(g, camX, t);
+  };
+  const puW = playUpdate; playUpdate = function () { puW.apply(this, arguments); Snow.trackPrints(); };
+  // a loaded save from before the calendar gets a sky
+  const ldW = load; load = function () { const r = ldW.apply(this, arguments); if (G && G.weather === undefined) Weather.roll(); return r; };
+  // the palette: snow days are bright and grey, not dark like rain
+  const tp0 = todPalette; todPalette = function (tod, rain) { const p = tp0(tod, rain); if (G && G.weather === 'snow') { const l = v => [Math.min(255, v[0] * 0.92 + 26), Math.min(255, v[1] * 0.92 + 28), Math.min(255, v[2] * 0.92 + 34)]; p.top = l(p.top); p.bot = l(p.bot); p.amb = l(p.amb); p.sun *= 0.5; } else if (G && G.weather === 'clear' && G.day < 84) { p.sun = Math.min(1, p.sun * 1.1); } return p; };
+  // the garden under snow: cold frames, or not much
+  const gdW = Garden.daily; Garden.daily = function () {
+    const s = this.S(); if (!s.unlocked || !s.planted) return gdW.call(this);
+    if ((G.snow || 0) > 0.2) s.lastWater = G.day;
+    const g0 = s.growth; gdW.call(this); const delta = s.growth - g0;
+    if (delta > 0) { let f = 1; if (G.day >= 84) f = 1.6; else if ((G.snow || 0) > 0.15 || G.cold) f = s.coldFrames ? 0.7 : 0.35; s.growth = Math.min(100, g0 + delta * f); }
+    if (s.helpers && s.helpers.amos && G.flags.amosTools && !s.coldFrames && G.day < 84) { s.coldFrames = true; s.coldFrameNew = true; }
+  };
+  const pbW = paintBeds; paintBeds = function (g, camX, t) {
+    pbW(g, camX, t); const s = Garden.S(); if (!s.coldFrames || G.day >= 84) return;
+    for (const [bx, bw] of [[110, 60], [190, 60], [270, 60]]) { const x = bx - camX, top = GROUND_Y + 14; g.fillStyle = 'rgba(210,225,240,0.35)'; g.fillRect(x - 2, top - 26, bw + 4, 22); g.strokeStyle = 'rgba(120,90,60,0.9)'; g.lineWidth = 1; g.strokeRect(x - 2 + 0.5, top - 26 + 0.5, bw + 4, 22); g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(x + 4, top - 24, bw - 20, 2); }
+  };
+  const oesW = onEnterScene; onEnterScene = function (sc) { oesW(sc); if (sc === 'garden' && Garden.S().coldFrameNew) { Garden.S().coldFrameNew = false; remember('cold_frames'); Dlg.run([narr("Three low boxes over the beds, plastic sheeting stretched over frames of scrap lumber, the corners joined the way only somebody with the right tools joins a corner. Amos. Under the plastic the ground is dark and not frozen, and something in it is green."), narr('Cold frames. Hector had the plastic in the shed all along; Amos had the tools, since you. The garden is going to make it to spring.')]); } };
+}
+
+// ---- 09y_story_journal.js ----
+// ============================================================
+// The journal: a calendar, the people, the days, the photographs. J, or the pause menu.
+// ============================================================
+const Journal = {
+  tab: 0, TABS: ['Calendar', 'People', 'Days', 'Photos'], scroll: 0, month: 0, from: 'play',
+  open(from) { this.from = from || 'play'; this.tab = 0; this.scroll = 0; this.month = CAL.dateOf(G.day).m; G.state = 'journal'; Audio.sel(); G.dayLog = G.dayLog || {}; if (!G.dayLog[1]) G.dayLog[1] = 'The doctor said ninety-nine days. Maybe more, if the trial comes through.'; },
+  close() { G.state = 'play'; Audio.blip(); },
+  update() {
+    if (Input.hit('back') || Input.hit('menu') || Input.hit('journal')) { this.close(); return; }
+    if (Input.hit('left')) { if (this.tab === 0 && this.month > 0 && this.month > CAL.dateOf(1).m) { this.month--; } else { this.tab = (this.tab + this.TABS.length - 1) % this.TABS.length; this.scroll = 0; } Audio.blip(); }
+    if (Input.hit('right')) { if (this.tab === 0 && this.month < CAL.dateOf(99).m) { this.month++; } else { this.tab = (this.tab + 1) % this.TABS.length; this.scroll = 0; } Audio.blip(); }
+    if (Input.hit('act')) { this.tab = (this.tab + 1) % this.TABS.length; this.scroll = 0; Audio.blip(); }
+    if (Input.hit('up')) this.scroll = Math.max(0, this.scroll - 1);
+    if (Input.hit('down')) this.scroll++;
+  },
+  // ---- what is coming ----
+  events() {
+    const out = []; const d = G.day; const f = G.flags; const c = G.chars;
+    const add = (day, text, kind) => { if (day >= 1 && day <= 99) out.push({ day, text, kind: kind || 'mine' }); };
+    for (const k in CAL.EVENTS) { const day = +k; if (day === 43 && d < 43) continue; add(day, CAL.EVENTS[k], CAL.HOLIDAYS[k] ? 'closed' : 'public'); }
+    if (Rent.active()) { const r = Rent.S(); for (let day = r.nextDay; day <= 99; day += 7) add(day, `Rent, $${RENT}${r.owed ? ` (and $${r.owed} owed)` : ''}`); }
+    if (f.nanoPaid) { for (let day = f.nanoNext; day <= Math.min(99, f.nanoNext + 20); day += 2) add(day, 'The shot, at the clinic'); }
+    else if (f.cureKnown && !f.curePaid && d < 44) add(44, "Dr. Okafor's check");
+    if (c.signe && c.signe.band) { for (let day = d; day <= Math.min(99, d + 28); day++) if (day % 7 === 5) add(day, 'The Three, under the shelter'); }
+    if (c.signe && c.signe.auditionDay && !c.signe.audition) add(c.signe.auditionDay, "Signe's audition");
+    if (c.signe && c.signe.duetDay && !c.signe.duet) add(c.signe.duetDay, 'Signe and Cal, on the corner, after dark');
+    if (c.signe && c.signe.bandDay && !c.signe.band) add(c.signe.bandDay, 'Sol brings the horn. Friday, after dark');
+    if (c.birdie && c.birdie.leaseKnown && !c.birdie.lease) add(LEASE_DAY, 'The tower lease runs out', 'bad');
+    if (c.birdie && c.birdie.callinDay && !c.birdie.lease) add(c.birdie.callinDay, 'The call-in night, KHRL');
+    if (c.birdie && c.birdie.sessionDay && !c.birdie.session) add(c.birdie.sessionDay, 'The Three, live on KHRL');
+    { const j = G.phone && G.phone.jo; if (j && j.coming && !j.visited) add(j.visitDay, 'Jo comes. The 10:40'); }
+    if (f.busPassDay) add(f.busPassDay + 30, 'The bus pass runs out');
+    if (G.garden && G.garden.planted && G.garden.ready === 0 && G.garden.lastHarvest) add(G.garden.lastHarvest + 3, 'The garden may be ready');
+    if (G.house && G.house.listed && !G.house.owner && G.house.listDay) add(G.house.listDay + 14, 'The Ashby house: somebody will buy it', 'bad');
+    add(99, 'Day ninety-nine', 'bad');
+    return out.sort((a, b) => a.day - b.day);
+  },
+  // ---- people, in one line each ----
+  people() {
+    const c = G.chars, f = G.flags; const P = [];
+    const put = (name, line) => P.push({ name, line });
+    if (c.amos.met) put('Amos', c.amos.dead ? 'Gone. The candle on the stoop is yours.' : c.amos.room ? `The basement room. ${c.amos.job ? 'Working. ' : ''}${c.amos.tools ? 'He has his tools back.' : 'He does not have his tools.'}` : c.amos.job ? 'Working the dock, sleeping on the cardboard.' : `On the stoop. ${c.amos.fed ? `You have fed him ${c.amos.fed} times.` : 'You have not fed him.'}`);
+    else if (G.day >= 2) put('The man by the stoop', c.amos.dead ? 'Flowers on the cardboard. Somebody knew him.' : 'You have not spoken to him.');
+    if (c.mei.met) put('Mei', c.mei.accepted ? 'Accepted to the program. She has told her mother.' : c.mei.applied ? 'Applied. Waiting for the envelope.' : c.mei.cold ? 'She rings you up and does not look up.' : `Behind the counter at Lin's, drawing. ${c.mei.textbook ? 'She has the Bridgman.' : ''}`);
+    if (c.walter.met) put('Walter', c.walter.dead ? `Died on day ${c.walter.deadDay}. St. Bartholomew's, beside Ruth.` : `The bench under the bus sign. ${c.walter.radio ? 'The radio works. ' : ''}${c.walter.ruthWatch ? "He has Ruth's watch. " : ''}${c.walter.chess ? 'Knight first.' : ''}`);
+    if (c.nadia.met) put('Nadia', c.nadia.closed ? 'The diner is closed. Dayton.' : c.nadia.saved ? `The diner is open; you are the reason. ${c.nadia.sam ? 'Sam does fractions in the booth.' : ''}` : `The diner. ${c.nadia.customers || 0} customers you sent. ${c.nadia.sam ? 'Sam is hers.' : ''}`);
+    if (c.nora && c.nora.met) put('Nora', c.nora.cold ? 'Next door. She keeps to her side of the wall.' : c.nora.person ? 'Your person on the form. She knows what it says.' : `411. Nights on the ward. ${c.nora.told ? 'She knows.' : 'She does not know yet.'}`);
+    if (c.theo && (c.theo.visits > 0 || c.theo.reunited)) put('Theo', c.theo.reunited ? "Back on the corner with Cal, hood down." : c.theo.gone ? 'Gone from the railing.' : 'The kid at the railing with the marker.');
+    if (nameKnown('cal')) put('Cal', `The corner, under the shelter. ${f.buskerTips || 0} tips. ${c.signe && c.signe.dating ? 'Two coffees, no guitar, mornings, at 410.' : ''}`);
+    if (c.sol && c.sol.met) put('Sol', c.sol.cold ? 'The ledger. Your name is in it.' : `Behind the wire. ${c.sol.played ? 'He played the horn for you. ' : ''}${c.sol.ledger ? 'You have seen the book.' : ''}`);
+    if (c.emmett && c.emmett.met) put('Emmett', c.emmett.gone ? 'Out past the point.' : c.emmett.lenaCame ? 'Lena came to the lake.' : `The cabin at the end of the 14. ${c.emmett.mailed ? 'The letter went.' : c.emmett.letter ? 'There is a letter he has not sent.' : ''}`);
+    if (c.signe && c.signe.arrived) put(c.signe.met ? 'Signe' : 'The woman in 410', c.signe.audition === 'yes' ? 'On the symphony list. The window is open.' : c.signe.band ? 'Fridays under the shelter with Cal and Sol.' : c.signe.met ? `${c.signe.talks} conversations, most of them short. Practicing 4-6.` : 'A cello through two walls, four to six.');
+    if (c.birdie && (c.birdie.met || c.birdie.heard)) put(c.birdie.met ? 'Birdie' : 'The woman on the radio', c.birdie.dark ? 'The tower is dark. She still goes up.' : c.birdie.lease ? 'The tower is paid for the year.' : c.birdie.leaseKnown ? `The tower lease: day ${LEASE_DAY}. ${c.birdie.pledges.length} of five will call.` : c.birdie.met ? `KHRL, top floor, after nine. ${c.birdie.shifts} nights of weather.` : 'KHRL 1340, the overnight.');
+    { const j = G.phone && G.phone.jo; if (j && (j.stage >= 1 || j.calls > 0 || j.stopped)) put('Jo', j.visited ? 'She came. She took the 10:40.' : j.stopped ? 'She said she would stop calling.' : j.coming ? `Coming on day ${j.visitDay}.` : `${j.calls} calls. The number is the same.`); }
+    if (nameKnown('ortega')) put('Mrs. Ortega', `Second floor, oranges. ${G.garden && G.garden.unlocked ? "Hector's plot is yours to keep." : ''}`);
+    if (f.dogFollows || f.dogCollar) put(f.dogName || 'The dog', f.dogFollows ? 'Follows you. Sleeps on the bed, which is not allowed.' : 'Collared. Yours, in the way a dog is anybody\'s.');
+    if (c.morrow && c.morrow.met) put('Morrow', c.morrow.asked ? `The super. He asked who gets the room; you said ${c.morrow.answer}.` : `The super, first floor, block capitals. ${c.morrow.radiator ? 'The radiator works.' : ''}`);
+    put('Dr. Okafor', f.nanoPaid ? `Nanobots. ${f.nanoShots || 0} shots.` : f.curePaid ? 'Halvorsen. Paid.' : f.cureKnown ? 'Halvorsen: $' + CURE_COST + '.' : `${G.pills} pills left.`);
+    return P;
+  },
+  // ---- drawing ----
+  draw(g, t) {
+    buildEntities(); renderScene(g, t);
+    g.fillStyle = 'rgba(4,5,9,0.86)'; g.fillRect(0, 0, W, H);
+    UI.panel(g, 20, 8, W - 40, H - 16, 0.9);
+    // tabs
+    let tx = 30; for (let i = 0; i < this.TABS.length; i++) { const on = i === this.tab; const w = textWidth(this.TABS[i]) + 10; if (on) { g.fillStyle = 'rgba(232,200,74,0.15)'; g.fillRect(tx - 4, 12, w, 12); } drawText(g, this.TABS[i], tx, 14, on ? '#e8c84a' : '#6a7080'); tx += w + 8; }
+    drawText(g, `${CAL.long(G.day)}  -  day ${G.day}`, W - 30, 14, '#8a92a4', { align: 'right' });
+    px(g, 28, 26, W - 56, 1, 'rgba(255,255,255,0.12)');
+    if (this.tab === 0) this.drawCalendar(g); else if (this.tab === 1) this.drawList(g, this.people().map(p => ({ h: p.name, t: p.line }))); else if (this.tab === 2) this.drawDays(g); else this.drawPhotos(g);
+    UI.drawHint(g, `${UI.keyName('act')} next tab   arrows move   ${UI.keyName('back')} close`);
+  },
+  drawCalendar(g) {
+    const m = this.month; const len = CAL.LEN[m]; const first = CAL.dayOf(m, 1); const x0 = 32, y0 = 58, cw = 22, ch = 16;
+    drawText(g, `${m > CAL.dateOf(1).m ? '< ' : '  '}${CAL.MONTHS[m]}${m < CAL.dateOf(99).m ? ' >' : ''}`, x0 + 76, 32, '#f0ead8', { align: 'center' });
+    for (let i = 0; i < 7; i++) drawText(g, 'SMTWTFS'[i], x0 + i * cw + 8, y0 - 10, '#5a6274', { align: 'center' });
+    const ev = this.events(); const byDay = {}; for (const e of ev) (byDay[e.day] = byDay[e.day] || []).push(e);
+    for (let dd = 1; dd <= len; dd++) {
+      const day = first + dd - 1; const inGame = day >= 1 && day <= 99; const wd = ((day % 7) + 7) % 7; const row = Math.floor((dd - 1 + (((first % 7) + 7) % 7)) / 7);
+      const cx = x0 + wd * cw, cy = y0 + row * ch;
+      if (day === G.day) { g.fillStyle = 'rgba(232,200,74,0.22)'; g.fillRect(cx, cy - 2, cw - 2, ch - 2); }
+      const col = !inGame ? '#3a3f4a' : day < G.day ? '#5a6274' : CAL.dockClosed(day) ? '#c8b070' : '#d8dce8';
+      drawText(g, String(dd), cx + 8, cy, col, { align: 'center' });
+      if (inGame && byDay[day]) { const k = byDay[day][0].kind; g.fillStyle = k === 'bad' ? '#e86a6a' : k === 'public' || k === 'closed' ? '#c8b070' : '#8ab0d8'; g.fillRect(cx + 6, cy + 9, 4, 2); }
+      if (inGame && day < G.day && G.dayLog && G.dayLog[day] && Weather.kind(day) === 'snow') { g.fillStyle = '#e8f0ff'; g.fillRect(cx + 1, cy + 9, 2, 2); }
+    }
+    // the list: what is coming
+    const lx = 200, ly = 32; drawText(g, 'Coming', lx, ly, '#f0ead8');
+    const up = ev.filter(e => e.day >= G.day).slice(this.scroll, this.scroll + 12); let y = ly + 12;
+    if (!up.length) drawText(g, 'Nothing written down.', lx, y, '#6a7080');
+    for (const e of up) { const when = e.day === G.day ? 'Today' : e.day === G.day + 1 ? 'Tomorrow' : CAL.short(e.day); drawText(g, when, lx, y, e.kind === 'bad' ? '#e86a6a' : e.kind === 'public' || e.kind === 'closed' ? '#c8b070' : '#8ab0d8'); drawText(g, e.text + (e.kind === 'closed' ? ' (dock closed)' : ''), lx + 74, y, '#c8ccd8'); y += 12; if (y > H - 30) break; }
+    drawText(g, `${Weather.label(G.weather)}${G.snow > 0.1 ? ', snow on the ground' : ''}${G.cold ? ', cold' : ''}.  ${CAL.dockClosed(G.day) ? 'The dock is closed today.' : 'The dock is open.'}`, x0, H - 36, '#8a92a4');
+  },
+  drawList(g, items) {
+    let y = 32; const rows = items.slice(this.scroll); if (!rows.length) drawText(g, 'Nobody yet.', 32, y, '#6a7080');
+    for (const it of rows) { drawText(g, it.h, 32, y, '#e8c84a'); const lines = wrapText(it.t, 300); lines.forEach((ln, i) => drawText(g, ln, 140, y + i * 10, '#c8ccd8')); y += Math.max(1, lines.length) * 10 + 4; if (y > H - 34) break; }
+  },
+  drawDays(g) {
+    const log = G.dayLog || {}; const days = []; for (let d = G.day; d >= 1; d--) if (log[d]) days.push(d);
+    const items = days.map(d => ({ h: `${CAL.short(d)}`, t: `${log[d]}${CAL.event(d) ? '  (' + CAL.event(d) + ')' : ''}` }));
+    if (!items.length) items.push({ h: '', t: 'The days will be here as they happen.' });
+    this.drawList(g, items);
+  },
+  drawPhotos(g) {
+    const f = G.flags; const items = [];
+    if (f.photos && f.photos.length) for (const p of f.photos) items.push({ h: 'Photo', t: Home.photoName(p) });
+    if (G.inv.drawing) items.push({ h: 'Sketch', t: "Mei's drawing of you, from the counter, in pencil." });
+    if (f.joLetterDay && f.joWrote) items.push({ h: 'Letter', t: "Jo's, two pages, and a drawing of a house in the rain by somebody who is four." });
+    if (f.emmettWrote) items.push({ h: 'Postcard', t: 'A lake on the front, not his. GOT IT. FISH ARE BITING.' });
+    if (G.inv.chess) items.push({ h: 'Kept', t: "Walter's chess set. Knight first." });
+    if (G.inv.bird) items.push({ h: 'Kept', t: "Amos's carved bird. A wren; they sing louder than their size." });
+    if (G.inv.thermos) items.push({ h: 'Kept', t: "Nora's thermos." });
+    if (!items.length) items.push({ h: '', t: 'Nothing kept yet. The camera at Sol\'s takes six.' });
+    this.drawList(g, items);
+  }
+};
+{
+  Input.map.KeyJ = 'journal';
+  const puJ = playUpdate; playUpdate = function () { puJ.apply(this, arguments); if (G.state === 'play' && Input.hit('journal')) Journal.open('play'); };
+  const pmJ = pauseMenu; pauseMenu = function () { pmJ(); if (Menu.active) Menu.items.splice(2, 0, { t: 'Journal', do: () => Journal.open('menu') }); };
+  const dlJ = dayLine; dayLine = function () { const l = dlJ.apply(this, arguments); G.dayLog = G.dayLog || {}; G.dayLog[G.day] = l; return l; };
+}
+
+// ---- 09z_story_lobby.js ----
+// ============================================================
+// The first floor: mailboxes, the board, the super's window. Morrow, who writes everything in block capitals and says almost nothing.
+// ============================================================
+SPECS.morrow = { skin: '#d8b8a0', hair: '#8a8a8a', hairStyle: 'thin', shirt: '#6a5a4a', pants: '#3a3a3a', shoes: '#2a2420', glasses: true, old: true, vest: '#4a3a30' };
+SPEAKERS.morrow = { name: 'Morrow', color: '#b8b0a0', spec: 'morrow' };
+
+INTERIORS.lobby = {
+  id: 'lobby', outdoor: false, floorY: FEET_Y, x0: 60, x1: 420, ceil: CEIL_Y, ambient: [100, 92, 84],
+  lamp: { x: 200, y: CEIL_Y + 18 }, window: { x: 92, y: 150, w: 18, h: 30 },
+  doors: [
+    { x: 62, w: 22, to: 'street', label: 'Street', at: 'home' },
+    { x: 244, w: 20, to: null, label: "Super's office", office: true },
+    { x: 322, w: 20, to: 'hall', label: 'Stairs', lobbyStairs: true },
+    { x: 372, w: 32, to: 'hall', label: 'Elevator', lobbyElev: true },
+  ],
+  spawnX: 100, spawnDir: 1, spawns: { street: 100, elevator: 384, stairs: 336 },
+  spots: { boxes: 130, board: 190, office: 272, stairs: 332, elevator: 388 },
+  paint(g) {
+    const I = this; paintRoom(g, I, '#4a4238', '#5a5048', gg => { for (let y = GROUND_Y; y < 252; y += 6) for (let x = I.x0; x < I.x1; x += 12) if (((x - I.x0) / 12 + (y - GROUND_Y) / 6) % 2 === 0) px(gg, x, y, 12, 6, 'rgba(0,0,0,0.12)'); });
+    // wainscot
+    px(g, I.x0, GROUND_Y - 30, I.x1 - I.x0, 26, '#3a3028'); px(g, I.x0, GROUND_Y - 30, I.x1 - I.x0, 1, '#5a4a3a'); for (let x = I.x0 + 8; x < I.x1; x += 16) px(g, x, GROUND_Y - 28, 1, 22, 'rgba(0,0,0,0.15)');
+    // the street door, glass, with the building's name backwards on it
+    fDoor(g, 62, GROUND_Y, '#3a2a24', { glass: true }); fWindow(g, this.window.x, this.window.y, this.window.w, this.window.h, '#2a2a30');
+    // mailboxes: brass, four by six, one with a name
+    px(g, 112, CEIL_Y + 12, 40, 44, '#1a1418'); for (let r = 0; r < 6; r++) for (let c = 0; c < 4; c++) { const bx = 114 + c * 9, by = CEIL_Y + 14 + r * 7; px(g, bx, by, 8, 6, '#a8884a'); px(g, bx, by, 8, 1, '#c8a850'); px(g, bx + 5, by + 2, 2, 2, '#3a3a40'); }
+    px(g, 114 + 3 * 9, CEIL_Y + 14 + 3 * 7, 8, 6, '#c8a850'); px(g, 115 + 3 * 9, CEIL_Y + 16 + 3 * 7, 6, 2, '#2a2a30');   // 412
+    // the board: cork in a frame
+    px(g, 158, CEIL_Y + 8, 70, 46, '#3a2a1a'); px(g, 160, CEIL_Y + 10, 66, 42, '#a8804a'); for (let y = CEIL_Y + 12; y < CEIL_Y + 50; y += 3) for (let x = 162; x < 224; x += 4) if ((x + y) % 7 === 0) px(g, x, y, 1, 1, 'rgba(0,0,0,0.12)');
+    px(g, 170, CEIL_Y + 2, 46, 6, '#2a2a30'); drawText(g, 'NOTICES', 193, CEIL_Y + 3, '#d8d0b8', { align: 'center' });
+    // the super's office: a door with a frosted light, and beside it a window with a counter
+    fDoor(g, 244, GROUND_Y, '#4a3a2a', { frame: '#1a1418' }); px(g, 247, GROUND_Y - 40, 14, 12, '#c8c8b0'); px(g, 248, GROUND_Y - 39, 12, 10, '#d8d8c0'); drawText(g, 'SUPER', 254, GROUND_Y - 36, '#3a3a40', { align: 'center' });
+    px(g, 266, CEIL_Y + 10, 44, 36, '#1a1418'); px(g, 268, CEIL_Y + 12, 40, 32, '#2a2a30'); for (let y = CEIL_Y + 12; y < CEIL_Y + 44; y += 4) px(g, 268, y, 40, 1, 'rgba(0,0,0,0.25)');  // the window with the grille
+    fCounter(g, 262, 314, '#6a5a4a', '#3a2e26', {}); px(g, 268, COUNTER_TOP - 6, 14, 6, '#e8e0d0'); px(g, 270, COUNTER_TOP - 5, 10, 1, '#8a8a92'); px(g, 270, COUNTER_TOP - 3, 8, 1, '#8a8a92');  // the pad
+    px(g, 296, COUNTER_TOP - 5, 8, 5, '#3a3a44'); px(g, 300, COUNTER_TOP - 8, 2, 3, '#8a8a92');   // a bell nobody rings
+    // radiator, the dead plant, the stairs, the elevator
+    fRadiator(g, 66 + 30, GROUND_Y, 18); px(g, 232, GROUND_Y - 22, 8, 22, '#5a4a3a'); px(g, 230, GROUND_Y - 30, 12, 9, '#4a5a3a'); px(g, 233, GROUND_Y - 34, 6, 5, '#6a6a3a');
+    px(g, 318, CEIL_Y, 40, GROUND_Y - CEIL_Y, '#2a2226'); for (let i = 0; i < 7; i++) px(g, 322 + i * 3, GROUND_Y - 4 - i * 6, 32 - i * 3, 3, '#3a3038'); px(g, 320, CEIL_Y + 6, 36, 9, '#2a2226'); drawText(g, 'STAIRS', 338, CEIL_Y + 7, '#d8d0b8', { align: 'center' });
+    px(g, 372, GROUND_Y - 44, 32, 44, '#8a7a4a'); px(g, 372, GROUND_Y - 44, 32, 1, '#c8b070'); px(g, 387, GROUND_Y - 44, 2, 44, '#3a2a1a'); px(g, 372, GROUND_Y - 46, 32, 2, '#3a3a44');
+    px(g, 376, GROUND_Y - 56, 24, 8, '#1a1a20'); for (let i = 0; i < 4; i++) px(g, 379 + i * 6, GROUND_Y - 54, 3, 4, i === 0 ? '#e8b84a' : '#3a3a44');
+    px(g, 362, GROUND_Y - 30, 4, 6, '#8a7a4a'); px(g, 363, GROUND_Y - 29, 2, 2, '#e8b84a');
+    fBulb(g, this.lamp.x, CEIL_Y, 18);
+  },
+  dynamic(g, t) {
+    // the papers on the board, as many as there are notices; the office light
+    const N = Lobby.notices(); const R = seeded(N.length * 13 + 5);
+    for (let i = 0; i < Math.min(N.length, 10); i++) { const x = 163 + (i % 5) * 12 + Math.floor(R() * 3), y = CEIL_Y + 13 + Math.floor(i / 5) * 19 + Math.floor(R() * 3); const c = N[i].col || '#e8e0d0'; px(g, x, y, 10, 14, c); px(g, x + 4, y - 1, 2, 2, '#c83a3a'); for (let k = 0; k < 4; k++) px(g, x + 2, y + 3 + k * 3, 6 - (k % 2) * 2, 1, 'rgba(0,0,0,0.35)'); }
+    if (Morrow.here()) { px(g, 269, CEIL_Y + 13, 38, 30, `rgba(255,220,150,${0.10 + 0.02 * Math.sin(t * 0.03)})`); }
+    if (G.elevatorBroken) { px(g, 376, GROUND_Y - 34, 24, 12, '#e8e0c8'); drawText(g, 'OUT OF', 388, GROUND_Y - 33, '#a83030', { align: 'center' }); px(g, 378, GROUND_Y - 25, 20, 1, '#a83030'); }
+  },
+  fg(g) { }
+};
+
+const Morrow = {
+  init() { return { met: false, talks: 0, trust: 0, radiator: false, radiatorDay: 0, drawer: false, asked: false, answer: null, padlock: false, paidHere: 0, seenLobby: false }; },
+  S() { if (!G.chars.morrow) G.chars.morrow = this.init(); return G.chars.morrow; },
+  here() { return G.tod > 0.04 && G.tod < 0.9; },
+  menu() {
+    const m = this.S(); const items = [{ t: 'Talk', r: '-2 energy', do: () => this.talk() }];
+    const rp = Rent.payItem(); if (rp) items.push(rp);
+    if (Rent.active() && Rent.S().owed === 0 && G.day < 92) items.push({ t: "Pay next week's rent now", r: `$${RENT}`, disabled: () => G.money < RENT, do: () => { if (!spend(RENT)) return; const r = Rent.S(); r.nextDay += 7; r.paid++; m.paidHere++; remember('rent_early'); Dlg.run([narr('A hundred dollars through the grille. He writes it in the book, and the date, and turns the book so you can see it.'), say('morrow', "PAID THRU " + CAL.short(Rent.S().nextDay - 1) + ".")]); } });
+    if (m.met && !m.radiator && G.day >= 2) items.push({ t: 'Ask about the heat', do: () => this.radiator() });
+    if (m.met && m.talks >= 3 && !m.drawer) items.push({ t: 'Ask about the drawer', do: () => this.drawer() });
+    items.push({ t: 'Leave', do: () => { } });
+    Menu.open(m.met ? 'Morrow' : 'The super', items, { sub: m.met ? 'A pad, a pen, a book. He looks at you over the glasses.' : 'A man behind a grille with a pad in front of him. He does not say anything. He picks up the pen.' });
+  },
+  talk() {
+    const m = this.S(); if (!talkEnergy(2)) return; m.talks++; const L = [];
+    if (!m.met) { m.met = true; clearPortrait('morrow'); remember('morrow_met'); L.push(narr('He looks at you for a long moment, the way he must look at everybody who comes to the window, which is nobody. Then he writes on the pad and turns it around.'), say('morrow', "412."), you("Yes."), say('morrow', "RENT MONDAYS. I KNOW YOU KNOW."), narr('He tears the page off and puts it in a drawer. There are a lot of pages in the drawer.'), say('morrow', "MORROW. SUPER. TWENTY-TWO YEARS. IF THE HEAT GOES, KNOCK. I DON'T ANSWER, BUT I HEAR IT.")); }
+    else if (m.talks === 2) L.push(say('morrow', "I DON'T TALK. THROAT. 1998. IT'S NOT A SECRET, IT'S JUST NOT A CONVERSATION."), narr('He shrugs, which is a whole sentence.'));
+    else if (m.talks === 3) L.push(say('morrow', "THE ELEVATOR IS OLDER THAN ME. THE BOILER IS OLDER THAN THE ELEVATOR. THE BUILDING WAS HERE BEFORE THE STREET."), say('morrow', "I KEEP IT STANDING. THAT'S THE JOB. NOBODY NOTICES A BUILDING THAT'S STANDING."));
+    else if (m.talks === 5 && G.chars.amos.met) L.push(say('morrow', G.chars.amos.room ? "THE MAN IN THE BASEMENT. I KNOW. I'VE KNOWN SINCE THE FIRST NIGHT. THE BOILER ROOM HAS A DOOR THAT DOESN'T LOCK BECAUSE I TOOK THE LOCK OFF IT." : "THE MAN ON THE CARDBOARD. I PUT A CHAIN ON THE BASEMENT DOOR IN 2019 AND TOOK IT OFF IN 2020. HE NEVER CAME IN. HE'S PROUD. IT'S THE WORST THING ABOUT HIM."));
+    else L.push(say('morrow', fresh('morrow', ["HEAT'S ON. IF IT ISN'T, KICK THE RADIATOR, TOP LEFT.", "SNOW ON THE WALK IS MINE TO SHOVEL. I SHOVEL IT AT FIVE. NOBODY SEES.", "THE WOMAN IN 411 WORKS NIGHTS. IF YOU HEAR HER COME IN AT SEVEN, THAT'S THE BUILDING WORKING.", "I HAVE A NOTE FROM EVERY TENANT SINCE 2002. I KEEP THEM. I DON'T KNOW WHY.", "410'S LET. A GIRL WITH A CELLO. SHE SAID SORRY FOUR TIMES. I WROTE 'DON'T BE' AND SHE KEPT THE PAGE.", "YOU LOOK WORSE THAN DECEMBER. I'M NOT ASKING. I'M SAYING I NOTICED.", "THE BOARD IS FOR NOTICES. PEOPLE PUT UP ANYTHING. I LEAVE IT. IT'S THE ONLY PART OF THE BUILDING THAT TALKS.", "THE LOCK ON 412 STICKS. LIFT AND TURN. YOU KNOW THAT. I'M WRITING IT ANYWAY.", "TWENTY-TWO YEARS. ONE FIRE, SMALL. TWO FLOODS. FOUR TENANTS DIED IN THEIR ROOMS AND I FOUND THREE OF THEM. I'M NOT TELLING YOU THAT FOR A REASON. I'M TELLING YOU BECAUSE YOU ASKED HOW I WAS."])));
+    if (m.talks === 4 && m.trust < 2) m.trust = 2;
+    if (G.day >= 70 && !m.asked && m.talks >= 2) { L.push(narr('He writes for longer than usual. He does not turn the pad around right away.'), say('morrow', "I'M GOING TO ASK YOU SOMETHING AND YOU DON'T HAVE TO ANSWER."), say('morrow', "WHEN A ROOM EMPTIES, I CLEAR IT. THINGS GO IN BOXES. THE BOXES GO IN THE BASEMENT AND THEN THE CURB. I DON'T LIKE THE CURB."), say('morrow', "WHO GETS YOUR THINGS."), choice(...this.answers())); }
+    Dlg.run(L);
+  },
+  answers() {
+    const m = this.S(); const c = G.chars; const out = [];
+    const pick_ = (id, label, line) => ({ t: label, do: () => { m.asked = true; m.answer = id; m.trust += 2; remember('morrow_answer_' + id); return [narr('He writes it down. One word. He underlines it, which he does not do.'), say('morrow', line), narr('He tears off the page and puts it in the drawer, on top.')]; } });
+    if (c.amos.met && !c.amos.dead) out.push(pick_('Amos', 'Amos.', "THE MAN IN THE BASEMENT. GOOD. HE'LL KNOW WHAT'S WORTH KEEPING. HE'S KEPT LESS."));
+    if (c.nora && c.nora.met && !c.nora.cold) out.push(pick_('Nora', 'Nora, next door.', "411. SHE'LL DO IT AT SEVEN IN THE MORNING IN SCRUBS AND NOT CRY UNTIL THE HALL. I'VE SEEN HER DO IT FOR 409."));
+    if (nameKnown('jo')) out.push(pick_('Jo', 'My sister. Jo.', "FAMILY. I'LL HOLD THE ROOM TILL SHE COMES. I DON'T DO THAT. I'LL DO IT."));
+    out.push(pick_('the next tenant', 'Whoever gets the room next.', "THE NEXT ONE. ...ALL RIGHT. I'LL LEAVE IT HOW YOU LEAVE IT. THAT'S NOT A THING I'VE EVER DONE EITHER."));
+    out.push({ t: "I don't know yet.", do: () => [say('morrow', "OKAY."), narr('He does not tear off the page. He leaves it on the pad, and it is still there the next time you come down.')] });
+    return out;
+  },
+  radiator() {
+    const m = this.S(); if (!talkEnergy(2)) return; m.radiator = true; m.radiatorDay = G.day; remember('morrow_heat');
+    Dlg.run([you("The radiator in 412. It bangs and it doesn't get warm."), narr('He writes without looking at the pad.'), say('morrow', "TOMORROW. SIX. YOU WON'T BE UP. YOU WON'T HEAR ME. IT'LL BE WARM."), narr("It is. At six the next morning there is a sound in the wall like a man arguing with a pipe, and then the pipe gives in, and the room is warm for the first time since you took it.")]);
+  },
+  drawer() {
+    const m = this.S(); if (!talkEnergy(2)) return; m.drawer = true; m.trust += 1; remember('morrow_drawer');
+    Dlg.run([you("The drawer. The pages."), narr('He looks at you. Then he opens it and turns it so you can see: twenty-two years of torn-off pages, RENT and NO HEAT and THANK YOU and SORRY, in the same block capitals, and under them other hands, the tenants\' notes back.'), narr('Yours are near the top. RENT. - M. And under it, in your hand, on the back of an envelope, the one you slid under his door the first Monday: HERE. - 412.'), say('morrow', "I KEEP THEM. I DON'T READ THEM. I KNOW WHAT THEY SAY. IT'S THAT SOMEBODY WROTE BACK."), say('morrow', "YOU WROTE BACK. MOST DON'T.")]);
+  },
+  wake() {
+    const m = this.S(); const d = G.day;
+    if (m.radiator && d === m.radiatorDay + 1) { G.flags.own_heat = true; G.energy = clamp(G.energy + 6, 0, G.maxEnergy); G.tod = 1 - G.energy / G.maxEnergy; Dlg.run([narr('Six in the morning: a man arguing with a pipe in the wall, and the pipe giving in. The room is warm. It stays warm. You did not know how much of the cold you had been carrying until it was not there.')]); return true; }
+    if (d >= 93 && !m.padlock && m.met) { m.padlock = true; remember('morrow_padlock'); Dlg.run([narr("A note under the door, block capitals, no signature needed: \"THE PADLOCK IS OFF MY DESK. IT'S IN THE DRAWER WITH THE PAGES. I'M NOT GOING TO NEED IT. - M.\"")]); return true; }
+    return false;
+  },
+  endingLine() {
+    const m = this.S(); if (!m.met) return null;
+    if (m.asked) return { name: 'Morrow', line: `Twenty-two years of pages in a drawer, and one on top with a word underlined: ${m.answer}. He will clear the room the way you said. He has never done it the way anybody said.` };
+    return { name: 'Morrow', line: `The super, first floor, behind the grille. ${m.radiator ? 'He fixed the heat at six in the morning so you would not have to see him do it. ' : ''}${m.drawer ? 'He showed you the drawer. ' : ''}He will clear the room; boxes, the basement, the curb. He does not like the curb.` };
+  }
+};
+
+const Lobby = {
+  notices() {
+    const N = []; const f = G.flags, c = G.chars, d = G.day; const r = Rent.S();
+    const add = (t, body, col) => N.push({ t, body, col });
+    add('RENT MONDAYS', 'RENT MONDAYS. ENVELOPE UNDER THE OFFICE DOOR, OR THE WINDOW, IF YOU\'RE THE KIND WHO COMES TO THE WINDOW. - M.');
+    if (r.owed > 0) add('NOTICE TO 412', `NOTICE TO 412: $${r.owed} OWED. ${r.missed >= 2 ? 'ONE MORE AND THE LOCK GOES ON.' : 'I HAVE BEEN PATIENT.'} - M.`, '#e8c0a0');
+    if (d % 7 === 1 || d % 7 === 2) add('NO HEAT TUES', 'NO HEAT TUESDAY 9-12. BOILER. WEAR A COAT. - M.');
+    if ((G.snow || 0) > 0.5) add('SHOVEL', 'SHOVEL YOUR WALK. THAT MEANS ME. I DO IT AT FIVE. - M.');
+    if (d <= 10 && Season.lightsUp()) add('LIGHTS', 'LIGHTS COME DOWN JANUARY 5TH. LADDER IN THE BASEMENT. ASK. - R. ORTEGA, 2ND FLOOR');
+    for (const k in CAL.HOLIDAYS) { const hd = +k; if (hd >= d && hd <= d + 4) add('DOCK CLOSED', `MORROW FREIGHT: CLOSED ${CAL.short(hd).toUpperCase()}, ${CAL.HOLIDAYS[k].toUpperCase()}. NO DAY LABOR. - K.`, '#d8d8e8'); }
+    if (!f.dogCollar && !f.dogFollows && d >= 2) add('LOST DOG', 'LOST: BROWN DOG, NO COLLAR, ANSWERS TO NOTHING. SEEN BY THE LOT AT THE RIVER END. NOT MINE. SOMEBODY\'S.', '#f0e8c0');
+    if (d < 40) add('410 TO LET', '410 TO LET. ONE ROOM. WINDOW ON THE AIR SHAFT. NO MUSICIANS. - M.');
+    else if (c.signe && c.signe.arrived) add('TO 410', 'TO THE TENANT OF 410: PRACTICE HOURS 4 TO 6 ARE ACCEPTABLE. NOBODY HAS COMPLAINED. ONE PERSON ASKED FOR MORE. - M.');
+    if (c.theo && c.theo.posterRead && !c.theo.reunited && !c.theo.gone) add('MISSING', 'MISSING: THEO MARSH, 16. GREY HOODIE. LAST SEEN BY THE RIVER. HIS FATHER IS LOOKING. HIS FATHER IS SORRY. - PLEASE CALL.', '#f0e0d0');
+    if (c.nadia.met && !c.nadia.saved && !c.nadia.closed && d >= c.nadia.rentDay - 6) add("NADIA'S", `NADIA'S DINER: LAST DAY ${CAL.short(c.nadia.rentDay).toUpperCase()} UNLESS. COME EAT. - N.`, '#f0d0c0');
+    if (c.nadia.saved) add("NADIA'S", "NADIA'S: OPEN. STAYING OPEN. THANK YOU, YOU KNOW WHO. - N. (AND SAM)", '#f0d0c0');
+    if (c.signe && c.signe.band) add('FRIDAYS', 'FRIDAYS UNDER THE SHELTER, AFTER DARK: THE HARLAN STREET THREE. A GUITAR, A CELLO, A HORN. NO COVER. BRING A CRATE. - C.', '#e0d0f0');
+    if (c.birdie && c.birdie.callinDay && !c.birdie.lease) add('KHRL', `KHRL 1340 AM: CALL IN ${CAL.short(c.birdie.callinDay).toUpperCase()}, AFTER NINE. SOMEBODY IS LISTENING. PROVE IT. - B.`, '#e8d8a0');
+    if (c.birdie && c.birdie.dark) add('KHRL', 'KHRL 1340: OFF THE AIR. THANK YOU FOR LISTENING. I KNOW YOU WERE. - B.', '#c8c0b0');
+    if (c.birdie && c.birdie.lease) add('KHRL', 'KHRL 1340, THE OVERNIGHT: STILL HERE. THE TOWER IS PAID. SOMEBODY DID THAT. - B.', '#e8d8a0');
+    if (G.garden && G.garden.harvests > 0) add('VEGETABLES', "VEGETABLES BEHIND THE DINER, HECTOR'S PLOT. TAKE WHAT YOU NEED. LEAVE THE TOMATOES ON THE LEFT, THOSE ARE FOR THE DINER. - R.O.", '#d0e8c0');
+    if (c.walter.dead) add('WALTER J. ASHBY', `WALTER J. ASHBY. FORTY-ONE YEARS AT THE HERALD. THE BENCH UNDER THE BUS SIGN, ELEVEN YEARS. ST. BARTHOLOMEW'S, BESIDE RUTH. THE 14 DOES NOT RUN. HE KNEW.`, '#d8d8e0');
+    if (G.house && G.house.listed && !G.house.owner) add('FOR SALE', 'THE ASHBY HOUSE, THE LANE OFF THE RIVER END. TWENTY THOUSAND. SEVEN CLOCKS INCLUDED. - HARLAN REALTY');
+    if (G.house && G.house.owner === 'amos') add('SOLD', 'THE ASHBY HOUSE: SOLD. TO A CARPENTER. THE CLOCKS ARE WOUND. - A.R.');
+    if (d >= 89 && d <= 91) add('SUNDAY DINNER', "SUNDAY DINNER, 2ND FLOOR, THE FIRST SUNDAY OF SPRING. EVERYBODY. THAT MEANS YOU, 412. - R. ORTEGA", '#f0e0c0');
+    if (d === 43 && c.nadia.met) add('412', 'HAPPY BIRTHDAY 412. COME TO THE DINER. DON\'T ASK WHY. - S.', '#f0d0d0');
+    if (c.amos.dead) add('AMOS REED', 'AMOS REED. CARPENTER. HE SLEPT BY THE STOOP AND NEVER ONCE ASKED. THE CANDLE IS FOR HIM. LEAVE IT. - 412 (AND 411)', '#d8d8e0');
+    if (f.house === 'mine') add('412', 'ROOM 412 TO LET. THE TENANT MOVED TO THE LANE. HE LEFT THE CRACK IN THE CEILING; IT WAS THERE WHEN HE CAME. - M.');
+    if (c.morrow && c.morrow.padlock) add('TO 412', 'TO 412: THE PADLOCK IS OFF MY DESK. - M.', '#e8c0a0');
+    return N;
+  },
+  board() {
+    const N = this.notices(); remember('board_read');
+    const items = N.map(n => ({ t: n.t, do: () => Dlg.run([narr(n.body)]) })); items.push({ t: 'Step back', do: () => { } });
+    Menu.open('The board', items, { wide: true, sub: `Cork, thumbtacks, a pen on a string. ${N.length} notice${N.length === 1 ? '' : 's'}.` });
+  },
+  door(d) {
+    const room = G.chars.amos.room;
+    if (d.office) { if (Morrow.here()) Morrow.menu(); else Dlg.run([narr('The office is dark. A card in the grille, block capitals: BACK AT 7. IF IT\'S THE HEAT, KICK IT, TOP LEFT.')]); return; }
+    if (d.lobbyStairs) {
+      Audio.sel(); const up = () => UI.fadeOut(() => { goSceneNow('hall', 'stairs'); UI.fadeIn(); useStairs('up'); }, 0.08);
+      if (room) Menu.open('Stairs', [{ t: 'Up to your floor (4)', do: up }, { t: 'Down to the basement (Amos)', do: () => UI.fadeOut(() => { goSceneNow('basement', 'stairs'); UI.fadeIn(); useEnergy(1); Dlg.run([narr('One flight down. The stairwell smells like the boiler and, faintly, sawdust.')]); }, 0.08) }, { t: 'Never mind', do: () => { } }]);
+      else up();
+      return;
+    }
+    if (d.lobbyElev) {
+      if (G.elevatorBroken) { UI.toast('Out of order. Again.', '#e86a6a'); Audio.bad(); return; }
+      Audio.sel(); const up = () => Elevator.start('up', () => { goSceneNow('hall', 'elevator'); }, 1, 4);
+      if (room) Menu.open('Elevator', [{ t: 'Your floor (4)', do: up }, { t: 'Basement (B)', do: () => Elevator.start('down', () => { goSceneNow('basement', 'elevator'); }, 1, 0) }, { t: 'Never mind', do: () => { } }]);
+      else up();
+      return;
+    }
+    goScene(d.to, d.at);
+  },
+  arrive() {
+    const m = Morrow.S(); if (m.seenLobby) return; m.seenLobby = true;
+    Dlg.run([narr('The lobby of Harlan Arms: a checkerboard floor with the checks worn off in a path, brass mailboxes, a corkboard, a radiator that ticks, and a window with a grille in it and a light behind the grille.'), narr('You have lived here since September and come through this room every day and never once looked at the window. Somebody is behind it.')]);
+  }
+};
+{
+  // the building door now opens on the lobby; the stairs and the elevator come down to it
+  enterBuilding = function () { Audio.sel(); goScene('lobby', 'street'); };
+  const hdL = hallDoor; hallDoor = function (d) {
+    const here = G.scene; const room = G.chars.amos.room;
+    if (d && d.elevator && (here === 'hall' || here === 'basement')) {
+      if (G.elevatorBroken) { UI.toast('Out of order. Again.', '#e86a6a'); Audio.bad(); return; }
+      Audio.sel(); const toLobby = () => Elevator.start(here === 'hall' ? 'down' : 'up', () => { goSceneNow('lobby', 'elevator'); }, here === 'hall' ? 4 : 0, 1);
+      if (here === 'hall' && room) Menu.open('Elevator', [{ t: 'Lobby (1)', do: toLobby }, { t: 'Basement (B)', do: () => Elevator.start('down', () => { goSceneNow('basement', 'elevator'); }, 4, 0) }, { t: 'Never mind', do: () => { } }]);
+      else if (here === 'basement') Menu.open('Elevator', [{ t: 'Lobby (1)', do: toLobby }, { t: 'Your floor (4)', do: () => Elevator.start('up', () => { goSceneNow('hall', 'elevator'); }, 0, 4) }, { t: 'Never mind', do: () => { } }]);
+      else toLobby();
+      return;
+    }
+    if (d && d.stairs && (here === 'hall' || here === 'basement')) {
+      Audio.sel();
+      const toLobby = () => UI.fadeOut(() => { goSceneNow('lobby', 'stairs'); UI.fadeIn(); if (here === 'hall') useStairs('down'); else Dlg.run([narr('One flight up.')]); }, 0.08);
+      if (here === 'hall' && room) Menu.open('Stairs', [{ t: 'Down to the lobby', do: toLobby }, { t: 'Down to the basement (Amos)', do: () => UI.fadeOut(() => { goSceneNow('basement', 'stairs'); UI.fadeIn(); useEnergy(2); Dlg.run([narr('Five flights down. The last one is unlit. You count the steps by feel.')]); }, 0.08) }, { t: 'Never mind', do: () => { } }]);
+      else if (here === 'basement') Menu.open('Stairs', [{ t: 'Up to the lobby', do: toLobby }, { t: 'Up to your floor (4)', do: () => UI.fadeOut(() => { goSceneNow('hall', 'stairs'); UI.fadeIn(); useStairs('up'); }, 0.08) }, { t: 'Never mind', do: () => { } }]);
+      else toLobby();
+      return;
+    }
+    return hdL(d);
+  };
+  const oesL = onEnterScene; onEnterScene = function (sc) { oesL(sc); if (sc === 'lobby') Lobby.arrive(); };
+  const weL = wakeEvents; wakeEvents = function () { if (Morrow.wake()) return; weL.apply(this, arguments); };
+  const belL = buildEndingList; buildEndingList = function () { const out = belL(); const ml = Morrow.endingLine(); if (ml) out.push(ml); return out; };
+  NAME_RULES.push({ id: 'morrow', re: /\bMorrow('s)?\b(?! Freight| FREIGHT)/g, sub: 'the super' });
+  const nkL = nameKnown; nameKnown = function (id) { if (id === 'morrow') return !!(G.chars.morrow && G.chars.morrow.met) || (G.rent && G.rent.notes > 0) || G.day > 8; return nkL(id); };
+  FRESH.morrow = [];
+  FRESH.nora = FRESH.nora || []; FRESH.nora.push(L_("Morrow fixed your heat? He's never fixed mine. He fixed mine the day after yours. He thinks I don't know it was because of you.", () => !!(G.chars.morrow && G.chars.morrow.radiator)));
+  FRESH.amos = FRESH.amos || []; FRESH.amos.push(L_("Morrow took the lock off the basement door in 2020. I know. I watched him do it from the cardboard. He didn't look at me. That's how you know a man means it.", () => !!(G.chars.morrow && G.chars.morrow.talks >= 5)));
+}
+
 // ---- 10_game.js ----
 // ============================================================
 // game: state, loop, interactions, shop, sleep, ending, save
@@ -7184,7 +7824,7 @@ function freshState() {
     version: SAVE_VERSION, state: 'play', day: 1, money: 12, hunger: 62, energy: 100, maxEnergy: 100, tod: 0,
     inv: { bread: 1, soup: 0, rice: 0, coat: 0, radioParts: 0, signParts: 0, chess: 0, bird: 0, drawing: 0, thermos: 0, tools: 0, textbook: 0, collar: 0, ruthWatch: 0, chessClock: 0, strings: 0, checkers: 0, nurseShoes: 0, amosHeater: 0, gloves: 0, frame: 0, busPass: 0, fish: 0, letter: 0, veg: 0, type: 0, cards: 0, trumpet: 0, card: 0 },
     outfit: null, wardrobe: {},
-    flags: {}, bequests: {}, memories: [], chars: { amos: Amos.init(), mei: Mei.init(), walter: Walter.init(), nadia: Nadia.init(), nora: Nora.init(), theo: Theo.init(), sol: Pawn.init(), emmett: Emmett.init(), signe: Cello.init(), birdie: Radio.init() },
+    flags: {}, bequests: {}, memories: [], chars: { amos: Amos.init(), mei: Mei.init(), walter: Walter.init(), nadia: Nadia.init(), nora: Nora.init(), theo: Theo.init(), sol: Pawn.init(), emmett: Emmett.init(), signe: Cello.init(), birdie: Radio.init(), morrow: Morrow.init() },
     scene: 'apartment', px: 330, facing: -1, walking: false, frame: 0, camX: 0, rain: 0.8, wind: 0.2, weatherSeed: irnd(1, 99999),
     starveDays: 0, ateToday: false, walkers: [], dogX: 0, coughT: 600, stun: 0, dockShifts: 0, deliveries: 0, jobsToday: 0, hideHud: false,
     pendingStreet: null, pendingDiner: null, dayCard: null, dead: false, t: 0, elevatorBroken: false, pills: 30, lastPill: 1, pillPenalty: 0, phone: Phone.init(), pass: Passing.init(), house: House.init(), garden: Garden.init(), beats: {}, rent: Rent.init(), casino: Casino.init(), seen: {}, busT: 0, busDir: 'out', busArrived: false,
@@ -7259,7 +7899,7 @@ function buildEntities() {
     if (Walter.present()) { const w = G.chars.walter; const wx = w.atRiver ? STREET.spots.river : STREET.spots.walter; add({ id: 'walter', x: wx, y: feet, spec: w.spec, dir: 1, sit: !w.atRiver, on: () => Walter.menu(), label: w.met ? 'Walter' : 'Old man' }); }
     if (G.day >= 3 && G.tod > 0.15 && G.tod < 0.9) add({ id: 'busker', x: STREET.spots.busker, y: feet, spec: 'busker', dir: -1, on: () => Minor.busker(), label: 'Busker', light: 0 });
     if (G.day >= 2 && !f.dogFollows) add({ id: 'dog', x: STREET.spots.dog, y: feet, sprite: G.tod > 0.5 ? 'dogSit' : 'dog', dir: -1, on: () => Minor.dog(), label: 'Dog' });
-    if ([6, 15, 27, 40, 55, 72, 88].includes(G.day) && G.tod < 0.7) add({ id: 'granny', x: STREET.spots.granny, y: feet, spec: 'granny', dir: -1, on: () => Minor.granny(), label: 'Mrs. Ortega', bubble: f.grannyDay === G.day ? null : 'exclaim' });
+    if ([6, 10, 15, 27, 40, 55, 72, 88, 91].includes(G.day) && G.tod < 0.7) add({ id: 'granny', x: STREET.spots.granny, y: feet, spec: 'granny', dir: -1, on: () => Minor.granny(), label: 'Mrs. Ortega', bubble: f.grannyDay === G.day ? null : 'exclaim' });
     if (G.day === 9 && !f.kidDone && G.tod < 0.8) add({ id: 'kid', x: STREET.spots.kid, y: feet, spec: 'kid', dir: -1, on: () => Minor.kid(), label: 'Kid', bubble: 'exclaim' });
     if (G.chars.nadia.closed && !f.nadiaGoodbye && G.day <= G.chars.nadia.rentDay + 1) add({ id: 'nadiaLeaving', x: STREET.spots.walter + 40, y: feet, spec: 'nadia', dir: -1, on: () => nadiaGoodbye(), label: 'Nadia' });
     if (G.day >= 8 && G.tod > 0.2 && G.tod < 0.7 && G.day % 3 === 0 && !f.workerCut) add({ id: 'worker', x: STREET.spots.worker, y: feet, spec: 'worker', dir: -1, label: 'Dock worker', on: () => { const items = [{ t: 'Talk', r: '-2 energy', do: () => talkEnergy(2) && Dlg.run([say('worker', fresh('danny', ["Dock's hiring day labor. Roll-up door, ask for the foreman.", "Smoke break. Don't tell the foreman.", "You're the one from 412? Amos talks about you."]))]) }]; const ci = Theo.clueItem('dock'); if (ci) items.push(ci); items.push({ t: 'Leave', do: () => { } }); Menu.open('Danny', items); } });
@@ -7309,6 +7949,7 @@ function buildEntities() {
   // Nora (411)
   const nw = Nora.where();
   if (nw && nw.scene === sc) add({ id: 'nora', x: nw.x, y: nw.sit ? feet : (sc === 'diner' ? feet : feet), spec: nw.spec, dir: nw.x > G.px ? -1 : 1, sit: !!nw.sit, range: 40, on: () => (sc === 'hall' ? Nora.menu() : Nora.cameoTalk(sc)), label: G.chars.nora.met ? 'Nora' : 'Neighbor', bubble: (sc === 'hall' && G.day <= 9 && !G.chars.nora.boxes) ? 'exclaim' : null });
+  if (sc === 'lobby' && Morrow.here()) { const mo = Morrow.S(); add({ id: 'morrow', range: 40, x: INTERIORS.lobby.spots.office, y: 212, spec: 'morrow', dir: -1, on: () => Morrow.menu(), label: mo.met ? 'Morrow' : 'The super', bubble: mo.met ? null : 'exclaim' }); }
   if (sc === 'radio') {
     const rb = Radio.S(); add({ id: 'birdie', range: 60, x: INTERIORS.radio.spots.birdie, y: 212, spec: 'birdie', dir: -1, on: () => Radio.menu(), label: rb.met ? 'Birdie' : 'The woman at the desk', bubble: rb.met ? null : 'exclaim' });
     if (rb.sessionDay && G.day === rb.sessionDay && Radio.night()) { add({ id: 'busker', x: 176, y: feet, spec: 'busker', dir: 1, range: 30, on: () => Cello.calInHall(), label: 'Cal' }); add({ id: 'signeR', x: 150, y: feet, spec: 'signe', dir: 1, range: 30, on: () => Cello.streetTalk(), label: 'Signe' }); add({ id: 'solR', x: 124, y: feet, spec: 'sol', dir: 1, range: 30, on: () => Cello.solStreet(), label: 'Sol' }); }
@@ -7339,6 +7980,7 @@ function nearest() {
     else if (Math.abs(G.px - sp.sink) < 16 && bd > 14) best = { kind: 'note', label: G.flags.noteRead ? 'Post-it' : 'A note' };
   }
   if (G.scene === 'basement' && Math.abs(G.px - INTERIORS.basement.spots.chair) < 14 && bd > 14) best = { kind: 'chair', label: 'The chair' };
+  if (G.scene === 'lobby') { const sp = INTERIORS.lobby.spots; if (Math.abs(G.px - sp.board) < 16 && bd > 14) best = { kind: 'board', label: 'The board' }; else if (Math.abs(G.px - sp.boxes) < 12 && bd > 12) best = { kind: 'boxes', label: 'Mailboxes' }; }
   if (G.scene === 'hall' && Cello.practicing() && Math.abs(G.px - 178) < 22 && (!best || best.kind === 'door')) best = { kind: 'listen410', label: 'Listen at 410' };
   if (G.scene === 'house') {
     const sp = INTERIORS.house.spots; const mine = G.flags.house === 'mine';
@@ -7363,7 +8005,9 @@ function interact(n) {
   if (!n) return;
   if (n.kind === 'ent') { n.e.on(); return; }
   if (n.kind === 'listen410') { Cello.listen(); return; }
-  if (n.kind === 'door') { if (n.d.bus) Bus.door(); else if (n.d.to === 'house') House.enter(); else if (n.d.to === 'casino' && G.scene === 'street') Casino.door(); else if (n.d.to === 'radio' && G.scene === 'street') Radio.door(); else if (n.d.to === 'garden' && !Garden.S().unlocked) Dlg.run([narr(G.day < 6 ? 'A chain-link gate across the alley, padlocked. Weeds behind it to the fence, and the backs of buildings.' : 'Padlocked. Through the wire: weeds, a shed, a hand-painted sign you cannot read from here. Somebody kept this once.')]); else if (G.scene === 'hall') hallDoor(n.d); else if (n.d.to === 'hall' && G.scene === 'street') enterBuilding(); else goScene(n.d.to, n.d.at); return; }
+  if (n.kind === 'board') { Lobby.board(); return; }
+  if (n.kind === 'boxes') { Dlg.run([narr(pick(['412. A flyer for a church supper, a flyer for a phone plan, and a rubber band. Nobody writes to the mailbox; they write to the door.', 'Twenty-four boxes. Yours has a name on it in tape that is not your handwriting; the last tenant\'s, or the one before.', 'Empty. The important things come under the door in this building, and always have.']))]); return; }
+  if (n.kind === 'door') { if (n.d.bus) Bus.door(); else if (n.d.to === 'house') House.enter(); else if (n.d.to === 'casino' && G.scene === 'street') Casino.door(); else if (n.d.to === 'radio' && G.scene === 'street') Radio.door(); else if (n.d.to === 'garden' && !Garden.S().unlocked) Dlg.run([narr(G.day < 6 ? 'A chain-link gate across the alley, padlocked. Weeds behind it to the fence, and the backs of buildings.' : 'Padlocked. Through the wire: weeds, a shed, a hand-painted sign you cannot read from here. Somebody kept this once.')]); else if (G.scene === 'hall') hallDoor(n.d); else if (G.scene === 'lobby') Lobby.door(n.d); else if (n.d.to === 'hall' && G.scene === 'street') enterBuilding(); else goScene(n.d.to, n.d.at); return; }
   if (n.kind === 'lakebus') { Bus.back(); return; }
   if (n.kind === 'fish') { if (G.energy < 25) { UI.toast('Too tired to hold a rod.', '#8ab0d8'); return; } Fishing.start(); return; }
   if (n.kind === 'cabin') { cabinDoor(); return; }
@@ -7437,7 +8081,7 @@ function pauseMenu() {
     { t: 'People', do: () => peopleScreen() },
     { t: () => 'Sound: ' + (Audio.muted ? 'off' : 'on'), keep: true, do: () => { Audio.toggleMute(); Menu.items[3].t = 'Sound: ' + (Audio.muted ? 'off' : 'on'); } },
     { t: 'Save & quit to title', do: () => { save(); UI.fadeOut(() => { G.state = 'title'; titleInit(); UI.fadeIn(); }); } },
-  ].map(i => { if (typeof i.t === 'function') i.t = i.t(); return i; }), { sub: `Day ${G.day}. ${99 - G.day} left.` });
+  ].map(i => { if (typeof i.t === 'function') i.t = i.t(); return i; }), { sub: `${CAL.long(G.day)}. ${Weather.label(G.weather)}.` });
 }
 function peopleScreen() {
   const lines = [];
@@ -7647,13 +8291,14 @@ function dayCardDraw(g, t) {
   g.globalAlpha = a;
   const [tc, tgc] = mkCanvas(80, 12); drawText(tgc, `DAY ${G.day}`, 1, 1, '#f0ead8'); const w = textWidth(`DAY ${G.day}`) + 2;
   g.drawImage(tc, 0, 0, w, 12, W / 2 - w * 1.5, 96, w * 3, 36);
-  drawText(g, `${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][G.day % 7]}.  ${99 - G.day} left`, W / 2, 138, '#8a92a4', { align: 'center' });
+  drawText(g, `${CAL.long(G.day)}.  ${99 - G.day} left`, W / 2, 138, '#8a92a4', { align: 'center' });
+  { const ev = CAL.event(G.day); const wk = G.weather ? Weather.label(G.weather) : ''; const sub = [ev, wk].filter(Boolean).join('  -  '); if (sub) drawText(g, sub, W / 2, 148, ev ? '#c8b070' : '#5a6274', { align: 'center' }); }
   g.globalAlpha = clamp((c.t - 50) / 40, 0, 1);
-  const lines = wrapText(c.line, 300); lines.forEach((ln, i) => drawText(g, ln, W / 2, 160 + i * 10, '#c8ccd8', { align: 'center' }));
+  const lines = wrapText(c.line, 300); lines.forEach((ln, i) => drawText(g, ln, W / 2, 164 + i * 10, '#c8ccd8', { align: 'center' }));
   g.globalAlpha = 1;
 }
 function introScene() {
-  Dlg.run([narr('Your apartment: 412, Harlan Arms, fourth floor. One room, a window on the street, a bed that is mostly fine.'), narr('On the table, the pills from Dr. Okafor and the letter from the clinic. On the cabinet over the sink, a post-it you wrote yourself so you would not forget the appointment.'), narr(`Ninety-nine days, she said. Maybe more, if the trial opens up. You have twelve dollars and a loaf of bread, and rent is a hundred a week, Mondays, in an envelope under the super's door.`), narr("Lin's Market sells food. Nadia's diner and the freight dock pay cash for a day's work. Everything takes energy; when it runs out you sleep, and the number goes down by one."), narr(`Move with ${Input.touch ? 'the arrows' : 'A/D or the arrow keys'}. ${UI.keyName('act')} talks, opens doors, does things. ${UI.keyName('menu')} for the menu. The door is to the left.`)]);
+  Dlg.run([narr('December 27th. Two days after Christmas, which happened to other people. Your apartment: 412, Harlan Arms, fourth floor. One room, a window on the street, a bed that is mostly fine.'), narr('On the table, the pills from Dr. Okafor and the letter from the clinic. On the cabinet over the sink, a post-it you wrote yourself so you would not forget the appointment.'), narr(`Ninety-nine days, she said. Maybe more, if the trial opens up. You have twelve dollars and a loaf of bread, and rent is a hundred a week, Mondays, in an envelope under the super's door.`), narr("Lin's Market sells food. Nadia's diner and the freight dock pay cash for a day's work. Everything takes energy; when it runs out you sleep, and the number goes down by one."), narr(`Move with ${Input.touch ? 'the arrows' : 'A/D or the arrow keys'}. ${UI.keyName('act')} talks, opens doors, does things. ${UI.keyName('menu')} for the menu. The door is to the left.`)]);
 }
 function wakeEvents() {
   const d = G.day; ladderWake();
@@ -7700,6 +8345,7 @@ const Ending = {
         if (b.proxy === 'jo' && !j.visited && !j.stopped) { V.push({ x: 250, y: feet, spec: 'jo', dir: 1, id: 'v_jo' }); lines.push(say('jo', "Nora called. Four in the morning; she said she'd call and she called. I took the first train. I've got the form. I know what it says. I'm not going to say anything about the room.")); } }
       if (f.dogFollows) { V.push({ x: 286, y: feet + 8, sprite: 'dogSit', dir: -1, id: 'v_dog' }); lines.push(narr('The dog is on the bed. It is not allowed on the bed. Nobody says anything.')); }
       if (G.inv.chess) lines.push(narr("Walter's chess set is on the table. Knight first. You never moved anything. You did not need to."));
+      { const mo = G.chars.morrow; if (mo && mo.met && (mo.asked || mo.trust >= 2)) lines.push(narr(mo.asked ? `Morrow, in the doorway, with the pad. He has come up four flights, which he does not do. He writes one word on it and does not turn it around, and you know the word; it is ${mo.answer}.` : 'Morrow, in the doorway, with the pad. He has come up four flights, which he does not do. He does not write anything. He stands there the length of a page.')); }
       { const cs = G.chars.signe; if (cs && cs.arrived && cs.trust >= 2 && G.flags.house !== 'mine') lines.push(narr(cs.band ? 'Down the hall, through two walls, a cello. The third suite, all the way through, and under the window a guitar and a trumpet finding it. They are playing it for the building. They are playing it for you.' : 'Down the hall, through two walls, a cello. The third suite. She plays it all the way through.')); }
       { const rb = G.chars.birdie; if (rb && (rb.met || rb.heard >= 3) && Radio.hasRadio()) lines.push(narr(rb.dark ? 'The radio on the sill is on, low. Static, at 1340, where she was. You leave it on.' : rb.trust >= 1 ? 'The radio on the sill is on, low. Birdie: "This one\'s for the fourth floor of Harlan Arms. He knows which window. Everybody else be quiet a minute." Everybody else is quiet a minute.' : 'The radio on the sill is on, low. The overnight. She is talking to the river; tonight you are the river.')); }
       if (f.buskerTips >= 3) lines.push(narr('Somewhere below the window, a guitar. A song about rain. He is playing it badly and on purpose.'));
@@ -7779,7 +8425,7 @@ function playUpdate() {
     for (const w of G.walkers) { w.x += w.dir * 1.1; w.frame = (w.frame + 0.12) % 4; }
     G.walkers = G.walkers.filter(w => w.x > -60 && w.x < STREET.w + 60 && Math.abs(w.x - G.camX - W / 2) < W);
     // cough
-    if (G.day >= 20) { G.coughT -= (1 + (G.day - 20) / 40) * (G.day - (G.lastPill || 1) >= 3 ? 1.8 : 1) * (G.flags.own_umbrella && G.rain > 0.3 ? 0.6 : 1) * (G.flags.own_scarf ? 0.8 : 1); if (G.coughT <= 0) { G.coughT = 500 + Math.random() * 500; G.stun = 40; G.walking = false; Audio.tone(120, 0.15, 'sawtooth', 0.03, 0.6); } }
+    if (G.day >= 20) { G.coughT -= (1 + (G.day - 20) / 40) * (G.day - (G.lastPill || 1) >= 3 ? 1.8 : 1) * (G.flags.own_umbrella && G.rain > 0.3 ? 0.6 : 1) * (G.flags.own_scarf ? 0.8 : 1) * (G.cold && !G.flags.own_scarf && G.scene === 'street' ? 1.35 : 1); if (G.coughT <= 0) { G.coughT = 500 + Math.random() * 500; G.stun = 40; G.walking = false; Audio.tone(120, 0.15, 'sawtooth', 0.03, 0.6); } }
   }
   Phone.update(); Passing.update(); Beats.update(); Cello.update();
   // interactions
@@ -7833,6 +8479,7 @@ function tick() {
     case 'song': Song.update(); break;
     case 'casino': Casino.update(); break;
     case 'radio': RadioPlayer.update(); break;
+    case 'journal': Journal.update(); break;
     case 'ending': Ending.update(); break;
   }
 }
@@ -7848,6 +8495,7 @@ function render() {
     case 'song': Song.draw(g, t); UI.drawFade(g); return;
     case 'casino': Casino.draw(g, t); UI.drawFade(g); return;
     case 'radio': RadioPlayer.draw(g, t); UI.drawFade(g); return;
+    case 'journal': Journal.draw(g, t); UI.drawFade(g); return;
     case 'elevator': Elevator.draw(g, t); UI.drawFade(g); return;
     default:
       playDraw(g, t);
@@ -7860,7 +8508,7 @@ World.static || buildStreetStatic(); paintLampPosts(World.static.getContext('2d'
 titleInit();
 requestAnimationFrame(loop);
 // debug hooks
-window.__99 = { get G() { return G; }, set G(v) { G = v; }, sleep, Amos, Mei, Walter, Nadia, Nora, Elevator, Ladder, Doctor, MG, readNote, Theo, VP, Pawn, Gifts, OUTFITS, PAWN_ITEMS, Dlg, Menu, startMinigame, buildEndingList, save, load, newGame, goScene, Ending, refresh: buildEntities, titleInit, Emmett, Bus, Fishing, Passengers, LAKE, busDay, Phone, Jo, Passing, House, LANE, homeScene, Song, SONGS, Garden, GARDEN, Beats, CEMETERY, Rent, Casino, best7, rank5, newDeck, Cello, gateNames, nameKnown, Radio, RadioPlayer, Home, Pawn, PAWN_ITEMS };
+window.__99 = { get G() { return G; }, set G(v) { G = v; }, sleep, Amos, Mei, Walter, Nadia, Nora, Elevator, Ladder, Doctor, MG, readNote, Theo, VP, Pawn, Gifts, OUTFITS, PAWN_ITEMS, Dlg, Menu, startMinigame, buildEndingList, save, load, newGame, goScene, Ending, refresh: buildEntities, titleInit, Emmett, Bus, Fishing, Passengers, LAKE, busDay, Phone, Jo, Passing, House, LANE, homeScene, Song, SONGS, Garden, GARDEN, Beats, CEMETERY, Rent, Casino, best7, rank5, newDeck, Cello, gateNames, nameKnown, Radio, RadioPlayer, Home, Pawn, PAWN_ITEMS, CAL, Weather, Season, Journal, Snow, Morrow, Lobby };
 
 })();
 </script>
