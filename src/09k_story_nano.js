@@ -1,7 +1,7 @@
 // ============================================================
 // The Halvorsen refund (collected at the clinic, in person) and the last option: the nanobot protocol
 // ============================================================
-const NANO_COST = 50000;
+const NANO_COST = 25000;
 function nanoDue() { const f = G.flags; return f.nanoPaid && G.day >= (f.nanoNext || 0); }
 {
   const baseMenu = Doctor.menu, baseTalk = Doctor.talk;

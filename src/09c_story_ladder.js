@@ -1,7 +1,7 @@
 // ============================================================
 // The Corporate Ladder: dock manager, Data Entry, Halvorsen deposit, the coffee can
 // ============================================================
-const CURE_COST = 20000;
+const CURE_COST = 10000;
 SPECS.playerManager = { skin: '#dcae88', hair: '#3a2a22', hairStyle: 'short', shirt: '#e8e8f0', pants: '#2c3444', shoes: '#3a3634', coat: '#4c5260', tie: '#8a2a2a' };
 SPECS.playerManagerLate = { skin: '#cfae96', hair: '#3a2a22', hairStyle: 'short', shirt: '#e8e8f0', pants: '#2c3444', shoes: '#3a3634', coat: '#4c5260', tie: '#8a2a2a', scarf: '#8a3a3a' };
 function playerSpec() { const f = G.flags; if (f.manager) return G.day >= 60 ? 'playerManagerLate' : 'playerManager'; return G.day >= 60 ? 'playerLate' : 'player'; }
