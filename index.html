@@ -202,9 +202,17 @@ const Audio = {
     const src = c.createBufferSource(); src.buffer = buf; src.loop = true;
     const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2200; f.Q.value = 0.4;
     const g = c.createGain(); g.gain.value = 0; src.connect(f); f.connect(g); g.connect(this.master); src.start();
-    this.rainGain = g;
+    this.rainGain = g; this.rainFilter = f;
+    if (typeof G !== 'undefined' && G && G.weather) this.setWeather(G.weather, G.rain, G.snowing);
   },
-  setRain(level) { if (!this.rainGain) return; this.rainGain.gain.setTargetAtTime(this.muted ? 0 : level * 0.35, this.ctx.currentTime, 0.8); },
+  // rain and sleet hiss; snow is a softer, lower hush; anything else is quiet
+  setWeather(kind, rain, snowing) {
+    if (!this.rainGain) return; let lvl = 0, fq = 2200;
+    if (kind === 'rain' || kind === 'sleet') lvl = rain || 0; else if (kind === 'snow') { lvl = 0.3 * (snowing || 0.6); fq = 650; }
+    const now = this.ctx.currentTime; if (this.rainFilter) this.rainFilter.frequency.setTargetAtTime(fq, now, 0.8);
+    this.rainGain.gain.setTargetAtTime(this.muted ? 0 : lvl * 0.35, now, 0.8); this.weatherLevel = lvl;
+  },
+  setRain(level) { if (!this.rainGain) return; if (typeof G !== 'undefined' && G && G.weather && level > 0) { this.setWeather(G.weather, G.rain, G.snowing); return; } this.rainGain.gain.setTargetAtTime(this.muted ? 0 : level * 0.35, this.ctx.currentTime, 0.8); },
   tone(freq, dur, type, vol, slide) {
     if (!this._unlocked || this.muted) return;
     const c = this.ctx, o = c.createOscillator(), g = c.createGain();
@@ -7241,6 +7249,7 @@ const Weather = {
     if (k === 'snow' && G.snow >= 0.3 && G.day >= 2) { for (const x of [1985, 610]) if (!G.snowmen.some(s => s.x === x)) G.snowmen.push({ x, built: G.day, hat: R() < 0.5 }); }
     G.snowmen = G.snowmen.filter(s => G.snow > 0.12 && G.day - s.built < 12);
     G.prints = [];
+    Audio.setWeather(k, G.rain, G.snowing);
   }
 };
 rollWeather = function () { Weather.roll(); };
@@ -7474,7 +7483,7 @@ const Snow = {
   };
   const puW = playUpdate; playUpdate = function () { puW.apply(this, arguments); Snow.trackPrints(); };
   // a loaded save from before the calendar gets a sky
-  const ldW = load; load = function () { const r = ldW.apply(this, arguments); if (G && G.weather === undefined) Weather.roll(); return r; };
+  const ldW = load; load = function () { const r = ldW.apply(this, arguments); if (G && G.weather === undefined) Weather.roll(); else if (G) Audio.setWeather(G.weather, G.rain, G.snowing); return r; };
   // the palette: snow days are bright and grey, not dark like rain
   const tp0 = todPalette; todPalette = function (tod, rain) { const p = tp0(tod, rain); if (G && G.weather === 'snow') { const l = v => [Math.min(255, v[0] * 0.92 + 26), Math.min(255, v[1] * 0.92 + 28), Math.min(255, v[2] * 0.92 + 34)]; p.top = l(p.top); p.bot = l(p.bot); p.amb = l(p.amb); p.sun *= 0.5; } else if (G && G.weather === 'clear' && G.day < 84) { p.sun = Math.min(1, p.sun * 1.1); } return p; };
   // the garden under snow: cold frames, or not much
@@ -8513,7 +8522,7 @@ World.static || buildStreetStatic(); paintLampPosts(World.static.getContext('2d'
 titleInit();
 requestAnimationFrame(loop);
 // debug hooks
-window.__99 = { get G() { return G; }, set G(v) { G = v; }, sleep, Amos, Mei, Walter, Nadia, Nora, Elevator, Ladder, Doctor, MG, readNote, Theo, VP, Pawn, Gifts, OUTFITS, PAWN_ITEMS, Dlg, Menu, startMinigame, buildEndingList, save, load, newGame, goScene, Ending, refresh: buildEntities, titleInit, Emmett, Bus, Fishing, Passengers, LAKE, busDay, Phone, Jo, Passing, House, LANE, homeScene, Song, SONGS, Garden, GARDEN, Beats, CEMETERY, Rent, Casino, best7, rank5, newDeck, Cello, gateNames, nameKnown, Radio, RadioPlayer, Home, Pawn, PAWN_ITEMS, CAL, Weather, Season, Journal, Snow, Morrow, Lobby };
+window.__99 = { get G() { return G; }, set G(v) { G = v; }, sleep, Amos, Mei, Walter, Nadia, Nora, Elevator, Ladder, Doctor, MG, readNote, Theo, VP, Pawn, Gifts, OUTFITS, PAWN_ITEMS, Dlg, Menu, startMinigame, buildEndingList, save, load, newGame, goScene, Ending, refresh: buildEntities, titleInit, Emmett, Bus, Fishing, Passengers, LAKE, busDay, Phone, Jo, Passing, House, LANE, homeScene, Song, SONGS, Garden, GARDEN, Beats, CEMETERY, Rent, Casino, best7, rank5, newDeck, Cello, gateNames, nameKnown, Radio, RadioPlayer, Home, Pawn, PAWN_ITEMS, CAL, Weather, Season, Journal, Snow, Morrow, Lobby, Audio };
 
 })();
 </script>
