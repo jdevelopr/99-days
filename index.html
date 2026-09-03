@@ -2564,20 +2564,22 @@ const Amos = {
     Menu.open(a.met ? 'Amos' : 'The man by the stoop', items);
   },
   gaveFood(k) {
-    const a = C('amos'); a.fed++; a.lastFed = G.day; useEnergy(3); markTalked();
+    const a = C('amos'); if (a.lastFed !== G.day) a.fed++; a.lastFed = G.day; useEnergy(3); markTalked();
     if (a.sick) { a.sickFed = (a.sickFed || 0) + 1; if (a.sickFed >= 4) { a.sick = false; a.spec = a.coat ? 'amos2' : 'amos1'; clearPortrait('amos'); UI.toast('Amos is looking better.', '#8ae88a'); } }
     trust('amos', 1); remember('amos_food');
     const lines = [];
     if (a.fed === 1) lines.push(narr(`You hold out the ${FOOD[k].name}. He looks at it a long moment, like it might be a trick.`), say('amos', "...Huh. Alright. Thank you."), narr('He eats slowly, with his back to the wind.'));
     else if (a.fed === 2) lines.push(say('amos', "You again. You don't have to keep doing this, you know."), you("I know."), say('amos', "Well. Thank you."));
-    else if (a.fed === 3 && !a.met) lines.push(say('amos', "Hey. Name's Amos. Figured you should know who you're feeding."), you("Amos. Okay."), { fn: () => { a.met = true; clearPortrait('amos'); } });
+    else if (a.fed >= 3 && !a.met) lines.push(say('amos', "Hey. Name's Amos. Figured you should know who you're feeding."), you("Amos. Okay."), { fn: () => { a.met = true; clearPortrait('amos'); } });
     else if (a.sick) lines.push(say('amos', "*cough* ...appreciate it. Can't seem to shake this."), narr("His hands are shaking. It's not just the cold."));
     else lines.push(pick([say('amos', "Bless you. Sit a minute if you want."), say('amos', "Still warm. You didn't have to."), say('amos', "You eat too, yeah? You look worse than me some days."), say('amos', "Thank you, friend.")]));
     Dlg.run(lines);
   },
   gaveMoney(n) {
-    const a = C('amos'); a.cash += n; a.lastFed = G.day; markTalked(); if (n >= 3) a.fed++; trust('amos', n >= 5 ? 1 : 0); useEnergy(1); remember('amos_money');
-    Dlg.run([n >= 10 ? say('amos', "That's... that's a lot. You sure?") : say('amos', "Thank you. Every bit."), n >= 10 ? you("I'm sure.") : null]);
+    const a = C('amos'); a.cash += n; if (n >= 3 && a.lastFed !== G.day) a.fed++; a.lastFed = G.day; markTalked(); trust('amos', n >= 5 ? 1 : 0); useEnergy(1); remember('amos_money');
+    const L = [n >= 10 ? say('amos', "That's... that's a lot. You sure?") : say('amos', "Thank you. Every bit."), n >= 10 ? you("I'm sure.") : null];
+    if (a.fed >= 3 && !a.met) L.push(say('amos', "Hey. Name's Amos. Figured you should know who you keep giving money to."), you("Amos. Okay."), { fn: () => { a.met = true; clearPortrait('amos'); } });
+    Dlg.run(L);
   },
   clinic() {
     const a = C('amos'); if (!spend(35)) return; a.sick = false; a.spec = a.coat ? 'amos2' : 'amos1'; clearPortrait('amos'); useEnergy(15); trust('amos', 3); remember('amos_clinic');
@@ -2600,15 +2602,16 @@ const Amos = {
           { t: "Sorry, not today.", do: () => [say('amos', "Sure. Tomorrow, maybe."), narr('He goes back to watching the rain.')] },
           { t: 'Walk past without answering', do: () => { a.trust--; return [narr("You keep walking. He doesn't call after you.")]; } }));
       else if (a.fed === 0) L.push(say('amos', fresh('amos', ["Cold one today.", "Spare anything?", "You live up there? Four-twelve? I see you come and go."])));
-      else if (a.fed < 3) L.push(say('amos', fresh('amos', ["Slow day. They're all slow days.", "That building's got a leak on the third floor. Been there since March. Nobody fixes anything.", "You work? You've got that walk. The going-to-work walk."])));
-      if (a.fed >= 3 && a.met) { a.stage = 1; }
+      else if (a.fed >= 3 && !a.met) L.push(say('amos', "Hey. Name's Amos. Figured you should know who you're feeding."), you("Amos. Okay."), { fn: () => { a.met = true; clearPortrait('amos'); } });
+      else if (a.fed < 3 || !a.met) L.push(say('amos', fresh('amos', ["Slow day. They're all slow days.", "That building's got a leak on the third floor. Been there since March. Nobody fixes anything.", "You work? You've got that walk. The going-to-work walk."])));
+      if (a.fed >= 3 && a.met && G.day >= 4) { a.stage = 1; }
     }
     if (a.stage === 1 && L.length === 0) {
       if (a.trust >= 3 && !a.story1) {
         a.story1 = true;
         L.push(say('amos', "I was a carpenter. Twenty-two years. Framing, finish work, cabinets. My hands used to be worth something."), say('amos', "Fell off a roof in Millbrook. Two vertebrae. Company said I wasn't on the clock. Lawyer said it'd take years."), say('amos', "Rent doesn't take years."), you("I'm sorry."), say('amos', "Don't be. I'm telling you because you keep showing up. Figured you'd want to know who you're feeding."), { fn: () => { trust('amos', 1); remember('amos_story'); } });
       } else L.push(say('amos', fresh('amos', ["The cold gets in the joints. That's the real thing about winter. It gets in the joints.", "Mrs. Ortega from the third floor brings me coffee Sundays. Good woman. Terrible coffee.", "You look tired. You sleeping?", "Ever notice how nobody looks up? Whole street walks around looking at the ground."])));
-      if (a.trust >= 5 && a.fed >= 4) a.stage = 2;
+      if (a.trust >= 5 && a.fed >= 4 && G.day >= 9) a.stage = 2;
     }
     if (a.stage === 2 && L.length === 0) {
       if (!a.told) {
@@ -2619,7 +2622,7 @@ const Amos = {
       } else if (!a.coat && !a.askedCoat && a.fed >= 6) { a.askedCoat = true; L.push(say('amos', "This coat's done. See that? Whole seam's gone. The rain just comes right in."), say('amos', "Lin's has a rack in the back. Work coats. Forty-five bucks. Might as well be forty-five hundred."), narr("You could buy a coat at Lin's Market.")); G.flags.coatAvailable = true; }
       else if (!a.coat) L.push(say('amos', fresh('amos', ["Cold. That's all. Just cold.", "Lin's. Forty-five. I'm not asking. I'm just saying."])));
       else if (a.coat && !a.story2) { a.story2 = true; L.push(say('amos', "This coat. I slept last night. Actually slept. First time since... I don't know."), say('amos', "There's a thing I need. An ID. Mine got stolen with my bag last year. Can't get work without it, can't get a bed at the shelter without it."), say('amos', "Twenty-five dollars at the county office. And somebody to vouch that I exist."), narr("You could pay for his ID.")); G.flags.idAvailable = true; }
-      else if (a.coat && !a.id) L.push({ fn: () => Menu.open('The ID', [{ t: 'Pay the $25 and go with him', disabled: () => G.money < 25, do: () => this.getId() }, { t: 'Not today', do: () => { } }], { sub: 'A morning at the county office. It will take most of your energy.' }) });
+      else if (a.coat && !a.id && G.day >= 12) L.push({ fn: () => Menu.open('The ID', [{ t: 'Pay the $25 and go with him', disabled: () => G.money < 25, do: () => this.getId() }, { t: 'Not today', do: () => { } }], { sub: 'A morning at the county office. It will take most of your energy.' }) });
       if (a.id) a.stage = 3;
     }
     if (a.stage === 3 && L.length === 0) {
@@ -2636,7 +2639,7 @@ const Amos = {
       else if (G.scene === 'basement') L.push(say('amos', fresh('amos', ["Boiler kicks on at five. You get used to it. I like it, actually. Something in the building that works.", "Super gave me the scrap pile behind the dock. I'm making a shelf. I've got nothing to put on it. That's not the point.", "Sit. That's what the chair's for. I stand; I've been standing for three years, it's a hard habit.", "You know what a door that locks does to a man? It lets him sleep with both eyes. Both.", "Mrs. Ortega brought a plant down. It's dying. Everything dies down here, there's no window. I'm keeping it anyway."])));
       else L.push(say('amos', fresh('amos', ["Come by the basement sometime. I've got a chair now. One chair. It's yours if you visit.", "Nadia's kid beat me at checkers. Twice.", "I sit by the river some mornings now. It's a good spot. You should come.", "You look thin. Are you eating? Let me buy you something for once."])));
     }
-    if (L.length === 0) L.push(say('amos', "..."));
+    if (L.length === 0) L.push(say('amos', fresh('amos', ["Cold one.", "Rain's easing. It'll be back.", "You look worse than me some days. That's not a complaint about me."])));
     { const on = outfitNotice('amos'); if (on) L.unshift(on); }
     Dlg.run(L);
   },
@@ -2666,13 +2669,13 @@ const Mei = {
     if (G.flags.signAvailable && !G.inv.signParts && !G.flags.signFixed) items.push({ t: 'Buy neon transformer', r: '$22', disabled: () => G.money < 22, do: () => { if (spend(22)) { G.inv.signParts = 1; UI.toast('Sign parts.', '#8ae88a'); } } });
     Gifts.mei(items);
     if (m.stage >= 1 && !m.sketch && !m.cold) items.push({ t: 'Buy her a sketchbook', r: '$14', disabled: () => G.money < 14, do: () => this.sketchbook() });
-    if (m.stage >= 2 && !m.applied && !m.missed && !m.cold && G.day <= 50) items.push({ t: 'Pay her application fee', r: `$${this.feeNeeded()}`, disabled: () => G.money < this.feeNeeded(), do: () => this.payFee() });
+    if (m.stage >= 2 && !m.applied && !m.missed && !m.cold && G.day >= 16 && G.day <= 50) items.push({ t: 'Pay her application fee', r: `$${this.feeNeeded()}`, disabled: () => G.money < this.feeNeeded(), do: () => this.payFee() });
     if (C('nadia').stage >= 2 && !G.flags.dinerClosed && !G.flags.toldMeiDiner && m.stage >= 1) items.push({ t: "Mention Nadia's diner", do: () => { G.flags.toldMeiDiner = true; C('nadia').customers = (C('nadia').customers || 0) + 1; Dlg.run([you("Nadia's is trying to stay open. If your mom ever wants a night off from cooking..."), say('mei', "Mom hasn't taken a night off since 2019. But... yeah. I'll tell her. She likes pie.")]); } });
     items.push({ t: 'Leave', do: () => { } });
     Menu.open(m.met ? 'Mei' : 'The girl at the counter', items);
   },
   feeNeeded() { return C('mei').trust >= 6 ? 40 : 75; },
-  bought() { const m = C('mei'); m.purchases++; if (m.purchases >= 3 && m.stage === 0 && m.talked >= 1) m.stage = 1; },
+  bought() { const m = C('mei'); m.purchases++; if (m.purchases >= 3 && m.stage === 0 && m.talked >= 1 && G.day >= 4) m.stage = 1; },
   sketchbook() {
     if (!spend(14)) return; const m = C('mei'); m.sketch = true; trust('mei', 2); remember('mei_sketch'); useEnergy(2);
     Dlg.run([narr('You put the sketchbook on the counter and slide it toward her. Heavy paper. The good kind.'), say('mei', "That's... I can't take that."), you("It's already paid for. I'd have to return it, and I don't have the receipt."), say('mei', "You literally just bought it. I was here."), narr('She opens it and runs her thumb down the first blank page.'), say('mei', "...Okay. Thank you. Seriously.")]);
@@ -2689,18 +2692,18 @@ const Mei = {
     if (m.stage === 0) {
       if (m.talked === 1) L.push(narr('A teenager behind the counter, earbuds in, one hand hidden below the register. A sketchbook, maybe.'), say('mei', "You buying? Bread's five. Soup's nine."), { fn: () => { m.met = true; clearPortrait('mei'); } });
       else L.push(say('mei', fresh('mei', ["Mom's in the back. If you need the bathroom it's staff only. Sorry.", "It's been raining for like nine days. I checked.", "Yeah, the awning leaks. Everyone tells us."])));
-      if (m.purchases >= 3 && m.talked >= 2) m.stage = 1;
+      if (m.purchases >= 3 && m.talked >= 2 && G.day >= 4) m.stage = 1;
     }
     else if (m.stage === 1) {
       if (!m.seen) {
         L.push(narr('She is drawing again. Quick, sure lines. She flips the book face-down when she sees you looking.'),
           choice({ t: "Can I see?", do: () => { m.seen = true; trust('mei', 2); remember('mei_seen'); return [say('mei', "It's nothing. It's just the street."), narr('She turns it around. It is the street: the awning, the puddles, the lamp outside. ' + (Amos.present() ? 'And Amos, on his cardboard, drawn with more care than anything else on the page.' : 'Drawn like someone who has looked at it for a long time.')), you("This is really good."), say('mei', "It's fine. I do it when it's slow. Which is always."), say('mei', "I'm Mei, by the way. Since you're apparently going to keep coming in.")]; } },
             { t: "None of my business.", do: () => { m.seen = true; return [say('mei', "Cool. Bread's five.")]; } }));
-      } else if (!m.story1) { m.story1 = true; L.push(say('mei', "There's a program. Illustration. At the state school. Applications close in six weeks."), say('mei', "Seventy-five bucks to apply. Then a portfolio. Then, if they take you, a whole thing about money that I haven't figured out."), say('mei', "Mom needs me here. She says that a lot. She's not wrong."),
+      } else if (!m.story1 && G.day >= 9) { m.story1 = true; L.push(say('mei', "There's a program. Illustration. At the state school. Applications close in six weeks."), say('mei', "Seventy-five bucks to apply. Then a portfolio. Then, if they take you, a whole thing about money that I haven't figured out."), say('mei', "Mom needs me here. She says that a lot. She's not wrong."),
         choice({ t: "You should apply.", do: () => { trust('mei', 2); m.stage = 2; return [say('mei', "Easy for you to say."), you("It is. That's why I'm saying it."), say('mei', "...I'll think about it.")]; } },
           { t: "Your mom does need you.", do: () => { m.pushed++; trust('mei', -2); return [say('mei', "Yeah. I know. That's what I said."), narr('She puts the sketchbook away and does not take it out again while you are there.')]; } },
           { t: "Drawing's not a real job.", do: () => { m.pushed += 2; trust('mei', -4); return [say('mei', "..."), say('mei', "Right. Bread's five."), narr('Something closes behind her eyes.')]; } }));
-      } else { L.push(say('mei', fresh('mei', ["Still thinking about it.", "Mom found the brochure. We didn't talk for two days.", "I drew the lamp outside forty times. It's never right."]))); if (m.trust >= 3 && !m.pushed) m.stage = 2; }
+      } else { L.push(say('mei', fresh('mei', ["Still thinking about it.", "Mom found the brochure. We didn't talk for two days.", "I drew the lamp outside forty times. It's never right."]))); if (m.trust >= 3 && !m.pushed && G.day >= 14) m.stage = 2; }
     }
     else if (m.stage === 2) {
       if (m.sketch && !m.sketchStory) { m.sketchStory = true; L.push(say('mei', "I filled six pages in the new book already. Look."), narr("She turns it around. It's you. Standing at the counter with your hands in your coat pockets, drawn from memory."), say('mei', "You always stand like that. Like you're waiting for a bus."), you("Do I?"), say('mei', "It's a good stand. It's got shape."), { fn: () => { m.portraitDone = true; G.inv.drawing = 1; remember('mei_portrait'); trust('mei', 1); } }); }
@@ -2742,7 +2745,7 @@ const Walter = {
     Menu.open(w.met ? 'Walter' : 'The old man on the bench', items);
   },
   sit() {
-    const w = C('walter'); w.sat++; w.lastSat = G.day; useEnergy(6); markTalked(); trust('walter', 1); remember('walter_sat');
+    const w = C('walter'); if (w.lastSat === G.day) { Dlg.run([narr('You sat with him already today. He has said what he has to say, and the bus is not coming.')]); return; } w.sat++; w.lastSat = G.day; useEnergy(6); markTalked(); trust('walter', 1); remember('walter_sat');
     const L = [];
     const talks = [
       [say('walter', "The 14 used to come every twelve minutes. You could set a watch. Ruth did, actually. She had a watch she'd set by it."), say('walter', "They cut the route in March. I know that. I'm not senile."), say('walter', "I just like the waiting. Is that strange?"), you("No.")],
@@ -2773,7 +2776,7 @@ const Walter = {
   },
   fixRadio() {
     const w = C('walter'); G.inv.radioParts = 0; w.radio = true; w.stage = Math.max(w.stage, 1); trust('walter', 3); useEnergy(8); remember('walter_radio');
-    Dlg.run([narr('You open the back of the radio on the bench with a butter knife. The capacitor has leaked; you swap it. It takes twenty minutes and a lot of squinting.'), narr('Static. Then a voice, tinny and warm, calling a ball game.'), say('walter', "..."), say('walter', "That's Kessler. He's been calling games since I was fifty."), narr('He holds the radio in both hands against his chest for the rest of the afternoon.')]);
+    Dlg.run([narr('You open the back of the radio on the bench with a butter knife. The capacitor has leaked; you swap it. It takes twenty minutes and a lot of squinting.'), narr('Static. Then a voice, tinny and warm, calling a ball game.'), say('walter', "..."), say('walter', "That's Kessler. He's been calling games since I was fifty."), { fn: () => { G.flags.radioDay = G.day; } }]);
   },
   riverWalk() {
     const w = C('walter'); w.river = true; useEnergy(20); trust('walter', 4); remember('walter_river');
@@ -2806,7 +2809,7 @@ const Nadia = {
     const n = C('nadia');
     const items = [{ t: 'Talk', r: '-4 energy', do: () => this.talk() }, { t: 'Work a dish shift', r: '-30 energy', disabled: () => G.energy < 20, do: () => this.work(false) }, { t: 'Buy soup', r: '$8', disabled: () => G.money < 8, do: () => { if (spend(8)) { addHunger(45); n.trust += 0; } } }];
     Gifts.nadia(items);
-    if (G.inv.fish) items.push({ t: 'Sell her a lake fish', r: () => `x${G.inv.fish}  $12`, keep: true, hide: () => !G.inv.fish, do: () => { G.inv.fish--; addMoney(12); n.fishBought = (n.fishBought || 0) + 1; if (n.fishBought === 1) Dlg.run([say('nadia', "Perch? Where did you... the lake? You went to the lake? Twelve. I'll put it on the board tonight. 'Catch of the day.' First time that's been true in this building.")]); else UI.toast('+$12. Catch of the day.', '#8ae88a'); } });
+    if (G.inv.fish) items.push({ t: 'Sell her a lake fish', r: () => `x${G.inv.fish}  $12`, keep: true, hide: () => !G.inv.fish, do: () => { G.inv.fish--; addMoney(12); n.fishBought = (n.fishBought || 0) + 1; G.flags.fishSoldDay = G.day; if (n.fishBought === 1) Dlg.run([say('nadia', "Perch? Where did you... the lake? You went to the lake? Twelve. I'll put it on the board tonight. 'Catch of the day.' First time that's been true in this building.")]); else UI.toast('+$12. Catch of the day.', '#8ae88a'); } });
     if (n.stage >= 1 && !n.signFixed && G.inv.signParts) items.push({ t: 'Fix the sign', r: '-15 energy', disabled: () => G.energy < 15, do: () => this.fixSign() });
     if (n.stage >= 1 && n.askedFree && !n.freeToday) items.push({ t: 'Work a shift for free', r: '-30 energy', disabled: () => G.energy < 20, do: () => this.work(true) });
     if (n.saved && C('amos').id && !C('amos').job && Amos.present()) items.push({ t: 'Suggest she hire Amos', do: () => this.hireAmos() });
@@ -2819,7 +2822,7 @@ const Nadia = {
       useEnergy(30); addHunger(-12); n.shifts++;
       if (free) { n.freeShifts++; trust('nadia', 2); remember('nadia_free'); Dlg.run([say('nadia', "I'll remember this. I don't forget things like this."), narr(lines.join('. ') + '.')]); }
       else { addMoney(pay); Dlg.run([narr(lines.join('. ') + '.'), say('nadia', pay >= 15 ? "Not bad. Coffee's on the house. It's always on the house, but I'm saying it anyway." : pay >= 8 ? "It's a start. Coffee's free." : "Well. You showed up. That's more than the last guy.")]); }
-      if (n.shifts >= 3 && n.stage === 0) n.stage = 1;
+      if (n.shifts >= 3 && n.stage === 0 && G.day >= 5) n.stage = 1;
     });
     if (!n.met) { n.met = true; clearPortrait('nadia'); Dlg.run([narr('The diner is empty except for the smell of coffee and a woman wiping a counter that is already clean.'), say('nadia', "Sink's in the back. Dollar a plate, more if you're fast, nothing if you break them. I'm Nadia. Don't break them.")], go); }
     else go();
@@ -2842,7 +2845,7 @@ const Nadia = {
       if (!n.story1) { n.story1 = true; L.push(say('nadia', "Landlord's raising the rent in two months. Not a lot. Just enough."), say('nadia', "The sign's been dying for a year. Transformer. Lin's could order one, twenty-two bucks, but I'd have to get on the roof and I've got a nine-year-old who needs a mother with all her limbs."), narr("Lin's Market could sell you the part."), { fn: () => { G.flags.signAvailable = true; } }); }
       else if (!n.sam && G.tod > 0.5) { n.sam = true; L.push(say('nadia', "That's Sam in the booth. Homework. He'll tell you it's done. It's not done."), say('kid', "It's done!"), say('nadia', "It's not done.")); }
       else L.push(say('nadia', fresh('nadia', ["Two months. Sixty days. I count them on the register tape.", "If a few more regulars came in I could make it. That's all it would take. A few more faces.", "Sam asked why you're so thin. I said some people are. He said that's not a reason. He's not wrong.", "Amos came in. Sat at the counter for an hour with a coffee. Didn't say much. Left a dollar under the cup he couldn't afford."])));
-      if (n.signFixed || n.freeShifts >= 1 || n.customers >= 1) n.stage = 2;
+      if ((n.signFixed || n.freeShifts >= 1 || n.customers >= 1) && G.day >= 10) n.stage = 2;
     }
     else if (n.stage === 2) {
       L.push(say('nadia', fresh('nadia', ["Walter came in. Ordered pie and told me it was terrible and then ordered another slice.", "Mrs. Lin sent over a case of soup, cost. Said you told her to. Did you?", "I've got until the sixtieth. If I make it, I make it.", "Sam wants to know if you'll play checkers with him. I told him you're busy. He said 'doing what.' I didn't have an answer."])));
@@ -2871,7 +2874,7 @@ const Minor = {
   },
   dog() {
     const f = G.flags; f.dogFed = f.dogFed || 0;
-    const items = [{ t: 'Give it some bread', hide: () => !G.inv.bread, do: () => { G.inv.bread--; markTalked(); f.dogFed++; useEnergy(1); remember('dog'); Audio.tone(600, 0.1, 'sine', 0.04, 1.3); if (f.dogFed >= 3 && !f.dogFollows) { f.dogFollows = true; Dlg.run([narr('The dog eats, then does not go back through the fence. It sits by your foot and looks up.'), narr('It follows you home. It follows you everywhere after that.')]); } else Dlg.run([narr(pick(['The dog eats without taking its eyes off you.', 'It takes the bread gently, like it has been hit for taking things before.', 'It eats and then leans, very slightly, against your leg.']))]); } },
+    const items = [{ t: 'Give it some bread', hide: () => !G.inv.bread, do: () => { G.inv.bread--; markTalked(); f.dogFed++; useEnergy(1); remember('dog'); Audio.tone(600, 0.1, 'sine', 0.04, 1.3); if (f.dogFed >= 3 && !f.dogFollows) { f.dogFollows = true; Dlg.run([narr('The dog eats, then does not go back through the fence. It sits by your foot and looks up.'), narr('It gets up when you do.')]); } else Dlg.run([narr(pick(['The dog eats without taking its eyes off you.', 'It takes the bread gently, like it has been hit for taking things before.', 'It eats and then leans, very slightly, against your leg.']))]); } },
       { t: 'Crouch down', do: () => { if (!talkEnergy(2)) return; Dlg.run([narr(f.dogFed ? 'It comes over and pushes its head under your hand.' : 'It backs up two steps and watches you through the fence. Ribs like a radiator.')]); } },
       { t: 'Leave', do: () => { } }];
     const leave = items.pop(); Gifts.dog(items); items.push(leave);
@@ -3206,11 +3209,11 @@ const Nora = {
             { t: "It's nothing. Damp building.", do: () => { n.pushed++; trust('nora', -1); return [say('nora', "Damp building. Sure."), narr('She does not push. She has the look of someone who has learned exactly when not to push.')]; } },
             { t: "I'd rather not talk about it.", do: () => { n.pushed++; return [say('nora', "Fair. Door's thirty feet away if that changes.")]; } }));
       } else L.push(say('nora', fresh('nora', ["Twelve hours on the ward. My feet have opinions.", "The elevator ate my grocery bag Tuesday. Just took it. I'm scared to ask what floor it's on.", "Does the hot water do the thing where it screams for a minute first? Yours too? Good. Solidarity.", "I met the man by the stoop. Amos? He asked if I was your nurse. I said I was your neighbor, which is a kind of nurse."])));
-      if (n.talks >= 4 && n.trust >= 1 && !n.told) n.stage = 1;
+      if (n.talks >= 4 && n.trust >= 1 && !n.told && G.day >= 12) n.stage = 1;
     }
     else if (n.stage === 1) {
       if (n.soup === 0 && G.tod < 0.2) { n.soup = 1; L.push(say('nora', "Hold on."), narr('She comes back with a thermos.'), say('nora', "Congee. My grandmother's. I made too much, which is a lie, I made it for you. Eat it while it's hot or I'll know."), { fn: () => { addHunger(35); trust('nora', 1); remember('nora_soup'); G.inv.thermos = 1; } }); }
-      else if (!n.story1 && n.trust >= 4) { n.story1 = true; L.push(say('nora', "My brother died when I was nineteen. Leukemia. Eleven months from the word to the end."), say('nora', "Everyone kept saying he was brave. He wasn't brave, he was scared, he was scared the whole time and he did it anyway. That's not brave. That's just the only option."), say('nora', "I became a nurse because I wanted to be the person in the room who doesn't say brave."), you("What do you say instead?"), say('nora', "'I'm here.' It's all anybody wants. It's all he wanted."), { fn: () => { trust('nora', 1); n.stage = 2; } }); }
+      else if (!n.story1 && n.trust >= 4 && G.day >= 18) { n.story1 = true; L.push(say('nora', "My brother died when I was nineteen. Leukemia. Eleven months from the word to the end."), say('nora', "Everyone kept saying he was brave. He wasn't brave, he was scared, he was scared the whole time and he did it anyway. That's not brave. That's just the only option."), say('nora', "I became a nurse because I wanted to be the person in the room who doesn't say brave."), you("What do you say instead?"), say('nora', "'I'm here.' It's all anybody wants. It's all he wanted."), { fn: () => { trust('nora', 1); n.stage = 2; } }); }
       else L.push(say('nora', fresh('nora', ["Rough shift. Lost one. You learn to leave it in the parking lot, and then you carry it up four flights anyway.", "You're thinner. I'm not going to say anything about it. I just said it. Sorry.", "There's a trial coordinator at St. Anne's who owes me a favor. I asked. It's real, it's just slow. I'll keep asking.", "Sam from the diner thinks I'm a spy. I told him I am. He's terrified. It's wonderful."])));
       if (n.trust >= 4 && n.story1) n.stage = 2;
     }
@@ -3223,7 +3226,7 @@ const Nora = {
       else if (!n.person && G.day >= 80 && n.trust >= 7) { n.person = true; remember('nora_person'); L.push(say('nora', "Okafor asked me who to call. When it's time. I said me, if that's alright."), say('nora', "I get off at seven. I'll come straight up. I'll have my keys in my teeth and I'll be loud on purpose so you know it's me."), you("You don't have to."), say('nora', "I know I don't have to. That's the whole point of it.")); }
       else L.push(say('nora', fresh('nora', ["I brought you a pulse oximeter from work. It's stolen. Put your finger in it when you feel bad and if the number's under ninety, bang on the wall.", "Amos brought coffee up for both of us. He knocked on the wrong door first. We're a building now, apparently.", "Mei drew me. I look like I haven't slept since 2019. It's accurate.", "Walter's radio. Did you fix that? He told me a neighbor fixed it. I said, that's my neighbor. I was proud. Is that weird?", "Bang on the wall if you need me. Two for 'come over.' Three for 'bring the bag.'"])));
     }
-    if (n.pushed >= 2 && !n.cold && !n.told) { n.cold = true; remember('nora_cold'); L.push(narr('Something in her shuts, politely. She will nod to you in the hall from now on. That is all.')); }
+    if (n.pushed >= 2 && !n.cold && !n.told) { n.cold = true; remember('nora_cold'); L.push(narr('Something in her shuts, politely.')); }
     if (L.length === 0) L.push(say('nora', "Hey."));
     Dlg.run(L);
   },
@@ -3553,7 +3556,7 @@ const VP = {
       const cutNames = cur ? cur.cut : [];
       f.cutCount = (f.cutCount || 0) + cutNames.length;
       for (const fo of cutNames) {
-        if (fo.known === 'foreman') { f.foremanCut = true; remember('cut_foreman'); L.push(narr('Kowalski clears out his trailer in twenty minutes. Twenty years fits in a milk crate. He does not look at the office window, which is worse than if he had.')); }
+        if (fo.known === 'foreman') { f.foremanCut = true; remember('cut_foreman'); L.push(narr('Twenty years fits in a milk crate. He does not look at the office window.')); }
         if (fo.known === 'worker') { f.workerCut = true; remember('cut_worker'); L.push(narr('Pruitt is gone by lunch. He leaves his gloves on the crate where he took his breaks.')); }
         if (fo.known === 'amos') { f.amosCut = true; const a = G.chars.amos; a.job = null; a.cutByYou = true; a.spec = a.room ? 'amos3' : 'amos3'; a.stage = Math.min(a.stage, 3); clearPortrait('amos'); a.trust -= 8; remember('cut_amos'); L.push(narr("Amos's name is on the sheet in your handwriting. You wrote it there to hire him. You initial next to it to let him go.")); }
       }
@@ -3676,7 +3679,7 @@ const Theo = {
     } else if (t.agreed) {
       Dlg.run([say('theo', fresh('theo', ["Did you tell him?", "I'm here every morning. Until I'm not.", "Just Cal. I meant that."]))]);
     } else {
-      Dlg.run([say('theo', "..."), narr('He does not look up. The next morning the railing is bare and the drawing has been washed off, or scrubbed.'), { fn: () => { t.gone = true; remember('theo_gone'); } }]);
+      Dlg.run([say('theo', "..."), narr('He does not look up.'), { fn: () => { t.gone = true; remember('theo_gone'); } }]);
     }
     if (t.pushed >= 2 && !t.gone) { t.gone = true; remember('theo_gone'); }
   },
@@ -3788,9 +3791,9 @@ const Pawn = {
     if (it.kind === 'gift') { G.inv[k] = (G.inv[k] || 0) + 1; if (k === 'busPass') G.flags.busPassDay = G.day; const lines = { tools: [say('sol', "Reed's tools. He pawned them in '21 and came in every week for a year to look at them. Then he stopped coming in."), say('sol', "Take them to him. Don't tell him what you paid. I never told him what I'd have taken.")], ruthWatch: [say('sol', "Ashby's. He brought it in a bad winter, 2009, and he's never come back for it, and I've never put it in the window."), say('sol', "I'm selling it to you because you're going to give it to him. If I'm wrong about that, don't come back.")], collar: [say('sol', "What's the tag say?"), choice({ t: "412.", do: () => { f.collarTag = '412'; return [say('sol', "Your apartment. So he can find his way home. Alright.")]; } }, { t: "Biscuit.", do: () => { f.collarTag = 'Biscuit'; return [say('sol', "Biscuit. Every third dog in this city is Biscuit. He'll answer to it.")]; } }, { t: "Nothing. Just the tag.", do: () => { f.collarTag = ''; return [say('sol', "Blank tag. Suit yourself. Means he's somebody's, anyway.")]; } })] }[k] || [say('sol', fresh('sol', ["Good. That one's going somewhere.", "Wrapped. Sort of.", "You've got somebody in mind. I can always tell."]))]; Dlg.run(lines); return; }
     // self items
     f['own_' + k] = true;
-    const lines = { watch: [say('sol', "Keeps time. That's all a watch can do for you, and it's not nothing."), narr('A clock, top right. You will know what time it is now, whether you want to or not.')], bed: [say('sol', "I'll have Danny and his cousin bring it up. They'll complain about the stairs. Let them."), narr('That night the cot goes out to the curb and a real bed goes where it was.')], radio: [narr('Kessler is calling a ball game the moment you turn it on. Somebody, somewhere, is winning.')] }[k] || [narr(it.desc)];
+    const lines = { watch: [say('sol', "Keeps time. That's all a watch can do for you, and it's not nothing."), narr('A clock, top right. You will know what time it is now, whether you want to or not.')], bed: [say('sol', "I'll have Danny and his cousin bring it up. They'll complain about the stairs. Let them."), narr('Two men and a truck, he says. Tomorrow.')], radio: [narr('Kessler is calling a ball game the moment you turn it on. Somebody, somewhere, is winning.')] }[k] || [narr(it.desc)];
     Dlg.run(lines);
-    if (k === 'bed') { G.flags.betterBed = true; delete interiorCache.apartment; }
+    if (k === 'bed') { G.flags.bedDay = G.day; G.flags.own_bed = false; }
   },
   // ---------- selling ----------
   sellMenu() {
@@ -3815,17 +3818,17 @@ const Pawn = {
     if (s.cold) { L.push(say('sol', fresh('sol', ["Buying or selling.", "Ledger's open. That's all.", "..."]))); if (G.day - s.coldDay > 20 && Math.random() < 0.3) L.push(narr('He has not forgiven it. He has written it down, which for Sol is the same thing.')); Dlg.run(L); return; }
     if (!s.met) { s.met = true; clearPortrait('sol'); L.push(narr('Behind a cage of brass wire, an old man with a jeweler\'s loupe pushed up on his forehead and a ledger the size of a paving stone.'), say('sol', "Sol. Forty-one years. Buying, selling, holding. Mostly holding."), say('sol', "Everything on these shelves has a name in this book. Most of the names never came back. You looking to buy, or you looking to be a name?")); }
     else if (s.stage === 0) {
-      if (s.talks >= 3 && !s.ledger) { s.ledger = true; s.stage = 1; L.push(say('sol', "You want to see the book? Nobody wants to see the book."), narr('He turns it around. Columns of names and dates and objects, in the same careful hand, going back decades. Some entries have a line through them: redeemed. Most do not.'), say('sol', "Reed, A., 2021, tools, oak box. Ashby, W., 2009, ladies' watch. Marsh, C., this spring, a trumpet, and I'll tell you about that one when I know you better."), say('sol', "I don't sell the ones I think are coming back. Bad business. Forty-one years of bad business.")); }
+      if (s.talks >= 3 && !s.ledger && G.day >= 6) { s.ledger = true; s.stage = 1; L.push(say('sol', "You want to see the book? Nobody wants to see the book."), narr('He turns it around. Columns of names and dates and objects, in the same careful hand, going back decades. Some entries have a line through them: redeemed. Most do not.'), say('sol', "Reed, A., 2021, tools, oak box. Ashby, W., 2009, ladies' watch. Marsh, C., this spring, a trumpet, and I'll tell you about that one when I know you better."), say('sol', "I don't sell the ones I think are coming back. Bad business. Forty-one years of bad business.")); }
       else L.push(say('sol', fresh('sol', ["Everything's worth what somebody desperate will take for it. That's the only economics I know.", "The watch in the case is a real one. Swiss. A dentist pawned it in '98 for a weekend he regrets.", "Kowalski from the dock comes in twice a year. Always the same ring. Always gets it back.", "You've got the walk of a man deciding what he can do without. I've seen it forty-one years."])));
     }
     else if (s.stage === 1) {
       if (!s.watchTold && G.chars.walter.met && !G.chars.walter.dead) { s.watchTold = true; L.push(say('sol', "The old man at the bus stop. Ashby. You know him?"), you("I sit with him."), say('sol', "The watch in the case was his wife's. She set it by the bus, he told me. He pawned it the winter she was in the hospital and the heat bill came, and he's never come in since. Can't face me, or can't face it."), say('sol', "I've kept it wound fourteen years. It's in the case, always, one-forty. That's what I paid him. I'm not making a dollar on it. Take it to him.")); }
       else if (!s.toolsTold && G.chars.amos.met) { s.toolsTold = true; L.push(say('sol', "The tools in the window. Reed's. Carpenter, before the fall. He'd come and stand at the glass and I'd pretend to be busy."), say('sol', "One-eighty. That's what I gave him. He's got hands, that man; he's just got nothing to put in them.")); }
       else L.push(say('sol', fresh('sol', ["Nobody redeems anymore. They just wave at the window on the way past.", "I had a kid in here this spring, sixteen maybe, pawned a trumpet. Case was worth more than the horn. He wouldn't take more.", "The bed in the back was a good bed. Somebody's marriage was in it. Beds don't know."])));
-      if (s.trust >= 3) s.stage = 2;
+      if (s.trust >= 3 && G.day >= 12) s.stage = 2;
     }
     else if (s.stage === 2) {
-      if (!s.trumpet) { s.trumpet = true; s.stage = 3; remember('sol_trumpet'); L.push(say('sol', "The trumpet. Marsh, C. The busker's kid brother, this spring, right before he ran. I gave him twenty dollars for it and told him thirty days."), say('sol', "It's been a hundred and some. By the book it's mine to sell. I've had two offers."), say('sol', "My son played. Same model, near enough. He's been dead nineteen years and I still can't put a trumpet in a window."), you("So it stays in the case."), say('sol', "It stays in the case. Everything I can't sell stays in the case. It's a big case.")); }
+      if (!s.trumpet && G.day >= 20) { s.trumpet = true; s.stage = 3; remember('sol_trumpet'); L.push(say('sol', "The trumpet. Marsh, C. The busker's kid brother, this spring, right before he ran. I gave him twenty dollars for it and told him thirty days."), say('sol', "It's been a hundred and some. By the book it's mine to sell. I've had two offers."), say('sol', "My son played. Same model, near enough. He's been dead nineteen years and I still can't put a trumpet in a window."), you("So it stays in the case."), say('sol', "It stays in the case. Everything I can't sell stays in the case. It's a big case.")); }
       else L.push(say('sol', fresh('sol', ["Slow. It's always slow. That's not a complaint; fast is worse, fast means the block's in trouble.", "Ashby came in. First time in fourteen years. Stood at the case. Didn't say anything. Left. That's more than I expected.", "I closed the book on a name today. Redeemed. It happens. Not enough, but it happens."])));
     }
     else if (s.stage >= 3) {
@@ -3856,7 +3859,7 @@ const Gifts = {
     const a = G.chars.amos;
     const t = this.item('amos', 'tools', 'Give him his tools', () => { a.tools = true; trust('amos', 4); G.flags.amosTools = true; Dlg.run([narr('You set the oak box on the cardboard, or the workbench, wherever he is. He knows it before he opens it. He knows it from the weight.'), say('amos', "..."), say('amos', "Sol kept them. That old crook kept them."), narr("He runs a thumb along the plane's sole the way other men touch a face."), say('amos', "I'm going to make you something. I don't know what. Something square.")]); });
     if (t) items.push(t);
-    const h = this.item('amos', 'amosHeater', 'Give him the heater', () => { a.heater = true; trust('amos', 2); Dlg.run([say('amos', a.room ? "For the basement? It's got a boiler, but the boiler's got opinions. Thank you." : "Runs off what? ...The laundromat's got an outside outlet. Don't tell them."), narr('That night the alley glows faintly orange from the dumpster side.')]); });
+    const h = this.item('amos', 'amosHeater', 'Give him the heater', () => { a.heater = true; trust('amos', 2); Dlg.run([say('amos', a.room ? "For the basement? It's got a boiler, but the boiler's got opinions. Thank you." : "Runs off what? ...The laundromat's got an outside outlet. Don't tell them."), narr('He takes it in both arms like a cat.')]); });
     if (h) items.push(h);
   },
   mei(items) {
@@ -4230,7 +4233,7 @@ const WRONG_NUMBERS = [
   [say('voice', "Hi there, this is a courtesy call regarding your account. Please stay on the line for..."), narr('A recording, cheerful as a hospital. You put the receiver down on the counter and let it talk to the room. It goes on for two full minutes.')],
   [say('voice', "Is Sunny there?"), you("No Sunny here."), say('voice', "She said this number."), you("She gave you the wrong one."), say('voice', "...Yeah. Yeah, she does that."), narr('He hangs up gently, like it was the phone\'s fault.')],
   [say('voice', "Good evening! On a scale of one to ten, how satisfied are you with your current..."), you("Ten."), say('voice', "That's wonderful! And how likely are you to..."), you("Ten."), narr('You hang up. Ten. Why not. Nobody is checking.')],
-  [say('voice', "Mrs. Ortega? It's the pharmacy, your..."), you("Fourth floor. She's in 408."), say('voice', "This says 412."), you("It's wrong."), narr('You go knock on 408 later and tell her. She feeds you a tamale for it, which was not the point, and was.'), { fn: () => { addHunger(20); G.flags.grannyPhone = true; } }],
+  [say('voice', "Mrs. Ortega? It's the pharmacy, your..."), you("Fourth floor. She's in 408."), say('voice', "This says 412."), you("It's wrong."), narr('408 is the second floor. You will tell her when you see her.'), { fn: () => { G.flags.wrongOrtega = true; G.flags.grannyPhone = true; } }],
 ];
 
 const Jo = {
@@ -4326,7 +4329,7 @@ const Phone = {
     const f = G.flags, c = G.chars, P = this.P(); const opts = [];
     if (c.nadia.saved && c.nadia.savedStory && !P.friends.nadia) opts.push('nadia');
     if (c.nora && !c.nora.cold && (c.nora.person || c.nora.stage >= 2) && !P.friends.nora) opts.push('nora');
-    if (c.mei.applied && !c.mei.accepted && !c.mei.cold && !P.friends.mei) opts.push('mei');
+    if (c.mei.applied && !c.mei.accepted && !c.mei.cold && !P.friends.mei && G.day >= 84) opts.push('mei');
     if ((c.amos.job || c.amos.room) && !c.amos.dead && !P.friends.amos) opts.push('amos');
     if (c.emmett && c.emmett.mailed && !c.emmett.wrote && !P.friends.emmett) opts.push('emmett');
     if (c.sol && c.sol.met && c.sol.stage >= 2 && !c.sol.cold && !P.friends.sol) opts.push('sol');
@@ -4437,7 +4440,7 @@ const Passing = {
         say('amos', "Hey. Hey. Four days. You've gone past four days and I've counted, because I've got nothing else to count."),
         say('amos', `What is it? ${busy} You're the one who used to stop.`),
         choice({ t: "You're right. What's going on with you?", do: () => { trust('amos', 1); remember('amos_stopped'); return [say('amos', "Nothing's going on with me. That's the thing about me: nothing's going on. I just noticed you going past."), you("The days go fast now."), say('amos', "They go fast for everybody. Faster for you, I know that. I'm not asking for the day. I'm asking for the minute."), narr('You give him the minute. It costs what a minute costs, which today is nothing you can measure.')]; } },
-          brush([say('amos', "...Sure. Sure. Go on."), narr('He sits back down. He does not look up when you pass the next time, or the time after that.')]))]);
+          brush([say('amos', "...Sure. Sure. Go on."), narr('He sits back down.')]))]);
     } else {
       Dlg.run([narr('Nora steps out of 411 as you pass, keys in her teeth, and takes them out.'),
         say('nora', "Four mornings. I counted; I count things, it's the job. You used to knock."),
@@ -5362,15 +5365,15 @@ const Garden = {
     if (id === 'amos') {
       if (c.trust < 3) { Dlg.run([say('amos', "A garden. ...I've got a back like a dropped ladder. Ask me when I've got a reason to get up early."), narr('He does not say no. He says not yet, which from Amos is a calendar.')]); s.helperAsked[id] = false; return; }
       s.helpers.amos = G.day; s.barrelDay = G.day + 2; remember('garden_amos');
-      Dlg.run([say('amos', "Hector's lot? Hector Ortega? He fixed a radiator for me once in a building I'd been thrown out of. Didn't ask why I was there."), say('amos', "I'll build you beds that don't rot. Rain barrel off the diner gutter; it's free water and it's falling anyway. Dawn. I'm up at dawn regardless."), narr('He is there the next morning before you are, with a hammer he did not have yesterday and will not explain.')]);
+      Dlg.run([say('amos', "Hector's lot? Hector Ortega? He fixed a radiator for me once in a building I'd been thrown out of. Didn't ask why I was there."), say('amos', "I'll build you beds that don't rot. Rain barrel off the diner gutter; it's free water and it's falling anyway. Dawn. I'm up at dawn regardless."), narr('He looks at his hands, and then at the sky, working out what dawn is in hours.')]);
     } else if (id === 'nora') {
       if (c.trust < 2) { Dlg.run([say('nora', "A garden. That's nice. That's genuinely nice. Ask me on a day I've slept."), { fn: () => { s.helperAsked[id] = false; } }]); return; }
       s.helpers.nora = G.day; remember('garden_nora');
-      Dlg.run([say('nora', "Dirt. Yes. God, yes. Twelve hours of fluorescent light and you're offering me dirt."), say('nora', "Days off. I'll come days off. I'll bring gloves; I've got a drawer of the blue ones."), narr('She comes on her days off in scrubs with the sleeves pushed up, and she weeds the way she does everything, fast and without discussion.')]);
+      Dlg.run([say('nora', "Dirt. Yes. God, yes. Twelve hours of fluorescent light and you're offering me dirt."), say('nora', "Days off. I'll come days off. I'll bring gloves; I've got a drawer of the blue ones."), narr('She writes it on the back of her hand, which is where she writes things that are going to happen.')]);
     } else {
       if (c.trust < 2) { Dlg.run([say('mei', "A garden? Behind the diner? I didn't know there was a behind the diner."), { fn: () => { s.helperAsked[id] = false; } }]); return; }
       s.helpers.mei = G.day; remember('garden_mei');
-      Dlg.run([say('mei', "Behind Nadia's? With actual dirt? I'm bringing the sketchbook. I'm bringing seeds; Mom's got marigolds she says keep bugs off, I don't know if that's true, they're orange."), narr('She plants a row of marigolds along the fence the first afternoon and draws them the second. The garden is in the sketchbook now, which is a kind of second garden.'), { fn: () => { s.flowers = true; s.drawn = true; } }]);
+      Dlg.run([say('mei', "Behind Nadia's? With actual dirt? I'm bringing the sketchbook. I'm bringing seeds; Mom's got marigolds she says keep bugs off, I don't know if that's true, they're orange."), { fn: () => { s.meiJoinDay = G.day; } }]);
     }
   },
   helperTalk(id) {
@@ -5535,7 +5538,7 @@ const CemWorld = { static: null };
 function buildCemeteryStatic() {
   const [c, g] = mkCanvas(CEMETERY.w, H);
   // low wall with iron railings; the gate at the left; big trees behind
-  for (const tx of [120, 300, 430]) { px(g, tx + 6, GROUND_Y - 130, 8, 130, '#2a2018'); for (let k = 0; k < 6; k++) { const w = 60 - k * 8, y = GROUND_Y - 130 + k * 16 - 10; px(g, tx + 10 - w / 2, y, w, 18, k % 2 ? '#2a3a26' : '#324630'); } }
+  for (const tx of [120, 300, 430]) { px(g, tx + 6, GROUND_Y - 130, 8, 130, '#2a2018'); for (let k = 0; k < 6; k++) { const w = 14 + k * 9, y = GROUND_Y - 134 + k * 16; px(g, tx + 10 - Math.floor(w / 2), y, w, 18, k % 2 ? '#2a3a26' : '#324630'); px(g, tx + 10 - Math.floor(w / 2), y, w, 1, k % 2 ? '#34482e' : '#3c5238'); } }
   px(g, 0, GROUND_Y - 40, CEMETERY.w, 40, '#4a4a50'); px(g, 0, GROUND_Y - 40, CEMETERY.w, 2, '#6a6a72'); for (let x = 0; x < CEMETERY.w; x += 16) px(g, x, GROUND_Y - 38, 1, 38, 'rgba(0,0,0,0.15)');
   for (let x = 0; x < CEMETERY.w; x += 8) px(g, x, GROUND_Y - 56, 1, 16, '#2a2a30'); px(g, 0, GROUND_Y - 56, CEMETERY.w, 1, '#2a2a30');
   px(g, 10, GROUND_Y - 70, 4, 70, '#2a2a30'); px(g, 44, GROUND_Y - 70, 4, 70, '#2a2a30'); px(g, 10, GROUND_Y - 72, 38, 3, '#2a2a30'); for (let x = 16; x < 44; x += 5) px(g, x, GROUND_Y - 66, 1, 66, '#3a3a44');
@@ -5545,10 +5548,10 @@ function buildCemeteryStatic() {
   const R = seeded(212); for (let i = 0; i < 500; i++) px(g, Math.floor(R() * CEMETERY.w), GROUND_Y + 1 + Math.floor(R() * 60), 1, 1 + Math.floor(R() * 2), R() < 0.5 ? '#34402a' : '#4a5a38');
   px(g, 0, FEET_Y - 2, CEMETERY.w, 14, '#6a6252'); for (let i = 0; i < 200; i++) px(g, Math.floor(R() * CEMETERY.w), FEET_Y - 2 + Math.floor(R() * 14), 1, 1, R() < 0.5 ? '#5a5244' : '#7a7262');
   // rows of stones behind the path (small, weathered)
-  for (let x = 70; x < CEMETERY.w; x += 34) { if (Math.abs(x - 226) < 40 || Math.abs(x - 372) < 20) continue; const h = 14 + ((x * 7) % 8); px(g, x, GROUND_Y - h, 12, h, '#6a6a72'); px(g, x, GROUND_Y - h, 12, 1, '#8a8a92'); px(g, x + 2, GROUND_Y - h + 4, 8, 1, '#4a4a52'); px(g, x + 2, GROUND_Y - h + 7, 6, 1, '#4a4a52'); }
+  for (let x = 70; x < CEMETERY.w; x += 34) { if (Math.abs(x - 252) < 54 || Math.abs(x - 375) < 34) continue; const h = 14 + ((x * 7) % 8); px(g, x, GROUND_Y - h, 12, h, '#6a6a72'); px(g, x, GROUND_Y - h, 12, 1, '#8a8a92'); px(g, x + 2, GROUND_Y - h + 4, 8, 1, '#4a4a52'); px(g, x + 2, GROUND_Y - h + 7, 6, 1, '#4a4a52'); }
   // Ruth's stone, and the paid-for one beside it
   const stone = (x, w, h, col, lines) => { px(g, x, GROUND_Y - h, w, h, col); px(g, x, GROUND_Y - h, w, 1, shade(col, 25)); px(g, x - 2, GROUND_Y - 2, w + 4, 2, shade(col, -20)); lines.forEach((ln, i) => drawText(g, ln, x + w / 2, GROUND_Y - h + 4 + i * 8, '#2a2a30', { align: 'center' })); };
-  stone(214, 32, 30, '#8a8a92', ['RUTH', 'ASHBY', '1939']); stone(250, 32, 30, '#9a9a9a', ['WALTER', 'J.', '1937']);
+  stone(204, 44, 30, '#8a8a92', ['RUTH', 'ASHBY', '1939']); stone(254, 44, 30, '#9a9a9a', ['WALTER', 'J.', '1937']);
   CemWorld.static = c;
 }
 function renderCemetery(g, t) {
@@ -5556,8 +5559,8 @@ function renderCemetery(g, t) {
   const camX = 0; const pal = todPalette(G.tod, G.rain); G.pal = pal; const b = Beats.S();
   drawSky(g, pal, 1400, t); g.drawImage(CemWorld.static, 0, 0);
   // Hector's stone, once it is in
-  if (b.stoneIn) { px(g, 358, GROUND_Y - 30, 34, 30, '#7a7a82'); px(g, 358, GROUND_Y - 30, 34, 1, '#9a9aa2'); px(g, 356, GROUND_Y - 2, 38, 2, '#5a5a62'); drawText(g, 'HECTOR', 375, GROUND_Y - 26, '#2a2a30', { align: 'center' }); drawText(g, 'ORTEGA', 375, GROUND_Y - 18, '#2a2a30', { align: 'center' }); drawText(g, 'HE FIXED', 375, GROUND_Y - 10, '#2a2a30', { align: 'center' }); }
-  if (b.walterStone) { px(g, 252, GROUND_Y - 12, 28, 8, '#9a9a9a'); drawText(g, b.walterEpitaph === 'type' ? 'TYPE' : b.walterEpitaph === 'bus' ? 'THE 14' : '', 266, GROUND_Y - 11, '#2a2a30', { align: 'center' }); }
+  if (b.stoneIn) { px(g, 348, GROUND_Y - 30, 54, 30, '#7a7a82'); px(g, 348, GROUND_Y - 30, 54, 1, '#9a9aa2'); px(g, 346, GROUND_Y - 2, 58, 2, '#5a5a62'); drawText(g, 'HECTOR', 375, GROUND_Y - 26, '#2a2a30', { align: 'center' }); drawText(g, 'ORTEGA', 375, GROUND_Y - 18, '#2a2a30', { align: 'center' }); drawText(g, 'HE FIXED', 375, GROUND_Y - 10, '#2a2a30', { align: 'center' }); }
+  if (b.walterStone) { px(g, 258, GROUND_Y - 1, 36, 9, '#9a9a9a'); px(g, 258, GROUND_Y - 1, 36, 1, '#b8b8b8'); drawText(g, b.walterEpitaph === 'type' ? 'TYPE' : b.walterEpitaph === 'bus' ? 'THE 14' : '', 276, GROUND_Y, '#2a2a30', { align: 'center' }); }
   const ents = G.entities.slice().sort((a, bb) => (a.y - bb.y) || (a.x - bb.x));
   const shadow = sunShadow(G.tod); shadow.alpha *= (1 - pal.night) * (1 - G.rain * 0.55) * pal.sun;
   for (const e of ents) { if (e.hidden || e.noShadow) continue; const fr = entFrame(e); drawShadow(g, e, fr, Math.round(e.x), e.y, shadow, []); }
@@ -5576,7 +5579,7 @@ const Beats = {
     const b = this.S(); const d = G.day; const c = G.chars; const f = G.flags;
     // Amos: the call
     if ((c.amos.room || c.amos.job) && c.amos.met && c.amos.trust >= 4 && !b.amosCall && d >= 20 && !Passing.isBrushed('amos')) { b.amosCall = d; this.amosCall(); return true; }
-    if (b.amosCall && b.amosLetterDay === d) { b.amosLetter = true; remember('amos_letter'); Dlg.run([narr('An envelope with your address and his name. Cleveland postmark. He is on the stoop when you bring it down; he does not open it there.'), narr('Later, from Nora, who was in the hall: he read it on the fourth-floor landing, standing up, twice, and then sat on the stairs for an hour and let people step around him.'), say('amos', "She's got a boy. Seven. She sent a picture. He's got my ears, God help him.")]); return true; }
+    if (b.amosCall && b.amosLetterDay === d) { b.amosLetter = true; remember('amos_letter'); Dlg.run([narr('An envelope with your address and his name. Cleveland postmark. He is on the stoop when you bring it down; he does not open it there.'), say('amos', "She's got a boy. Seven. She sent a picture. He's got my ears, God help him.")]); return true; }
     // Walter: Sunday at St. Bartholomew's
     if (b.walterGraveDay === d && !c.walter.dead && !b.walterGrave) { b.walterGrave = true; this.walterGrave(); return true; }
     // Walter: the type, in the last days
@@ -5615,7 +5618,7 @@ const Beats = {
     Dlg.run([narr('Mrs. Lin is at the register instead of Mei. She has been waiting for you; that is clear from the way she is not looking at the door.'), say('mrsLin', "You. The regular."), say('mrsLin', "You are the one telling my daughter to leave."),
       choice({ t: "She's good. She should go.", do: () => { b.meiMomWon = true; trust('mei', 1); remember('mei_mom'); return [say('mrsLin', "..."), say('mrsLin', "I know she is good. I have known since she was four. Do you think I need a sick man to tell me?"), narr('She takes a drawing from under the register. Mei, at six, in crayon: a woman behind a counter, enormous, smiling.'), say('mrsLin', "Half. I will pay half of the fee. Do not tell her it was you. Tell her it was the register.")]; } },
         { t: "It's her choice. Not mine, not yours.", do: () => [say('mrsLin', "That is a coward's answer. It is also correct. Bread is five.")] },
-        { t: "...", do: () => { m.coldUntil = G.day + 3; return [say('mrsLin', "Nothing. Good. Nothing is what you should say."), narr('Mei is in the back. She heard. She does not come out, and for three days she rings you up like a stranger.')]; } })]);
+        { t: "...", do: () => { m.coldUntil = G.day + 3; return [say('mrsLin', "Nothing. Good. Nothing is what you should say."), narr('Mei is in the back. She heard. She does not come out.')]; } })]);
   },
   meiNight() {
     const m = G.chars.mei; const b = this.S(); if (!talkEnergy(4)) return; b.meiNight = true; m.portraitDone = true; if (!G.inv.drawing && !G.flags.pawned_drawing) G.inv.drawing = 1; remember('mei_night');
@@ -5706,8 +5709,8 @@ const Beats = {
   theoDad() {
     const t = G.chars.theo; const b = this.S(); b.theoDad = true; b.theoDadPending = false;
     Dlg.run([narr('A man under the poster who is not Cal. Older, heavier, in a work coat, looking at the photograph on the wall the way you look at something you are afraid of.'), say('marsh', "You. You're around. The busker says you're around. Have you seen my boy?"), narr('Cal, ten feet away, holding the guitar by the neck, not playing, not looking at either of you.'), say('marsh', "Theo. Sixteen. Grey hoodie. I'm not... I'm not going to do anything. I just want to know he's alive."),
-      choice({ t: "He's alive. That's all I'll say.", do: () => { b.theoWarned = true; t.pushed = 0; remember('theo_warned'); return [say('marsh', "...Alive. Okay. Okay."), narr('He puts a hand flat on the poster, over the phone number that is his own, and goes.'), narr('The next morning at the river you tell Theo. He goes white and then he does not run, which is new.'), say('theo', "He came to the corner? Dad? He stood under it?"), say('theo', "...Okay. Okay. Just Cal. Still just Cal. But okay.")]; } },
-        { t: "The river. Dawn.", do: () => { t.gone = true; remember('theo_gone'); return [say('marsh', "The river. Thank you. Thank you."), narr('He is there at dawn. Theo sees him from the railing before he sees Theo, and by the time he gets to the bench there is a marker on the rail and a half-drawn bridge and nobody.'), narr('The poster stays up. Cal stops playing the rain songs.')]; } },
+      choice({ t: "He's alive. That's all I'll say.", do: () => { b.theoWarned = true; t.pushed = 0; remember('theo_warned'); return [say('marsh', "...Alive. Okay. Okay."), narr('He puts a hand flat on the poster, over the phone number that is his own, and goes.'), { fn: () => { Beats.S().theoWarnedPending = true; } }]; } },
+        { t: "The river. Dawn.", do: () => { t.gone = true; remember('theo_gone'); return [say('marsh', "The river. Thank you. Thank you."), narr('He goes, fast, the way a man goes who has somewhere to be at dawn.'), { fn: () => { Beats.S().theoRailPending = true; } }]; } },
         { t: "I don't know anything.", do: () => [say('marsh', "No. Nobody does."), narr('He leaves a card on the guitar case. Cal picks it up and puts it in his pocket without reading it.')] })]);
   },
   // ----- the stone goes in -----
@@ -5813,8 +5816,8 @@ const Rent = {
     if (G.money >= due) {
       const back = r.owed; r.owed = 0; addMoney(-due); r.paid++;
       if (r.lockedOut) { r.lockedOut = false; r.missed = 0; remember('rent_unlocked'); Dlg.run([narr(`${due} dollars in an envelope under the super's door. He comes up himself with the bolt cutters and does not say anything, which from Morrow is an apology.`), narr('412. The crack in the ceiling. You had not expected to miss it.')]); return true; }
-      if (back > 0) { r.missed = 0; Dlg.run([narr(`${due} dollars under the super's door: this week and the weeks you owed. A note comes back under yours by noon: PAID. THANK YOU. - M. The thank you is new.`)]); return true; }
-      if (r.paid === 1) { Dlg.run([narr(`Monday. A hundred dollars in an envelope, under the super's door on the first floor. He does not answer the knock; he never does. The envelope is gone by ten.`)]); return true; }
+      if (back > 0) { r.missed = 0; Dlg.run([narr(`${due} dollars under the super's door: this week and the weeks you owed.`), { fn: () => { Rent.S().noteDay = G.day; } }]); return true; }
+      if (r.paid === 1) { Dlg.run([narr(`Monday. A hundred dollars in an envelope, under the super's door on the first floor. He does not answer the knock.`)]); return true; }
       UI.toast(`Rent: -$${RENT}`, '#e88a6a'); return false;
     }
     // cannot pay
@@ -5858,7 +5861,7 @@ const Rent = {
 {
   const ad = Amos.daily; Amos.daily = function () {
     const a = G.chars.amos;
-    if (!a.met && !a.dead && !a.gone && G.day >= 14) { a.gone = true; a.dead = true; a.goneDay = G.day; G.flags.amosGone = true; G.pendingStreet = 'amosGone'; remember('amos_unmet_gone'); return; }
+    if (!a.met && !a.talked && !a.fed && !a.cash && !a.dead && !a.gone && G.day >= 14) { a.gone = true; a.dead = true; a.goneDay = G.day; G.flags.amosGone = true; G.pendingStreet = 'amosGone'; remember('amos_unmet_gone'); return; }
     return ad.call(this);
   };
   // the mat after: flowers, wilting; then the corner of the cardboard in the dumpster
@@ -6091,7 +6094,7 @@ const Casino = {
   },
   louGive() {
     const c = this.S(); const l = c.lou; const amt = Math.min(l.down, G.money); if (amt <= 0) return;
-    Menu.open('Lou', [{ t: `Give him back what you took ($${amt})`, disabled: () => G.money < amt, do: () => { addMoney(-amt); c.net -= amt; l.gave = true; l.down = 0; remember('lou_gave'); Dlg.run([narr('You push it across the felt. Lou looks at it the way a man looks at a dog that has come back.'), say('lou', "...I can't. ...Yeah, I can. Spring semester. Okay. Okay."), say('lou', "I'm going to sit at the bar. I'm going to sit at the bar for a while."), narr('He does. He is at the bar every night after, with the free coffee, and does not sit down at the table again while you are there.')]); } }, { t: 'Keep it', do: () => { } }], { sub: `He is down $${l.down} to you, over the nights.` });
+    Menu.open('Lou', [{ t: `Give him back what you took ($${amt})`, disabled: () => G.money < amt, do: () => { addMoney(-amt); c.net -= amt; l.gave = true; l.down = 0; remember('lou_gave'); Dlg.run([narr('You push it across the felt. Lou looks at it the way a man looks at a dog that has come back.'), say('lou', "...I can't. ...Yeah, I can. Spring semester. Okay. Okay."), say('lou', "I'm going to sit at the bar. I'm going to sit at the bar for a while."), narr('He gets up from the table. He leaves the chips where they are.')]); } }, { t: 'Keep it', do: () => { } }], { sub: `He is down $${l.down} to you, over the nights.` });
   },
   widowTalk() {
     const c = this.S(); if (!talkEnergy(2)) return; c.widowTalks++;
@@ -6412,7 +6415,7 @@ const Cello = {
   wake() {
     const s = this.S(); const d = G.day;
     if (!s.arrived && d >= CELLO_DAY) { s.arrived = true; s.arrivedDay = d; remember('cello_arrived'); Dlg.run([narr('A cello case in the hall, taller than a person, leaning by 410 like it is waiting to be let in. The door is open. Nobody is in it.'), narr(G.chars.nora && G.chars.nora.met ? 'Nora, going past in scrubs: "410\'s let. Girl with a cello. She said four words to Morrow and one of them was sorry."' : 'The super\'s voice on the stairs, and a second voice, low, that says "yes" and then nothing else.')]); return true; }
-    if (s.band && !s.dating && d >= s.bandDay + 5 && G.day % 3 === 0) { s.dating = true; s.datingDay = d; remember('cello_cal'); Dlg.run([narr('Early. Voices in the hall, one of them doing all the talking. Through the spyhole: Cal, at the door of 410, with a coffee in each hand and no guitar, which you have never seen.'), narr('She takes one. She does not say anything. He keeps talking. The door closes with both of them behind it, and the talking goes on, muffled, and then stops, and then the cello starts, and then, very badly, a guitar tries to keep up.')]); return true; }
+    if (s.band && !s.dating && d >= s.bandDay + 5 && G.day % 3 === 0) { s.dating = true; s.datingDay = d; remember('cello_cal'); Dlg.run([narr('Early. Voices in the hall, one of them doing all the talking. Through the spyhole: Cal, at the door of 410, with a coffee in each hand and no guitar, which you have never seen.')]); return true; }
     if (s.band && d >= 80 && !s.auditionDay && !s.cold) { s.auditionDay = d + 4; remember('cello_audition'); Dlg.run([narr('A note under your door. Small square handwriting.'), narr('"The symphony has a sub list. Audition Thursday. I have not played for a room since I left. Would you sit in the room, the night before. You do not have to say anything. - S."'), narr('Signe has never written you more than one line. This is four.')]); return true; }
     if (s.auditionDay && d === s.auditionDay - 1 && !s.playedThrough) { s.playedThrough = true; this.playThrough(); return true; }
     if (s.auditionDay && d === s.auditionDay + 1 && s.audition === null) { s.audition = s.playedThrough && s.trust >= 3 ? 'yes' : 'no'; remember('cello_result_' + s.audition); Dlg.run(s.audition === 'yes' ? [narr('Through two walls, at seven in the morning: the third suite. All of it. Fast, and then slow, and then, near the end, a sound you have not heard from 410 before, which is somebody laughing while they play.'), narr('The note under the door says one word. "Yes." Underneath, smaller: "Thank you for the chair."')] : [narr('Quiet from 410 all morning. At noon, one line of the piece, stopped in the middle. Then nothing.'), narr('The note under your door says: "I did not go. I stood outside. I am sorry."')]); return true; }
@@ -6785,7 +6788,7 @@ const Radio = {
   // ---- the tower ----
   leaseMenu() {
     const r = this.S(); const items = [];
-    items.push({ t: `Pay the tower lease`, r: `$${LEASE_FEE}`, disabled: () => G.money < LEASE_FEE, do: () => { if (!spend(LEASE_FEE)) return; r.lease = 'paid'; remember('lease_paid'); Dlg.run([narr('Three thousand dollars, in an envelope, on the console. She does not touch it for a long time.'), say('birdie', "I said I wasn't asking."), you("You weren't."), say('birdie', "...I'm going to say it on air. Not your name. That somebody. Every night, until I'm not here, I'm going to say somebody."), narr('She says it that night. You hear it from the couch. "Somebody paid the tower. I don\'t know why. Somebody." The river does not answer, but it does not have to.')]); } });
+    items.push({ t: `Pay the tower lease`, r: `$${LEASE_FEE}`, disabled: () => G.money < LEASE_FEE, do: () => { if (!spend(LEASE_FEE)) return; r.lease = 'paid'; remember('lease_paid'); Dlg.run([narr('Three thousand dollars, in an envelope, on the console. She does not touch it for a long time.'), say('birdie', "I said I wasn't asking."), you("You weren't."), say('birdie', "...I'm going to say it on air. Not your name. That somebody. Every night, until I'm not here, I'm going to say somebody.")]); } });
     items.push({ t: 'Get the block to call in', r: r.pledges.length >= 5 ? 'ready' : `${r.pledges.length} of 5`, disabled: () => r.pledges.length < 5 || r.callinDay > 0, do: () => { r.callinDay = G.day + 1; remember('callin_set'); Dlg.run([you("Tomorrow night. Everybody I could ask. They'll call. Have the tower man listen."), say('birdie', "He listens every night; he told me so, to prove nobody else does. All right. Tomorrow. I'll put the phone on the air, which I have never done, because there has never been anything on it.")]); } });
     items.push({ t: 'Not yet', do: () => { } });
     Menu.open('The tower', items, { sub: r.pledges.length >= 5 ? 'Five people on the block have said they will call. That might be enough for a man who says nobody is listening.' : 'Three thousand dollars, or proof that somebody is listening. Ask the people you know to call the station one night.' });
@@ -7714,7 +7717,7 @@ const Morrow = {
   },
   radiator() {
     const m = this.S(); if (!talkEnergy(2)) return; m.radiator = true; m.radiatorDay = G.day; remember('morrow_heat');
-    Dlg.run([you("The radiator in 412. It bangs and it doesn't get warm."), narr('He writes without looking at the pad.'), say('morrow', "TOMORROW. SIX. YOU WON'T BE UP. YOU WON'T HEAR ME. IT'LL BE WARM."), narr("It is. At six the next morning there is a sound in the wall like a man arguing with a pipe, and then the pipe gives in, and the room is warm for the first time since you took it.")]);
+    Dlg.run([you("The radiator in 412. It bangs and it doesn't get warm."), narr('He writes without looking at the pad.'), say('morrow', "TOMORROW. SIX. YOU WON'T BE UP. YOU WON'T HEAR ME. IT'LL BE WARM.")]);
   },
   drawer() {
     const m = this.S(); if (!talkEnergy(2)) return; m.drawer = true; m.trust += 1; remember('morrow_drawer');
@@ -7722,7 +7725,7 @@ const Morrow = {
   },
   wake() {
     const m = this.S(); const d = G.day;
-    if (m.radiator && d === m.radiatorDay + 1) { G.flags.own_heat = true; G.energy = clamp(G.energy + 6, 0, G.maxEnergy); G.tod = 1 - G.energy / G.maxEnergy; Dlg.run([narr('Six in the morning: a man arguing with a pipe in the wall, and the pipe giving in. The room is warm. It stays warm. You did not know how much of the cold you had been carrying until it was not there.')]); return true; }
+    if (m.radiator && d === m.radiatorDay + 1) { G.flags.own_heat = true; G.energy = clamp(G.energy + 6, 0, G.maxEnergy); G.tod = 1 - G.energy / G.maxEnergy; Dlg.run([narr('Six in the morning: a man arguing with a pipe in the wall, and the pipe giving in. The room is warm.')]); return true; }
     if (d >= 93 && !m.padlock && m.met) { m.padlock = true; remember('morrow_padlock'); Dlg.run([narr("A note under the door, block capitals, no signature needed: \"THE PADLOCK IS OFF MY DESK. IT'S IN THE DRAWER WITH THE PAGES. I'M NOT GOING TO NEED IT. - M.\"")]); return true; }
     return false;
   },
@@ -7823,6 +7826,122 @@ const Lobby = {
   FRESH.morrow = [];
   FRESH.nora = FRESH.nora || []; FRESH.nora.push(L_("Morrow fixed your heat? He's never fixed mine. He fixed mine the day after yours. He thinks I don't know it was because of you.", () => !!(G.chars.morrow && G.chars.morrow.radiator)));
   FRESH.amos = FRESH.amos || []; FRESH.amos.push(L_("Morrow took the lock off the basement door in 2020. I know. I watched him do it from the cardboard. He didn't look at me. That's how you know a man means it.", () => !!(G.chars.morrow && G.chars.morrow.talks >= 5)));
+}
+
+// ---- 09zy_story_pace.js ----
+// ============================================================
+// Pace: one story conversation per person per day. The rest of the day they have other things to say.
+// And the things people said on the phone, happening where they said they would.
+// ============================================================
+const PACE_FILLER = {
+  amos: ["We talked. Go do something. I'll be here; I'm always here.", "Later. Rain's picking up; I'm going under the awning.", "You already said good morning. I'm holding you to it."],
+  mei: ["Bread's five. We covered the rest.", "I'm working. Come back tomorrow, I'll have drawn something.", "Mom's watching. Buy something or go."],
+  nadia: ["Sit or don't, but I've got a floor to do.", "We talked. Eat something.", "Later. The lunch crowd, which is two people, is coming."],
+  nora: ["I've got four hours of sleep to get. Tomorrow.", "We talked. Go take the pills.", "Later. I'm dead on my feet."],
+  walter: ["We talked. Sit if you want; you don't have to say anything.", "Later. The bus isn't coming and neither is anything I haven't said.", "Ruth would say I've talked enough for one day. Ruth was right about most things."],
+  sol: ["We talked. Buying or selling.", "The book's closed for the day. Tomorrow.", "You've had your conversation. I ration them."],
+  emmett: ["Fish don't bite twice. Neither do I. Tomorrow.", "We talked. Sit and watch the water; it's what it's for.", "..."],
+  signe: ["...", "Tomorrow.", "I have said my words for today."],
+  birdie: ["The light's about to go red. Sit on the couch.", "We talked. I've got a river to talk to.", "Tomorrow. Nine. Same as always."],
+  morrow: ["WE TALKED.", "TOMORROW.", "THE PAD'S FULL FOR TODAY."],
+};
+const Pace = {
+  // wrap a character's story talk so it runs once a day; the rest of the day is small talk
+  wrap(obj, key, id, getState) {
+    const f0 = obj[key];
+    obj[key] = function () {
+      const c = getState(); if (!c) return f0.apply(this, arguments);
+      const wasMet = !!c.met;
+      if (wasMet && c.storyDay === G.day && !c.cold) {
+        if (!talkEnergy(1)) return;
+        Dlg.run([say(id, fresh(id, PACE_FILLER[id] || ['...']))]); return;
+      }
+      const r = f0.apply(this, arguments);
+      if (c.met) c.storyDay = G.day;
+      return r;
+    };
+  }
+};
+{
+  Pace.wrap(Amos, 'talk', 'amos', () => G.chars.amos);
+  Pace.wrap(Mei, 'talk', 'mei', () => G.chars.mei);
+  Pace.wrap(Nadia, 'talk', 'nadia', () => G.chars.nadia);
+  Pace.wrap(Nora, 'talk', 'nora', () => G.chars.nora);
+  Pace.wrap(Walter, 'talk', 'walter', () => G.chars.walter);
+  Pace.wrap(Pawn, 'talk', 'sol', () => G.chars.sol);
+  Pace.wrap(Emmett, 'talk', 'emmett', () => G.chars.emmett);
+  Pace.wrap(Cello, 'talk', 'signe', () => G.chars.signe);
+  Pace.wrap(Radio, 'talk', 'birdie', () => G.chars.birdie);
+  Pace.wrap(Morrow, 'talk', 'morrow', () => G.chars.morrow);
+
+  // ---- the phone calls, kept ----
+  // Nadia: "Come by. I'll feed you and he'll feed you fractions."
+  const oesP = onEnterScene; onEnterScene = function (sc) {
+    oesP(sc); const P = G.phone; if (!P) return;
+    if (sc === 'diner' && P.friends.nadia && !G.flags.fractionsDone && G.chars.nadia.sam && !G.chars.nadia.closed) { G.flags.fractionsDone = true; G.hunger = Math.min(100, G.hunger + 35); G.ateToday = true; trust('nadia', 1); remember('fractions'); Dlg.run([narr('Sam has the booth and the worksheet and the look of a boy who has been promised somebody.'), say('kid', "Three-eighths plus one-quarter. Go."), you("Five-eighths."), say('kid', "...He said you knew fractions. He didn't say you were fast."), narr('Nadia puts the 412 in front of you without asking. You do the whole page. He checks every one against the back of the book and does not find one wrong, and is disappointed, and is not.')]); }
+  };
+  // Sol: "Come in sometime; I'll show you the page."
+  const pmP = Pawn.menu; Pawn.menu = function () { pmP.call(this); const P = G.phone; const s = G.chars.sol; if (Menu.active && P && P.friends.sol && !s.pageShown) Menu.items.splice(1, 0, { t: 'Ask to see the page', do: () => { s.pageShown = true; s.trust += 1; remember('sol_page'); Dlg.run([narr('He turns the ledger around without being asked twice. A page near the back. Names, dates, objects, in his hand, going down the column.'), narr('Your name is on it. Not with a thing beside it; with a phone number, and a date in January, and in the margin, smaller: PICKED UP.'), say('sol', "Forty-one years of Januaries. One line says picked up. It's a good page. I'll leave it in.")]); } }); };
+  // Cal: "I'm playing it Friday under the shelter."
+  const bmP = Minor.busker; Minor.busker = function () { bmP.call(this); const P = G.phone; if (Menu.active && P && P.friends.busker && G.day % 7 === 5 && !G.flags.walterSongHeard) Menu.items.splice(1, 0, { t: "Hear the song for Walter", r: '-3 energy', do: () => { if (!talkEnergy(3)) return; G.flags.walterSongHeard = true; remember('walter_song'); const sp = SONGS.find(x => x.id === 'the14'); if (sp) Song.play(sp); } }); };
+  // Mei: "I'm going to open it when you're at the counter."
+  const mmP = Mei.menu; Mei.menu = function () { mmP.call(this); const P = G.phone; const m = G.chars.mei; if (Menu.active && P && P.friends.mei && !m.accepted && !m.cold && m.stage >= 3) Menu.items.splice(1, 0, { t: 'The envelope', do: () => { m.storyDay = 0; Mei.talk(); } }); };
+  // Jo: "I'll call Thursday."
+  const paP = Phone.answer; Phone.answer = function () { const P = this.P(); const was = P.callToday; paP.call(this); if (was === 'jo_birthday') { const j = Jo.J(); let d = G.day + 1; while (d % 7 !== 4) d++; j.nextDay = d; } };
+  // Mei: "Saturday." The bus pass, and the school
+  const gmP = Gifts.mei; Gifts.mei = function (items) { gmP.call(this, items); const it = items.find(i => /bus pass/.test(i.t)); if (it) { const d0 = it.do; it.do = () => { d0(); G.chars.mei.busPassDay = G.day; }; } };
+  const meiSat = () => { const m = G.chars.mei; if (!m.busPassDay) return null; let d = m.busPassDay + 1; while (d % 7 !== 6) d++; return d; };
+  const mmS = Mei.menu; Mei.menu = function () { const sat = meiSat(); if (sat && G.day === sat && !G.chars.mei.cold) { Dlg.run([narr('Mrs. Lin is at the register. Mei is not.'), say('mrsLin', "The school. Saturday. She took a bus; she said you gave her the bus. Bread is five.")]); return; } mmS.call(this); };
+  FRESH.mei = FRESH.mei || []; FRESH.mei.push(L_("I went. Saturday. The school. There's a room with forty easels and north light, and nobody in it was drawing a lamp. I drew the lamp anyway. From memory.", () => { const s = meiSat(); return !!(s && G.day > s); }), L_("The bus back from the school had a man drawing on his hand. I drew him drawing on his hand. It's a whole thing now.", () => { const s = meiSat(); return !!(s && G.day > s + 2); }));
+  // Nadia: "Catch of the day."
+  FRESH.nadia = FRESH.nadia || []; FRESH.nadia.push(L_("Catch of the day. Perch. Two people asked where from. I said a fisherman. I didn't say which one.", () => G.flags.fishSoldDay && G.day === G.flags.fishSoldDay + 1), L_("Sold the last of the perch. Somebody asked if it'd be back. I said ask the fisherman.", () => G.flags.fishSoldDay && G.day === G.flags.fishSoldDay + 2));
+  // Amos: "Something square."
+  const amP = Amos.menu; Amos.menu = function () {
+    const a = G.chars.amos; if (a.tools && !a.madeBox && G.day >= (G.flags.amosToolsDay || 0) + 4 && !a.dead && G.scene !== 'dock') { a.madeBox = true; G.flags.amosBox = true; trust('amos', 1); remember('amos_box'); Dlg.run([narr('He has something behind his back, which on Amos is a whole announcement.'), narr('A box. Square, dovetailed, the lid fitted so close it sighs when you lift it. Nothing in it. Sanded until the grain shows through like a map.'), say('amos', "Something square. I said. It took four days because the plane needed sharpening and I'd forgotten how, and then I remembered."), say('amos', "Put something in it. Not for me. For whoever opens it after.")]); return; }
+    amP.call(this);
+  };
+  const gtP = Gifts.amos; Gifts.amos = function (items) { gtP.call(this, items); const it = items.find(i => /his tools/.test(i.t)); if (it) { const d0 = it.do; it.do = () => { d0(); G.flags.amosToolsDay = G.day; }; } };
+  const adP = INTERIORS.apartment.dynamic; INTERIORS.apartment.dynamic = function (g, t) { if (adP) adP.call(this, g, t); if (G.flags.amosBox) { px(g, 198, COUNTER_TOP - 8, 12, 8, '#8a6a3a'); px(g, 198, COUNTER_TOP - 8, 12, 1, '#a8885a'); px(g, 199, COUNTER_TOP - 5, 10, 1, '#5a4020'); } };
+}
+
+// ---- 09zz_story_show.js ----
+// ============================================================
+// Shown, not told: the things people said they would do, happening on their own time.
+// ============================================================
+{
+  // mornings: the bed arrives, the note comes back, the marigolds go in
+  const weZ = wakeEvents; wakeEvents = function () {
+    const f = G.flags; const d = G.day;
+    if (f.bedDay && d > f.bedDay && !f.betterBed) { f.betterBed = true; f.own_bed = true; delete interiorCache.apartment; }
+    { const r = Rent.S(); if (r.noteDay && d > r.noteDay && !r.noteSeen) { r.noteSeen = true; r.noteDay = 0; Dlg.run([narr('Under the door: PAID. THANK YOU. - M. The thank you is new.')]); return; } }
+    { const s = G.garden; if (s && s.meiJoinDay) { if (d >= s.meiJoinDay + 1) s.flowers = true; if (d >= s.meiJoinDay + 2) s.drawn = true; } }
+    weZ.apply(this, arguments);
+  };
+  // Theo, the morning after his father came to the corner
+  const ttZ = Theo.talk; Theo.talk = function () {
+    const b = Beats.S(); if (b.theoWarnedPending) { b.theoWarnedPending = false; if (!talkEnergy()) return; Dlg.run([you("Your dad came to the corner. He asked if you were alive. I said yes. That's all I said."), narr('He goes white and then he does not run, which is new.'), say('theo', "He stood under it? Under the poster?"), say('theo', "...Okay. Okay. Just Cal. Still just Cal. But okay.")]); return; }
+    return ttZ.apply(this, arguments);
+  };
+  // the railing at dawn, after you told his father where
+  const buZ = Beats.update; Beats.update = function () {
+    buZ.apply(this, arguments); const b = this.S();
+    if (b.theoRailPending && G.scene === 'street' && G.state === 'play' && G.tod < 0.22 && Math.abs(G.px - (STREET.spots.river + 40)) < 60 && !Dlg.active) { b.theoRailPending = false; Dlg.run([narr('A marker on the rail, and a half-drawn bridge, and nobody.')]); }
+  };
+  // Walter, the afternoon the radio works again
+  const beZ = buildEntities; buildEntities = function () { beZ(); if (G.flags.radioDay === G.day && G.entities) { const w = G.entities.find(e => e.id === 'walter'); if (w && !w.bubble) w.bubble = 'note'; } };
+  // the heater in the alley, at night
+  const dpZ = drawPuddles; drawPuddles = function (g, ents, camX, pal, t) {
+    dpZ(g, ents, camX, pal, t);
+    const a = G.chars.amos; if (G.scene !== 'street' || !a.heater || a.room || a.dead || pal.night < 0.05) return;
+    const sx = 236 - camX; if (sx < -60 || sx > W + 60) return;
+    g.save(); g.globalCompositeOperation = 'lighter'; const rg = g.createRadialGradient(sx, FEET_Y - 4, 2, sx, FEET_Y - 4, 34 + Math.sin(t * 0.1) * 2); rg.addColorStop(0, `rgba(255,120,40,${0.22 * pal.night})`); rg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = rg; g.fillRect(sx - 40, FEET_Y - 44, 80, 50); g.restore();
+  };
+  // Mrs. Ortega, about the pharmacy call
+  const gmZ = Minor.granny; Minor.granny = function () {
+    if (G.flags.wrongOrtega && !G.flags.tamale) { G.flags.tamale = true; addHunger(20); Dlg.run([say('granny', "You! The pharmacy called YOU. They have had the wrong floor since Hector; I have told them nine times."), narr('She puts a tamale in your hand, warm, from somewhere in her coat.'), say('granny', "For taking the call. Eat it before it gets ideas.")]); return; }
+    gmZ.call(this);
+  };
+  FRESH.nora = FRESH.nora || []; FRESH.nora.push(L_("Your friend. Amos. He read a letter on the fourth-floor landing yesterday, standing up, twice, and then sat on the stairs for an hour. I stepped around him. Everybody did. Nobody said anything, which was right.", () => !!(G.beats && G.beats.amosLetter)));
 }
 
 // ---- 10_game.js ----
@@ -8062,7 +8181,7 @@ function onEnterScene(sc) {
 }
 function streetEvent(p) {
   if (p === 'amosGone') Dlg.run([narr('The cardboard is there. The blanket is folded, which it never was.'), narr('Someone has put a candle in a jar beside it, and a bunch of flowers from Lin\'s, still in the paper. The wind has already put the candle out.'), narr(G.chars.amos.met ? 'Mrs. Ortega tells you later. Pneumonia. The ambulance came at four in the morning and nobody rode with him.' : 'You never asked his name. You walked past him fourteen times.')]);
-  if (p === 'walterGone') { const w = G.chars.walter; Dlg.run(w.sat >= 6 ? [narr('The bench is empty. The 14 does not come. Nothing comes.'), narr('Mrs. Ortega finds you on the sidewalk. Walter Ashby died in his sleep on Tuesday. He had left an envelope with your apartment number on it.'), narr(G.inv.chess ? 'Inside: a photograph of a woman laughing, mid-snort. On the back, in typesetter\'s capitals: SHE WOULD HAVE LIKED YOU.' : 'Inside: a photograph of a woman laughing, and a note. YOU SAT WITH ME. THANK YOU. W.A.'), { fn: () => remember('walter_letter') }] : w.sat >= 3 ? [narr('The bench is empty. It stays empty the next day, and the next.'), narr('The busker tells you: the old man with the cane. Heart. In his sleep, they think. Nobody is sure who they are.')] : [narr('The bench is empty today. You notice, and then you notice that you noticed.')]); }
+  if (p === 'walterGone') { const w = G.chars.walter; Dlg.run(w.sat >= 6 ? [narr('The bench is empty. The 14 does not come. Nothing comes.'), narr('Mrs. Ortega finds you on the sidewalk. Walter Ashby died in his sleep on Tuesday. He had left an envelope with your apartment number on it.'), narr(G.inv.chess ? 'Inside: a photograph of a woman laughing, mid-snort. On the back, in typesetter\'s capitals: SHE WOULD HAVE LIKED YOU.' : 'Inside: a photograph of a woman laughing, and a note. YOU SAT WITH ME. THANK YOU. W.A.'), { fn: () => remember('walter_letter') }] : w.sat >= 3 ? [narr('The bench is empty.'), narr('The busker tells you: the old man with the cane. Heart. In his sleep, they think. Nobody is sure who they are.')] : [narr('The bench is empty today. You notice, and then you notice that you noticed.')]); }
   if (p === 'dinerClosed') Dlg.run([narr("The neon is dark. There is a sheet of paper taped inside the door: CLOSED. THANK YOU FOR 26 YEARS."), narr('Through the glass the stools are upside down on the counter like they are waiting for something.')]);
   if (p === 'amosRoom') Dlg.run([narr('The cardboard by the stoop is gone. Swept. Just the sidewalk, wet and ordinary, as if nobody ever lived there.')]);
 }
