@@ -1901,17 +1901,21 @@ function drawPuddles(g, ents, camX, pal, t) {
 const rainDrops = []; const splashes = [];
 function initRain() { rainDrops.length = 0; for (let i = 0; i < 260; i++) rainDrops.push({ x: Math.random() * (W + 80), y: Math.random() * H, v: 6 + Math.random() * 4, l: 5 + Math.random() * 6, z: Math.random() }); }
 initRain();
+let rainCamX = null;
 function updateRain(camX) {
   const n = Math.floor(rainDrops.length * G.rain);
   const dx = -1.4 - G.wind;
+  // the rain hangs in the world, not on the camera: when the view scrolls, the drops slide the other way
+  const shift = rainCamX === null || Math.abs(camX - rainCamX) > W ? 0 : camX - rainCamX; rainCamX = camX;
   for (let i = 0; i < n; i++) {
-    const d = rainDrops[i]; d.x += dx * (0.6 + d.z * 0.6); d.y += d.v * (0.6 + d.z * 0.6);
+    const d = rainDrops[i]; d.x += dx * (0.6 + d.z * 0.6) - shift * (0.5 + d.z * 0.5); d.y += d.v * (0.6 + d.z * 0.6);
+    if (d.x > W + 60) d.x -= W + 80; else if (d.x < -40 && shift < 0) d.x += W + 80;
     if (d.y > H || d.x < -20) {
       if (d.y > H && Math.random() < 0.5) splashes.push({ x: d.x, y: G.scene === 'street' ? (GROUND_Y + 2 + Math.random() * (H - GROUND_Y - 4)) : H - 10, t: 0 });
       d.y = -10 - Math.random() * 40; d.x = Math.random() * (W + 80);
     }
   }
-  for (let i = splashes.length - 1; i >= 0; i--) { splashes[i].t++; if (splashes[i].t > 8) splashes.splice(i, 1); }
+  for (let i = splashes.length - 1; i >= 0; i--) { splashes[i].t++; splashes[i].x -= shift; if (splashes[i].t > 8) splashes.splice(i, 1); }
   if (splashes.length > 90) splashes.splice(0, splashes.length - 90);
 }
 function drawRain(g, t, camX, clipRect) {
@@ -7409,12 +7413,13 @@ const Snow = {
   },
   // flakes
   initFlakes() { this.flakes.length = 0; for (let i = 0; i < 240; i++) this.flakes.push({ x: Math.random() * (W + 40) - 20, y: Math.random() * H, v: 0.35 + Math.random() * 0.7, z: Math.random(), ph: Math.random() * 6.28, s: Math.random() < 0.3 ? 2 : 1 }); },
-  fall(g, t, clipRect) {
+  fall(g, t, clipRect, camX) {
     const amt = G.snowing || 0; if (amt <= 0.01) return; if (!this.flakes.length) this.initFlakes();
     const n = Math.floor(this.flakes.length * amt);
+    const cx = camX || 0; const shift = (this.camX === undefined || Math.abs(cx - this.camX) > W) ? 0 : cx - this.camX; if (!clipRect) this.camX = cx;
     g.save(); if (clipRect) { g.beginPath(); g.rect(...clipRect); g.clip(); }
     for (let i = 0; i < n; i++) {
-      const f = this.flakes[i]; if (!clipRect) { f.y += f.v * (0.6 + f.z * 0.7); f.x += Math.sin(f.ph + t * 0.02) * 0.35 - (G.wind || 0) * 0.5 * (0.5 + f.z); if (f.y > H) { f.y = -4; f.x = Math.random() * (W + 40) - 20; } if (f.x < -20) f.x += W + 40; if (f.x > W + 20) f.x -= W + 40; }
+      const f = this.flakes[i]; if (!clipRect) { f.y += f.v * (0.6 + f.z * 0.7); f.x += Math.sin(f.ph + t * 0.02) * 0.35 - (G.wind || 0) * 0.5 * (0.5 + f.z) - shift * (0.5 + f.z * 0.5); if (f.y > H) { f.y = -4; f.x = Math.random() * (W + 40) - 20; } if (f.x < -20) f.x += W + 40; if (f.x > W + 20) f.x -= W + 40; }
       g.fillStyle = `rgba(240,244,252,${0.45 + f.z * 0.45})`; g.fillRect(Math.round(f.x), Math.round(f.y), f.s, f.s);
     }
     g.restore();
@@ -7464,7 +7469,7 @@ const Snow = {
   const drW = drawRain; drawRain = function (g, t, camX, clipRect) {
     if (!clipRect) { Snow.caps(g, camX); Snow.lights(g, camX, t, G.pal); Snow.breath(g, camX, t); }
     drW(g, t, camX, clipRect);
-    Snow.fall(g, t, clipRect);
+    Snow.fall(g, t, clipRect, camX);
     if (!clipRect) Snow.fireworks(g, camX, t);
   };
   const puW = playUpdate; playUpdate = function () { puW.apply(this, arguments); Snow.trackPrints(); };
@@ -7642,7 +7647,7 @@ INTERIORS.lobby = {
     px(g, 158, CEIL_Y + 8, 70, 46, '#3a2a1a'); px(g, 160, CEIL_Y + 10, 66, 42, '#a8804a'); for (let y = CEIL_Y + 12; y < CEIL_Y + 50; y += 3) for (let x = 162; x < 224; x += 4) if ((x + y) % 7 === 0) px(g, x, y, 1, 1, 'rgba(0,0,0,0.12)');
     px(g, 170, CEIL_Y + 2, 46, 6, '#2a2a30'); drawText(g, 'NOTICES', 193, CEIL_Y + 3, '#d8d0b8', { align: 'center' });
     // the super's office: a door with a frosted light, and beside it a window with a counter
-    fDoor(g, 244, GROUND_Y, '#4a3a2a', { frame: '#1a1418' }); px(g, 247, GROUND_Y - 40, 14, 12, '#c8c8b0'); px(g, 248, GROUND_Y - 39, 12, 10, '#d8d8c0'); drawText(g, 'SUPER', 254, GROUND_Y - 36, '#3a3a40', { align: 'center' });
+    fDoor(g, 244, GROUND_Y, '#4a3a2a', { frame: '#1a1418' }); px(g, 247, GROUND_Y - 40, 14, 12, '#c8c8b0'); px(g, 248, GROUND_Y - 39, 12, 10, '#d8d8c0');
     px(g, 266, CEIL_Y + 10, 44, 36, '#1a1418'); px(g, 268, CEIL_Y + 12, 40, 32, '#2a2a30'); for (let y = CEIL_Y + 12; y < CEIL_Y + 44; y += 4) px(g, 268, y, 40, 1, 'rgba(0,0,0,0.25)');  // the window with the grille
     fCounter(g, 262, 314, '#6a5a4a', '#3a2e26', {}); px(g, 268, COUNTER_TOP - 6, 14, 6, '#e8e0d0'); px(g, 270, COUNTER_TOP - 5, 10, 1, '#8a8a92'); px(g, 270, COUNTER_TOP - 3, 8, 1, '#8a8a92');  // the pad
     px(g, 296, COUNTER_TOP - 5, 8, 5, '#3a3a44'); px(g, 300, COUNTER_TOP - 8, 2, 3, '#8a8a92');   // a bell nobody rings
@@ -7775,7 +7780,7 @@ const Lobby = {
   },
   arrive() {
     const m = Morrow.S(); if (m.seenLobby) return; m.seenLobby = true;
-    Dlg.run([narr('The lobby of Harlan Arms: a checkerboard floor with the checks worn off in a path, brass mailboxes, a corkboard, a radiator that ticks, and a window with a grille in it and a light behind the grille.'), narr('You have lived here since September and come through this room every day and never once looked at the window. Somebody is behind it.')]);
+    Dlg.run([narr('The lobby of Harlan Arms: a checkerboard floor with the checks worn off in a path, brass mailboxes, a corkboard, a radiator that ticks, and a window with a grille in it and a light behind the grille.')]);
   }
 };
 {
