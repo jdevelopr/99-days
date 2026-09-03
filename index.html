@@ -5209,6 +5209,7 @@ const Song = {
     if (!A._unlocked || A.muted) { this.startAt = 0; return; }
     const c = A.ctx; const t0 = c.currentTime + 0.15; this.startAt = t0; this.ctxStart = t0;
     const pluck = (m, t, len, vol, type) => { const o = c.createOscillator(), g = c.createGain(), fl = c.createBiquadFilter(); o.type = type || 'triangle'; o.frequency.value = midiHz(m); fl.type = 'lowpass'; fl.frequency.value = 2200; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(0.15, len * 1.1)); o.connect(fl); fl.connect(g); g.connect(A.master); o.start(t); o.stop(t + len * 1.1 + 0.05); this.nodes.push(o, g); };
+    if (spec.solo && this.solo) { this.solo(spec, t0, beat); return; }
     // accompaniment: bass on the bar, arpeggio on the beats
     spec.chords.forEach((ch, bi) => {
       const root = spec.key + ch[0]; const third = ch[1] === 'm' ? 3 : 4; const tb = t0 + bi * spec.bar * beat;
@@ -5234,8 +5235,9 @@ const Song = {
     if (early) { const A = Audio; try { const now = A.ctx.currentTime; for (const n of this.nodes) { if (n.gain) n.gain.cancelScheduledValues(now), n.gain.setTargetAtTime(0.0001, now, 0.05); if (n.stop) { try { n.stop(now + 0.3); } catch (e) { } } } } catch (e) { } }
     this.nodes = [];
     const s = this.spec; const outro = s.alt && s.when && !s.when() ? s.alt.outro : s.outro;
-    G.flags.songsHeard = (G.flags.songsHeard || 0) + (early ? 0 : 1); if (!early) remember('song_' + s.id);
-    Dlg.run([narr(early ? 'You walk on before the end. He does not stop; the song was not for you, particularly. It was for the corner.' : outro)]);
+    if (!s.solo) G.flags.songsHeard = (G.flags.songsHeard || 0) + (early ? 0 : 1); if (!early) remember('song_' + s.id);
+    if (s.after) { s.after(early); return; }
+    Dlg.run([narr(early ? (s.early || 'You walk on before the end. He does not stop; the song was not for you, particularly. It was for the corner.') : outro)]);
   },
   draw(g, t) {
     buildEntities(); const b = G.entities.find(e => e.id === 'busker'); if (b) b.bubble = 'note';
@@ -5246,7 +5248,7 @@ const Song = {
     if (this.lyricIdx >= 0) { const text = ly[this.lyricIdx][1]; const lines = wrapText(text, 300); const w = Math.max(...lines.map(l => textWidth(l))) + 16; UI.panel(g, Math.round(W / 2 - w / 2), 48, w, 8 + lines.length * 10, 0.7); lines.forEach((ln, i) => drawText(g, ln, W / 2, 52 + i * 10, '#f0ead8', { align: 'center' })); }
     // progress
     const p = clamp((G.t - this.startedFrame) / 60 / this.dur, 0, 1); px(g, W / 2 - 60, 26, 120, 1, 'rgba(255,255,255,0.15)'); px(g, W / 2 - 60, 26, Math.round(120 * p), 1, '#e8c84a');
-    UI.drawHint(g, `${UI.keyName('back')} walk on`);
+    UI.drawHint(g, `${UI.keyName('back')} ${s.hint || 'walk on'}`);
   }
 };
 
@@ -7124,6 +7126,51 @@ const Home = {
   FRESH.nora = FRESH.nora || []; FRESH.nora.push(L_("Fourteen down. Six letters. 'Stubborn.' I wrote your name; it didn't fit; I wrote it anyway.", () => !!(G.chars.nora && G.chars.nora.crossword)));
 }
 
+// ---- 09w_story_horn.js ----
+// ============================================================
+// Sol's trumpet: one song, no band. Four cracked notes and then the thing itself.
+// ============================================================
+const SOL_SONG = {
+  id: 'sol1994', title: '1994', bpm: 66, bar: 4, key: 55, solo: true, who: 'sol', hint: 'let him stop',
+  chords: [[0, 'M'], [9, 'm'], [5, 'M'], [7, 'M'], [0, 'M'], [9, 'm'], [5, 'M'], [7, 'M'], [0, 'M'], [0, 'M']],
+  melody: [[[7, 1], [12, 1], [16, 2]], [[14, 2], [12, 1], [9, 1]], [[5, 1], [9, 1], [12, 2]], [[11, 3], [null, 1]],
+    [[7, 1], [12, 1], [16, 1], [19, 1]], [[17, 2], [16, 1], [14, 1]], [[12, 2], [9, 1], [7, 1]], [[11, 2], [14, 2]], [[12, 4]], [[null, 4]]],
+  lyrics: [[0, '(four notes, cracked, thin, exactly wrong)'], [4, '(then the fifth, which is nearly music)'], [16, '(the bell of it is dented; the note is not)'], [30, '(he holds the last one longer than he has wind for)']],
+  early: 'He stops when you look away. He was not playing for you, particularly. He was playing for 1994.',
+  outro: ''
+};
+// the horn: square wave under a lowpass, a little vibrato once it settles, a crack on the first four notes
+Song.solo = function (spec, t0, beat) {
+  const c = Audio.ctx; const muted = spec.who === 'sol' && G.chars.sol && G.chars.sol.mute;
+  const horn = (m, t, len, vol, crack) => {
+    const o = c.createOscillator(), g = c.createGain(), fl = c.createBiquadFilter(); o.type = 'square';
+    const hz = midiHz(m) * (crack ? (1 + (crack % 2 ? -0.03 : 0.025)) : 1); o.frequency.setValueAtTime(hz * 0.985, t); o.frequency.exponentialRampToValueAtTime(hz, t + 0.07);
+    fl.type = muted ? 'bandpass' : 'lowpass'; fl.frequency.value = muted ? 1400 : (crack ? 900 : 1700); if (muted) fl.Q.value = 1.4;
+    if (!crack) { const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 5.2; lg.gain.value = hz * 0.006; lfo.connect(lg); lg.connect(o.frequency); lfo.start(t + 0.25); lfo.stop(t + len + 0.1); this.nodes.push(lfo); }
+    const v = vol * (muted ? 0.6 : 1) * (crack ? 0.55 : 1); const L = crack ? len * 0.55 : len;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + (crack ? 0.03 : 0.08)); g.gain.setValueAtTime(v, t + L * 0.75); g.gain.exponentialRampToValueAtTime(0.0001, t + L);
+    o.connect(fl); fl.connect(g); g.connect(Audio.master); o.start(t); o.stop(t + L + 0.05); this.nodes.push(o, g);
+  };
+  let tm = t0, n = 0;
+  spec.melody.forEach(bar => { bar.forEach(([note, b]) => { if (note !== null) { n++; horn(spec.key + 12 + note, tm, b * beat * 0.92, 0.075, n <= 4 ? n : 0); } tm += b * beat; }); });
+};
+{
+  Pawn.play = function () {
+    const s = this.S(); if (!talkEnergy(3)) return; const again = s.played; s.played = true; s.plays = (s.plays || 0) + 1; remember('sol_played');
+    SOL_SONG.after = (early) => {
+      if (early) { Dlg.run([narr(SOL_SONG.early)]); return; }
+      Dlg.run([say('sol', again ? "That's it. That's all of it, again." : "That's it. That's all the wind I've got."), narr(s.mute ? 'He takes the mute out of the bell and puts them both in the case. He does not lock the case.' : 'He puts it back in the case. He does not lock the case.'), { fn: () => trust('sol', again ? 1 : 2) }]);
+    };
+    const open = again ? [say('sol', "Again. ...Once more. Don't make it a thing."), narr(s.mute ? 'The mute goes in the bell. The clocks do not mind.' : 'He unlocks the case.')] :
+      [say('sol', "You want me to play it."), you("Once."), say('sol', "..."), narr('He unlocks the case. The trumpet is dull brass, a dent in the bell. He puts it to his mouth like a man picking up a phone he expects bad news on.')];
+    Dlg.run(open.concat([{ fn: () => { Dlg.steps.length = Dlg.i; setTimeout(() => Song.play(SOL_SONG), 80); } }]));
+  };
+  const pm3 = Pawn.menu; Pawn.menu = function () {
+    pm3.call(this); const s = Pawn.S(); if (!Menu.active) return;
+    if (s.played && s.trumpet && !s.cold && (s.mute || s.trust >= 5) && !Menu.items.some(i => /play it/.test(i.t))) Menu.items.splice(Menu.items.length - 1, 0, { t: 'Ask him to play it again', r: '-3 energy', do: () => Pawn.play() });
+  };
+}
+
 // ---- 10_game.js ----
 // ============================================================
 // game: state, loop, interactions, shop, sleep, ending, save
@@ -7227,7 +7274,7 @@ function buildEntities() {
     if (G.chars.nadia.sam && G.tod > 0.5) add({ id: 'sam', x: 104, y: 215, spec: 'kid', dir: 1, sit: true, range: 40, on: () => { if (G.inv.checkers) { const gi = []; Gifts.sam(gi); gi[0].do(); return; } if (G.chars.nadia.checkers && G.day >= 60 && !Beats.S().samCard) { if (!talkEnergy(3)) return; Beats.samCheckers(); return; } const ci = Theo.clueItem('sam'); if (ci) { Theo.clue('sam'); return; } talkEnergy(2) && Dlg.run([say('kid', fresh('sam', ["It's done. The homework. It's done.", "Do you know how to do fractions? Don't tell Mom I asked.", "Mom says you're sick. Are you going to be okay?", "Wanna play checkers? I always win. That's a warning."]))]); }, label: 'Sam' });
     if (f.buskerTips >= 3 && G.chars.nadia.saved && G.tod > 0.6) add({ id: 'busker2', x: 140, y: feet, spec: 'busker', dir: 1, label: 'Busker', on: () => Minor.busker() });
   }
-  if (sc === 'pawn') add({ id: 'sol', range: 60, x: INTERIORS.pawn.spots.counter, y: 212, spec: 'sol', dir: -1, on: () => Pawn.menu(), label: G.chars.sol.met ? 'Sol' : 'Pawnbroker' });
+  if (sc === 'pawn') add({ id: 'sol', range: 60, x: INTERIORS.pawn.spots.counter, y: 212, spec: 'sol', dir: -1, on: () => Pawn.menu(), label: G.chars.sol.met ? 'Sol' : 'Pawnbroker', bubble: Song.active && Song.spec && Song.spec.who === 'sol' ? 'note' : null });
   if (sc === 'bus') {
     add({ id: 'pryor', x: INTERIORS.bus.spots.pryor, y: feet, spec: 'pryor', dir: 1, sit: true, range: 30, on: () => Passengers.pryor(), label: f.pryorTalks ? 'Mr. Pryor' : 'Man with a laptop' });
     add({ id: 'ortega', x: INTERIORS.bus.spots.ortega, y: feet, spec: 'granny', dir: 1, sit: true, range: 30, on: () => Passengers.ortega(), label: 'Mrs. Ortega', bubble: f.ortegaBus ? null : 'exclaim' });
