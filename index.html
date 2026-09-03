@@ -6948,6 +6948,182 @@ function paintRadioDoor(g) {
   FRESH.busker = FRESH.busker || []; FRESH.busker.push(L_("The top floor. A real board, a real mic, a real red light. I've played to it in my head since I was nine. Now I've done it once. Once is plenty. Once is enough for the rest.", () => G.chars.birdie && G.chars.birdie.session));
 }
 
+// ---- 09v_story_pawn2.js ----
+// ============================================================
+// Sol's shelves: five things a day, never the same five. Fifteen more things with names.
+// ============================================================
+Object.assign(PAWN_ITEMS, {
+  kettle: { name: 'Electric kettle', price: 45, kind: 'self', desc: 'Chrome, dented. The cord has been taped twice.' },
+  blanket: { name: 'Wool blanket, army', price: 40, kind: 'self', desc: 'Grey, army, moth holes at one corner. Warm.' },
+  lamp: { name: 'Reading lamp', price: 35, kind: 'self', desc: 'Brass, bendable neck, a shade the color of weak tea.' },
+  camera: { name: 'Instant camera, six shots', price: 130, kind: 'self', desc: 'The kind that spits the picture out. Six left in the pack. No more packs.' },
+  scarf: { name: 'Wool scarf', price: 30, kind: 'self', desc: 'Long, dark green, knitted by somebody who could knit.' },
+  typewriter: { name: 'Typewriter, portable', price: 140, kind: 'self', desc: 'Olive case, a fresh ribbon. The E strikes a little low.' },
+  records: { name: 'Stack of records, no sleeves', price: 20, kind: 'gift', give: 'birdie', desc: 'Eleven of them, no sleeves, held with a strap.' },
+  harmonica: { name: 'Harmonica, key of C', price: 35, kind: 'gift', give: 'theo', desc: 'Chrome worn to brass where a mouth was.' },
+  rosin: { name: 'Cello rosin & a spare A', price: 45, kind: 'gift', give: 'signe', desc: 'A cake of amber in a cloth, and one string coiled in paper.' },
+  mute: { name: 'Trumpet mute', price: 40, kind: 'gift', give: 'sol', desc: 'Aluminum, one dent, the cork still good.' },
+  seeds: { name: 'Seed packets, rubber-banded', price: 25, kind: 'gift', give: 'granny', desc: 'Beans, squash, two kinds of tomato, and one packet with the name torn off.' },
+  tackle: { name: 'Tackle box', price: 55, kind: 'gift', give: 'emmett', desc: 'Green metal, three trays, lures somebody tied by hand.' },
+  crossword: { name: 'Book of crosswords, half done', price: 12, kind: 'gift', give: 'nora', desc: 'Half done, in pen, by somebody confident.' },
+  peacoat: { name: 'Navy peacoat', price: 135, kind: 'outfit', desc: 'Navy wool, anchor buttons, one replaced with a plain one.' },
+  denim: { name: 'Denim jacket', price: 90, kind: 'outfit', desc: 'Faded to the color of a sky you have not seen in a while.' },
+});
+for (const k in PAWN_ITEMS) delete PAWN_ITEMS[k].always;
+OUTFITS.peacoat = { name: 'navy peacoat', spec: { skin: '#dcae88', hair: '#3a2a22', hairStyle: 'short', shirt: '#c8c0b0', pants: '#2c3444', shoes: '#1a1a1e', coat: '#1e2a48', scarf: '#8a8a92', stubble: true } };
+OUTFITS.denim = { name: 'denim jacket', spec: { skin: '#dcae88', hair: '#3a2a22', hairStyle: 'messy', shirt: '#e8e0c8', pants: '#3a3a44', shoes: '#3a3634', coat: '#5a7a9a', stubble: true } };
+for (const k of ['peacoat', 'denim']) { SPECS['outfit_' + k] = OUTFITS[k].spec; SPECS['outfit_' + k + '_late'] = Object.assign({}, OUTFITS[k].spec, { skin: '#cfae96' }); }
+
+// ---------- five a day ----------
+// gifts turn up more once you know who they are for; the things the arcs need turn up most
+const PAWN_MET = { amos: () => G.chars.amos.met && !G.chars.amos.dead, mei: () => G.chars.mei.met && !G.chars.mei.cold, walter: () => G.chars.walter.met && !G.chars.walter.dead, dog: () => G.day >= 2, busker: () => (G.flags.buskerTalks || 0) > 0, sam: () => !!G.chars.nadia.sam, nora: () => !!(G.chars.nora && G.chars.nora.met && !G.chars.nora.cold), granny: () => nameKnown('ortega'), nadia: () => G.chars.nadia.met && !G.chars.nadia.closed, birdie: () => !!(G.chars.birdie && G.chars.birdie.met), theo: () => !!(G.chars.theo && G.chars.theo.reunited), signe: () => !!(G.chars.signe && G.chars.signe.met), sol: () => !!(G.chars.sol && G.chars.sol.met && G.chars.sol.stage >= 2), emmett: () => !!(G.chars.emmett && G.chars.emmett.met) };
+const PAWN_KEY = ['tools', 'textbook', 'ruthWatch', 'collar'];
+Pawn.weight = function (k) {
+  const it = PAWN_ITEMS[k];
+  if (it.kind === 'gift') { const known = PAWN_MET[it.give] ? safeNeed(PAWN_MET[it.give]) : true; return known ? (PAWN_KEY.includes(k) ? 4 : 2.5) : 0.4; }
+  if (it.kind === 'outfit') return 1;
+  if (k === 'bed' || k === 'radio') return 1.6;
+  return 1.2;
+};
+Pawn.todaysStock = function () {
+  const s = this.S(); const R = seeded(G.weatherSeed + G.day * 7919);
+  let pool = Object.keys(PAWN_ITEMS).filter(k => !s.bought[k]); const out = [];
+  while (out.length < 5 && pool.length) {
+    const ws = pool.map(k => this.weight(k)); const total = ws.reduce((a, b) => a + b, 0); let r = R() * total; let i = 0;
+    for (; i < pool.length - 1; i++) { r -= ws[i]; if (r <= 0) break; }
+    out.push(pool[i]); pool.splice(i, 1);
+  }
+  return out;
+};
+{
+  const sh0 = Pawn.shop; Pawn.shop = function () { sh0.call(this); if (Menu.active) Menu.sub = `Five things on the shelf today; tomorrow, five others. You have $${G.money}.`; };
+}
+
+// ---------- what the new things do ----------
+{
+  const ab0 = Pawn.applyBuy; Pawn.applyBuy = function (k) {
+    const it = PAWN_ITEMS[k]; const f = G.flags;
+    const selfLines = {
+      kettle: [say('sol', "Boils. That's the whole review."), narr('Tea, at the table, whenever you like. It is the first warm thing the room has had that you did not have to be under a blanket for.')],
+      blanket: [say('sol', "Army. Somebody's son. Don't ask me whose; I didn't write it down, and I write everything down."), narr('Folded at the foot of the bed. The nights get shorter by about a blanket.')],
+      lamp: [say('sol', "It bends. That's rarer than you'd think."), narr('On the table, by the pills. There is a shelf of paperbacks in the hall that nobody has claimed. You could read.')],
+      camera: [say('sol', "Six shots. When they're gone they're gone; they stopped making the film in the nineties, and I stopped pretending to have it."), narr('Six. Choose.')],
+      scarf: [say('sol', "Hand-knitted. You can tell by the mistakes. Machines don't make those."), narr('Around your neck, twice. The cough has a harder time finding you in the rain.')],
+      typewriter: [say('sol', "The E's low. Everything you write on it will look a little like it's apologizing. Might suit you."), narr('On the table. A stack of paper from the super\'s office, which he will not miss. You could write to somebody.')],
+    };
+    if (selfLines[k]) { remember('pawn_' + k); Audio.coin(); f['own_' + k] = true; if (k === 'camera') f.shots = 6; Dlg.run(selfLines[k]); return; }
+    const giftLines = {
+      records: [say('sol', "No sleeves. Somebody sold the sleeves separately, which tells you about somebody."), say('sol', "There's a station at the river end that'd play these. I've never told anybody that. Don't tell anybody I told you.")],
+      harmonica: [say('sol', "A kid could learn on it. A kid did, once; you can see where.")],
+      rosin: [say('sol', "Cello rosin. I've had it eleven years. Nobody on this street plays a cello, I said, every year, for eleven years.")],
+      mute: [say('sol', "That's for a trumpet. ...That's for a trumpet."), narr('He looks at it in your hand and then at the case on the shelf and does not say the obvious thing, which is that he sold it to the one person who would bring it back.')],
+      seeds: [say('sol', "Seeds. In a pawn shop. A man brought them in the spring he died and I gave him four dollars because he wouldn't take nothing. Ortega. Hector. You'll know the widow.")],
+      tackle: [say('sol', "Hand-tied. Whoever did those had patience and no television.")],
+      crossword: [say('sol', "Half done in pen. Whoever it was, they were sure. Give it to somebody who works nights; that's when crosswords get done.")],
+    };
+    if (giftLines[k]) { remember('pawn_' + k); Audio.coin(); G.inv[k] = (G.inv[k] || 0) + 1; Dlg.run(giftLines[k]); return; }
+    return ab0.call(this, k);
+  };
+  // the new outfits, noticed
+  const on0 = outfitNotice; outfitNotice = function (id) {
+    if (!G.outfit || (G.outfit !== 'peacoat' && G.outfit !== 'denim')) return on0(id);
+    const key = 'noticed_' + id + '_' + G.outfit; if (G.flags[key]) return null; G.flags[key] = true;
+    const L = { amos: { peacoat: "Peacoat. You look like you got off a boat. A good boat.", denim: "Denim. You look nineteen from the back. From the front you look like you." }, mei: { peacoat: "Navy. Very serious. I'm drawing you as a captain.", denim: "Denim jacket! Okay. I'd draw the fade. The fade is the whole jacket." }, nora: { peacoat: "Wool, buttoned to the neck. Finally somebody on this floor listens to a nurse.", denim: "Denim in this rain. You'll be wet through by the diner. You'll look good, though." }, nadia: { peacoat: "Sailor's coat. My dad had one. Sit anywhere.", denim: "Denim. Sam wants one now. That's on you." } }[id];
+    return L && L[G.outfit] ? say(id, L[G.outfit]) : null;
+  };
+}
+
+// ---------- at home: tea, reading, letters ----------
+const Home = {
+  tea() {
+    const f = G.flags; if (f.teaDay === G.day) { Dlg.run([narr('The kettle is still warm. One cup a day is what you have the tea for.')]); return; }
+    f.teaDay = G.day; f.teas = (f.teas || 0) + 1; G.energy = clamp(G.energy + 4, 0, G.maxEnergy); G.hunger = clamp(G.hunger + 3, 0, 100); G.coughT = Math.max(G.coughT || 0, 400); G.tod = 1 - G.energy / G.maxEnergy; Audio.good();
+    Dlg.run([narr(pick(['The kettle ticks, roars, clicks off. Tea, in the chipped cup, at the table. The rain is on the window and not on you.', 'Tea. You hold the cup with both hands the way Walter holds the cane. It helps with the cough, or it helps with something.', 'The kettle. The cup. The window. The rain. It is a small room and for four minutes it is enough.', 'Tea, and the steam on the glass, and the crack in the ceiling looking less like a crack.']))]);
+  },
+  read() {
+    const f = G.flags; if (G.energy < 3) { UI.toast('Too tired to hold the book.', '#8ab0d8'); return; } useEnergy(3); f.reads = (f.reads || 0) + 1; remember('read');
+    const P = ['A paperback from the hall shelf with the cover torn off. A man on a boat, a storm, a lot of rope. You read forty pages and could not say what happened, and it was a good forty pages.', 'A book of poems, water-damaged. One about a lamp in a window that somebody has underlined in pencil. You leave the pencil mark alone.', 'A detective novel. The detective coughs, in chapter two, and you put the book down for a while, and then pick it up, because he solves it anyway.', 'A history of a city that is not this one. Bridges, a fire, a mayor. Cities go on; that is the whole book.', 'A field guide to birds of the northeast. You look up the one Amos carved. It is a wren. It says wrens sing louder than their size.', 'A cookbook, old, with somebody\'s notes in the margins: LESS SALT. HE LIKES IT. You make nothing from it. You read it like a letter.', 'A paperback western. A man rides somewhere for two hundred pages and at the end he sits down. You understand him completely.', 'Somebody\'s diary, 1974, from the hall shelf; you should not read it and you read it. She was worried about the rent. She made it. Every month she writes MADE IT and underlines it.'];
+    Dlg.run([narr(P[(f.reads - 1) % P.length]), narr(f.reads === 5 ? 'Five books. The shelf in the hall is getting shorter. Somebody has started leaving new ones.' : f.reads === 1 ? 'The lamp bends over the page. It is the first time the room has looked like a room somebody lives in.' : '')].filter(s => s.text));
+  },
+  letterMenu() {
+    const f = G.flags; const j = G.phone && G.phone.jo; const e = G.chars.emmett; const items = [];
+    if (!f.wroteJo) items.push({ t: 'To Jo', r: '-4 energy', do: () => this.write('jo') });
+    if (e && e.met && !f.wroteEmmett) items.push({ t: 'To Emmett, at the lake', r: '-4 energy', do: () => this.write('emmett') });
+    if (!f.wroteSelf) items.push({ t: 'To whoever finds it', r: '-4 energy', do: () => this.write('self') });
+    if (!items.length) { Dlg.run([narr('Three letters. The ribbon is not done; you are.')]); return; }
+    items.push({ t: 'Not tonight', do: () => { } });
+    Menu.open('The typewriter', items, { sub: 'The E strikes low. Everything looks like it is apologizing.' });
+  },
+  write(who) {
+    const f = G.flags; if (!talkEnergy(4)) return; const j = G.phone && G.phone.jo;
+    if (who === 'jo') { f.wroteJo = true; f.joLetterDay = G.day; remember('letter_jo'); Dlg.run([narr('Dear Jo. Then nothing for a long time, and the E, low, apologizing. Then a page, and then a second one, which you did not plan.'), narr("You tell her about the room, and the crack, and the pills on the table. You do not tell her the number of days. You tell her the number is the same, which she knows."), narr('Blue mailbox by the diner. The letter goes in before you can take it out.')]); return; }
+    if (who === 'emmett') { f.wroteEmmett = true; f.emmettLetterDay = G.day; remember('letter_emmett'); Dlg.run([narr('Dear Emmett. You do not know his address; you write "the cabin, the lake, the end of the 14" and trust the mail to be a person.'), narr('You tell him the fish was good. You tell him about the busker and the bench and the woman on the radio, which he already knows, and about the rain, which he already knows. It is a letter about knowing things together.'), narr('Blue mailbox by the diner.')]); return; }
+    f.wroteSelf = true; remember('letter_self'); Dlg.run([narr('To whoever finds this. Then a page about the room: where the crack is, which board creaks, that the radiator needs a kick at the top left, that the woman in 411 works nights and the man on the stoop takes his coffee black.'), narr('You fold it and put it under the pills on the table, where the next person will look first, because everybody looks there first.')]);
+  },
+  wake() {
+    const f = G.flags; const d = G.day;
+    if (f.wroteJo && !f.joWrote && d >= f.joLetterDay + 4) { f.joWrote = true; const j = Jo.J(); if (j.stage < 1) j.stage = 1; j.nextDay = Math.min(j.nextDay, d + 2); remember('jo_wrote_back'); Dlg.run([narr('An envelope under the door, the good kind, with a stamp somebody licked. Jo. Two pages, and a third that is a drawing by somebody who is four, of a house with a person in it and a lot of rain.'), narr('"I read it in the car. I read it four times. The number is the same and I am going to use it. - J." Underneath, in a different pen: "The kids say hi. They don\'t know you. They say hi anyway."')]); return true; }
+    if (f.wroteEmmett && !f.emmettWrote && d >= f.emmettLetterDay + 5) { f.emmettWrote = true; if (G.chars.emmett) G.chars.emmett.trust = (G.chars.emmett.trust || 0) + 2; remember('emmett_wrote_back'); Dlg.run([narr('A postcard under the door. A lake on the front, not his. On the back, block capitals, pencil: "GOT IT. FISH ARE BITING. DON\'T BRING ANYTHING. - E." And, smaller, at the bottom: "BRING THE RADIO WOMAN."')]); return true; }
+    return false;
+  },
+  endingLines() {
+    const f = G.flags; const out = [];
+    if (f.photos && f.photos.length) out.push({ name: f.photos.length === 1 ? 'A photograph' : 'Photographs', line: `${f.photos.length}, on the table, in the order you took them: ${f.photos.map(p => Home.photoName(p)).join(', ')}. Whoever comes for the room will find them first.` });
+    if ((f.reads || 0) >= 5) out.push({ name: 'The hall shelf', line: `${f.reads} books from the shelf nobody claimed. You put them back with the corners turned down, so the next one knows where you stopped.` });
+    if (f.wroteSelf) out.push({ name: 'A letter', line: 'Under the pills on the table, for whoever finds it: where the crack is, which board creaks, who takes their coffee black.' });
+    return out;
+  },
+  photoName(id) { return { amos: 'Amos on the stoop', nora: 'Nora in scrubs, mid-word', nadia: 'Nadia with the towel', mei: 'Mei not looking up', walter: 'Walter under the bus sign', sol: 'Sol behind the wire', busker: 'Cal, mid-chord', signe: 'Signe with the cello, not smiling', birdie: 'Birdie with the light red', emmett: 'Emmett on the pier', granny: 'Mrs. Ortega with the oranges', theo: 'Theo with his hood down' }[id] || id; },
+  // the camera: one picture of anybody, while the shots last
+  photoItem(id, line) {
+    const f = G.flags; if (!f.own_camera || !f.shots || (f.photos || []).includes(id)) return null;
+    return { t: 'Take their picture', r: `${f.shots} left`, do: () => { f.shots--; f.photos = f.photos || []; f.photos.push(id); remember('photo_' + id); if (G.chars[id] && typeof G.chars[id].trust === 'number') G.chars[id].trust += 1; Audio.sel(); Dlg.run([narr('The camera whirs and spits the picture out, grey, and you stand together and watch it come up out of nothing.'), say(id, line), { fn: () => { if (f.shots === 0) Dlg.steps.push(narr('That was the last one. The camera is a box now. You keep it anyway.')); } }]); } };
+  }
+};
+{
+  // the table
+  const tmH = tableMenu; tableMenu = function () {
+    tmH(); if (!Menu.active) return; const f = G.flags; const at = Menu.items.length - 1;
+    const extra = [];
+    if (f.own_kettle) extra.push({ t: 'Make tea', r: f.teaDay === G.day ? 'had it' : '+4 energy', do: () => Home.tea() });
+    if (f.own_lamp && G.tod >= 0.5) extra.push({ t: 'Read a while', r: '-3 energy', do: () => Home.read() });
+    if (f.own_typewriter) extra.push({ t: 'Write a letter', do: () => Home.letterMenu() });
+    Menu.items.splice(at, 0, ...extra);
+  };
+  const weH = wakeEvents; wakeEvents = function () { if (G.flags.own_blanket && G.flags.blanketDay !== G.day) { G.flags.blanketDay = G.day; G.energy = clamp(G.energy + 5, 0, G.maxEnergy); G.tod = 1 - G.energy / G.maxEnergy; } if (Home.wake()) return; weH.apply(this, arguments); };
+  const belH = buildEndingList; buildEndingList = function () { return belH().concat(Home.endingLines()); };
+  // pictures
+  const PH = (obj, key, id, line) => { const f0 = obj[key]; obj[key] = function () { f0.apply(this, arguments); const it = Home.photoItem(id, line); if (it && Menu.active) Menu.items.splice(Menu.items.length - 1, 0, it); }; };
+  PH(Amos, 'menu', 'amos', "Me? ...Wait. Wait, let me sit up. Okay. Okay, go. ...Huh. That's what I look like.");
+  PH(Nora, 'menu', 'nora', "I'm in scrubs. I'm always in scrubs. Fine. Fine! Take it. Don't show Amos.");
+  PH(Nadia, 'menu', 'nadia', "With the towel? ...With the towel. Dad's picture has the apron; mine has the towel. That's fair.");
+  PH(Mei, 'menu', 'mei', "Oh, no, I'm the one who draws people, I'm not the... okay. Okay. I'm going to draw this later, of you taking it.");
+  PH(Walter, 'menu', 'walter', "Ruth took the pictures. I stood where she said. ...Tell me where to stand.");
+  PH(Pawn, 'menu', 'sol', "Behind the wire. Forty-one years and nobody's photographed the wire. Go on.");
+  PH(Minor, 'busker', 'busker', "Mid-chord. Get the hands. Nobody photographs the hands.");
+  PH(Minor, 'granny', 'granny', "With the oranges! Hector always said, with the oranges. Wait, I'll hold them up.");
+  if (typeof Cello !== 'undefined') PH(Cello, 'menu', 'signe', "...With the cello. Not without.");
+  if (typeof Radio !== 'undefined') PH(Radio, 'menu', 'birdie', "With the light red. If it's not red it's just a woman at a desk.");
+  if (typeof Emmett !== 'undefined') PH(Emmett, 'menu', 'emmett', "On the pier. Lena took one here in '88. I'll stand in the same place; I know the board.");
+  // the gifts
+  const gn0 = Gifts.nora; Gifts.nora = function (items) { gn0.call(this, items); const c = this.item('nora', 'crossword', 'Give her the crosswords', () => { trust('nora', 1); G.chars.nora.crossword = true; Dlg.run([say('nora', "Half done in pen. Who does crosswords in pen? ...I do. I do crosswords in pen. Three a.m. on the ward, this is going to save somebody's life, and by somebody I mean me.")]); }); if (c) items.push(c); };
+  const gg0 = Gifts.granny; Gifts.granny = function (items) { gg0.call(this, items); const c = this.item('granny', 'seeds', 'Give her the seeds', () => { G.flags.grannyHelped = (G.flags.grannyHelped || 0) + 1; const gs = Garden.S(); gs.seeds = true; Dlg.run([say('granny', "...Hector's. These are Hector's; that's his writing on the tomato. Sol. That old crook kept them."), say('granny', gs.unlocked ? "They go in the plot. This year. I'll show you where he had the squash." : "Keep them dry. There's a plot behind the diner nobody's touched since him. Somebody should.")]); }); if (c) items.push(c); };
+  const hv0 = Garden.harvest; Garden.harvest = function () { const s = this.S(); if (s.seeds && s.ready > 0) s.ready += 1; hv0.call(this); };
+  const EM = (obj, key, gift, label, fn) => { const f0 = obj[key]; obj[key] = function () { f0.apply(this, arguments); if (!Menu.active || !G.inv[gift]) return; Menu.items.splice(Menu.items.length - 1, 0, { t: label, do: () => { G.inv[gift] = 0; remember('gift_' + gift); fn(); } }); }; };
+  if (typeof Emmett !== 'undefined') EM(Emmett, 'menu', 'tackle', 'Give him the tackle box', () => { const e = G.chars.emmett; e.tips = 3; e.trust = (e.trust || 0) + 2; e.tackle = true; Dlg.run([say('emmett', "..."), narr('He opens the trays one at a time. He picks up one of the lures and turns it to the light and puts it back exactly where it was.'), say('emmett', "Somebody tied these who knew the drop-off. I don't know how they knew. I'm going to use them anyway, and I'm going to feel bad about it, and I'm going to catch fish."), narr('The drop-off. He shows you where, this time, with his hand.')]); });
+  if (typeof Radio !== 'undefined') EM(Radio, 'menu', 'records', 'Give her the records', () => { const r = Radio.S(); r.trust += 1; r.records = true; Dlg.run([say('birdie', "No sleeves."), narr('She goes through them with her glasses off, holding each one to the lamp. At the seventh she stops.'), say('birdie', "1962. This is the one. I have played the bench a copy of a copy for eleven years and this is the one."), say('birdie', "I'm playing it tonight. I'm saying where it came from. I'm not saying your name; I'm saying 'somebody brought it up the stairs,' and that's you, and the river will know.")]); });
+  if (typeof Cello !== 'undefined') EM(Cello, 'menu', 'rosin', 'Give her the rosin', () => { const s = Cello.S(); s.trust += 1; s.rosin = true; Dlg.run([say('signe', "..."), say('signe', "The A has been false since the boat. I did not say. There is nobody on this street to say it to."), say('signe', "Thank you. That is three words. I am spending them.")]); });
+  EM(Pawn, 'menu', 'mute', 'Give him the mute', () => { const s = Pawn.S(); s.trust += 2; s.mute = true; Dlg.run([narr('He turns it over twice. He does not look at the case on the shelf.'), say('sol', "1994. The last time I played out, I played with one of these. The neighbors had asked. Politely, the first time."), say('sol', "...I'll try it. After hours. If you hear a trumpet from the pawn shop at ten at night, that's not a burglar, that's a man with a mute and no wind.")]); });
+  if (typeof Cello !== 'undefined') { const st0 = Cello.stage; Cello.stage = function () { const v = st0.call(this); const s = this.S(); return s.rosin && v >= 0 ? Math.min(3, v + 1) : v; }; }
+  // Theo, on the corner
+  if (typeof Theo !== 'undefined') { const ct0 = Theo.cornerTalk; Theo.cornerTalk = function () { if (!G.inv.harmonica) return ct0.call(this); Menu.open('Theo', [{ t: 'Talk', r: '-2 energy', do: () => ct0.call(this) }, { t: 'Give him the harmonica', do: () => { G.inv.harmonica = 0; remember('gift_harmonica'); G.flags.theoHarmonica = true; Dlg.run([say('theo', "A harmonica. ...Is this a joke? Cal said I couldn't carry a tune in a bucket."), narr('He blows one note. It is terrible. Cal, beside him, plays the chord under it, and it is less terrible, and Theo does it again.'), say('theo', "...Okay. Okay. Don't tell Dad.")]); } }, { t: 'Leave', do: () => { } }]); }; }
+  // Birdie, when there is something new to put on
+  if (typeof Radio !== 'undefined') { const bs0 = Radio.buildShow; Radio.buildShow = function () { const segs = bs0.call(this); const r = this.S(); if (r.records && !r.dark && G.day < 97) { const i = segs.findIndex(s => s.who === 'rec'); if (i >= 0) segs[i] = { who: 'rec', text: '(a record with no sleeve, from a stack somebody carried up thirty-one stairs: 1962, the real one)' }; } return segs; }; }
+  FRESH.busker = FRESH.busker || []; FRESH.busker.push(L_("Theo's got a harmonica. He's bad. He's getting less bad. That's the only kind of getting there is.", () => !!G.flags.theoHarmonica));
+  FRESH.sol = FRESH.sol || []; FRESH.sol.push(L_("Played with the mute last night. The clocks didn't mind. The clocks have heard worse.", () => !!(G.chars.sol && G.chars.sol.mute)), L_("Five things a day on the shelf. People ask why not more. Because five is what a person can look at and still see.", () => true));
+  FRESH.nora = FRESH.nora || []; FRESH.nora.push(L_("Fourteen down. Six letters. 'Stubborn.' I wrote your name; it didn't fit; I wrote it anyway.", () => !!(G.chars.nora && G.chars.nora.crossword)));
+}
+
 // ---- 10_game.js ----
 // ============================================================
 // game: state, loop, interactions, shop, sleep, ending, save
@@ -7556,7 +7732,7 @@ function playUpdate() {
     for (const w of G.walkers) { w.x += w.dir * 1.1; w.frame = (w.frame + 0.12) % 4; }
     G.walkers = G.walkers.filter(w => w.x > -60 && w.x < STREET.w + 60 && Math.abs(w.x - G.camX - W / 2) < W);
     // cough
-    if (G.day >= 20) { G.coughT -= (1 + (G.day - 20) / 40) * (G.day - (G.lastPill || 1) >= 3 ? 1.8 : 1) * (G.flags.own_umbrella && G.rain > 0.3 ? 0.6 : 1); if (G.coughT <= 0) { G.coughT = 500 + Math.random() * 500; G.stun = 40; G.walking = false; Audio.tone(120, 0.15, 'sawtooth', 0.03, 0.6); } }
+    if (G.day >= 20) { G.coughT -= (1 + (G.day - 20) / 40) * (G.day - (G.lastPill || 1) >= 3 ? 1.8 : 1) * (G.flags.own_umbrella && G.rain > 0.3 ? 0.6 : 1) * (G.flags.own_scarf ? 0.8 : 1); if (G.coughT <= 0) { G.coughT = 500 + Math.random() * 500; G.stun = 40; G.walking = false; Audio.tone(120, 0.15, 'sawtooth', 0.03, 0.6); } }
   }
   Phone.update(); Passing.update(); Beats.update(); Cello.update();
   // interactions
@@ -7637,7 +7813,7 @@ World.static || buildStreetStatic(); paintLampPosts(World.static.getContext('2d'
 titleInit();
 requestAnimationFrame(loop);
 // debug hooks
-window.__99 = { get G() { return G; }, set G(v) { G = v; }, sleep, Amos, Mei, Walter, Nadia, Nora, Elevator, Ladder, Doctor, MG, readNote, Theo, VP, Pawn, Gifts, OUTFITS, PAWN_ITEMS, Dlg, Menu, startMinigame, buildEndingList, save, load, newGame, goScene, Ending, refresh: buildEntities, titleInit, Emmett, Bus, Fishing, Passengers, LAKE, busDay, Phone, Jo, Passing, House, LANE, homeScene, Song, SONGS, Garden, GARDEN, Beats, CEMETERY, Rent, Casino, best7, rank5, newDeck, Cello, gateNames, nameKnown, Radio, RadioPlayer };
+window.__99 = { get G() { return G; }, set G(v) { G = v; }, sleep, Amos, Mei, Walter, Nadia, Nora, Elevator, Ladder, Doctor, MG, readNote, Theo, VP, Pawn, Gifts, OUTFITS, PAWN_ITEMS, Dlg, Menu, startMinigame, buildEndingList, save, load, newGame, goScene, Ending, refresh: buildEntities, titleInit, Emmett, Bus, Fishing, Passengers, LAKE, busDay, Phone, Jo, Passing, House, LANE, homeScene, Song, SONGS, Garden, GARDEN, Beats, CEMETERY, Rent, Casino, best7, rank5, newDeck, Cello, gateNames, nameKnown, Radio, RadioPlayer, Home, Pawn, PAWN_ITEMS };
 
 })();
 </script>
