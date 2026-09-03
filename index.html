@@ -1198,7 +1198,7 @@ const STREET = {
     { x: 1460, w: 130, h: 204, color: '#5a3a3a', style: 'brick', seed: 61, floors: 3, kind: 'pawn', door: 1498, name: "SOL'S PAWN & LOAN", poster: true },
     { x: 1590, w: 380, h: 92, color: '#4a4e58', style: 'corrugated', seed: 71, floors: 0, kind: 'warehouse', name: 'MORROW FREIGHT', roof: false },
     // 1970-2040 lot gap (fence)
-    { x: 2040, w: 100, h: 154, color: '#3a3a42', style: 'concrete', seed: 81, floors: 2, kind: 'plain', graffiti: 'NO ONE IS COMING' },
+    { x: 2040, w: 100, h: 154, color: '#3a3a42', style: 'concrete', seed: 81, floors: 2, kind: 'plain' },   // KHRL: door and graffiti painted in 09u
     // 2140-2460 river end
   ],
   lamps: [90, 300, 545, 838, 1132, 1440, 1720, 2010, 2200, 2400],
@@ -6554,6 +6554,400 @@ SONGS.push({
   };
 }
 
+// ---- 09u_story_radio.js ----
+// ============================================================
+// KHRL 1340 AM. The last building before the river, top floor. Birdie, thirty-one years on the overnight,
+// broadcasting to a street that has a sentence painted on the front of her building.
+// ============================================================
+SPECS.birdie = { skin: '#d8b090', hair: '#c8c0b8', hairStyle: 'short', shirt: '#6a4a5a', pants: '#3a3a44', shoes: '#2a2420', coat: '#8a6a7a', glasses: true, old: true, short: true };
+SPEAKERS.birdie = { name: 'Birdie', color: '#e8b070', spec: 'birdie' };
+SPEAKERS.caller = { name: 'Caller', color: '#b8b0c8', spec: 'woman1' };
+SPEAKERS.towerman = { name: 'The tower man', color: '#a8a0a0', spec: 'man1' };
+const RADIO_X = 2044;          // the steel door on the street, at the left of the last building
+const LEASE_DAY = 80, LEASE_FEE = 3000;
+
+INTERIORS.radio = {
+  id: 'radio', outdoor: false, floorY: FEET_Y, x0: 70, x1: 410, ceil: CEIL_Y, ambient: [92, 78, 70],
+  lamp: { x: 230, y: CEIL_Y + 16 }, window: { x: 344, y: 146, w: 50, h: 44 },
+  doors: [{ x: 78, w: 22, to: 'street', label: 'Down to the street', at: 'radio' }], spawnX: 116, spawnDir: 1, spawns: { stairs: 116 },
+  spots: { couch: 130, mic: 206, birdie: 262, phone: 306, shelf: 380 },
+  paint(g) {
+    const I = this; paintRoom(g, I, '#3a3038', '#4a3a34', gg => { for (let x = I.x0; x < I.x1; x += 14) px(gg, x, GROUND_Y, 1, 46, 'rgba(0,0,0,0.16)'); });
+    // acoustic foam on the back wall, egg-crate
+    for (let y = CEIL_Y + 4; y < GROUND_Y - 6; y += 6) for (let x = 116; x < 336; x += 6) px(g, x, y, 3, 3, ((x / 6 + y / 6) % 2 === 0) ? 'rgba(0,0,0,0.16)' : 'rgba(255,255,255,0.025)');
+    // stairs down at the left, and the door at their head
+    px(g, 72, CEIL_Y, 36, GROUND_Y - CEIL_Y, '#241e24'); for (let i = 0; i < 6; i++) px(g, 74 + i * 3, GROUND_Y - 4 - i * 7, 30 - i * 3, 3, '#3a3038');
+    fDoor(g, 78, GROUND_Y, '#3a2a2a', { frame: '#1a1418' });
+    px(g, 74, CEIL_Y + 6, 30, 9, '#2a2226'); drawText(g, 'EXIT', 89, CEIL_Y + 7, '#d84a4a', { align: 'center' });
+    // the window over the street, rain on it
+    fWindow(g, this.window.x, this.window.y, this.window.w, this.window.h, '#2a2226'); for (let i = 0; i < 12; i++) px(g, 346 + ((i * 37) % 46), 148 + ((i * 53) % 40), 1, 3, 'rgba(180,200,230,0.18)');
+    // ON AIR box above the console
+    px(g, 204, CEIL_Y + 10, 44, 14, '#1a1418'); px(g, 206, CEIL_Y + 12, 40, 10, '#2a1a1a');
+    // clock, a coffee maker on a filing cabinet, the couch
+    px(g, 150, CEIL_Y + 12, 14, 14, '#e8e0d0'); px(g, 150, CEIL_Y + 12, 14, 1, '#8a7a5a'); px(g, 156, CEIL_Y + 15, 2, 6, '#2a2a30'); px(g, 157, CEIL_Y + 19, 4, 1, '#2a2a30');
+    px(g, 110, GROUND_Y - 30, 18, 30, '#5a5a62'); px(g, 110, GROUND_Y - 30, 18, 1, '#7a7a82'); px(g, 113, GROUND_Y - 38, 10, 8, '#2a2a30'); px(g, 115, GROUND_Y - 36, 6, 4, '#8a5a3a');
+    px(g, 120, GROUND_Y - 14, 40, 14, '#6a3a3a'); px(g, 120, GROUND_Y - 18, 40, 4, '#7a4a4a'); px(g, 118, GROUND_Y - 4, 44, 6, '#4a2a2a'); px(g, 122, GROUND_Y - 16, 16, 3, '#8a5a5a'); px(g, 142, GROUND_Y - 16, 16, 3, '#8a5a5a');
+    // the console: a long desk with a board on it, two mics on arms, a lamp, the station phone
+    fCounter(g, 176, 330, '#4a3a2e', '#2e2420', { panels: true });
+    px(g, 216, COUNTER_TOP - 6, 76, 6, '#2a2a30'); for (let i = 0; i < 9; i++) { px(g, 220 + i * 8, COUNTER_TOP - 5, 2, 4, '#4a4a54'); px(g, 220 + i * 8, COUNTER_TOP - 5 + (i * 7) % 4, 2, 1, i % 3 ? '#e8c84a' : '#e86a6a'); }
+    for (const mx of [206, 262]) { px(g, mx, COUNTER_TOP - 20, 1, 20, '#3a3a44'); px(g, mx - 6, COUNTER_TOP - 22, 8, 1, '#3a3a44'); px(g, mx - 8, COUNTER_TOP - 26, 6, 6, '#8a8a92'); px(g, mx - 7, COUNTER_TOP - 25, 4, 4, '#3a3a44'); }
+    px(g, 300, COUNTER_TOP - 8, 14, 8, '#c8c0b0'); px(g, 302, COUNTER_TOP - 10, 10, 3, '#2a2a30');   // the station phone
+    px(g, 186, COUNTER_TOP - 12, 3, 12, '#3a3a44'); px(g, 180, COUNTER_TOP - 16, 14, 5, '#3a5a3a');    // a lamp with a green shade
+    // records: a wall of them, and a turntable
+    fShelf(g, 342, GROUND_Y, 22, 44, ['#3a3a44', '#6a3a2a', '#2a2a30', '#8a2a2a', '#3a3a44', '#4a4a5a'], 8);
+    fShelf(g, 368, GROUND_Y, 22, 44, ['#2a2a30', '#3a3a44', '#c8a850', '#2a2a30', '#6a3a2a', '#3a3a44'], 9);
+    px(g, 338, COUNTER_TOP - 2, 26, 6, '#2a2a30'); px(g, 340, COUNTER_TOP - 4, 22, 2, '#3a3a44'); px(g, 346, COUNTER_TOP - 6, 10, 2, '#1a1a20');
+    // a sign, hand-lettered
+    px(g, 250, CEIL_Y + 8, 70, 12, '#2a2024'); drawText(g, 'KHRL 1340 AM', 285, CEIL_Y + 10, '#e8b070', { align: 'center' });
+    fBulb(g, this.lamp.x, CEIL_Y, 14);
+  },
+  dynamic(g, t) {
+    const on = Radio.onAir();
+    if (on) { const a = 0.75 + 0.25 * Math.sin(t * 0.05); px(g, 206, CEIL_Y + 12, 40, 10, `rgba(200,40,40,${a})`); drawText(g, 'ON AIR', 226, CEIL_Y + 13, '#ffe0d0', { align: 'center' }); }
+    else drawText(g, 'ON AIR', 226, CEIL_Y + 13, '#4a2a2a', { align: 'center' });
+    px(g, 182, COUNTER_TOP - 15, 10, 3, on ? '#c8e8a0' : '#5a6a5a');
+    if (Radio.S().dark) { px(g, 216, COUNTER_TOP - 6, 76, 6, '#1a1a20'); }
+  },
+  fg(g) { }
+};
+
+// ---------- the show as a thing you can sit and listen to ----------
+const RadioPlayer = {
+  active: false, segs: [], i: 0, t: 0, dur: 0, nodes: [], onEnd: null, where: 'home',
+  start(segs, onEnd, where) {
+    this.segs = segs; this.onEnd = onEnd; this.where = where || 'home'; this.active = true; this.nodes = []; G.state = 'radio'; G.walking = false;
+    if (!Audio._unlocked) Audio.unlock(); this.bed(segs);
+    this.show(0);
+  },
+  show(i) { this.i = i; this.t = 0; const s = this.segs[i]; this.dur = s.who === 'static' ? 140 : Math.round(110 + s.text.length * 2.4); },
+  update() {
+    if (!this.active) return; this.t++;
+    if (Input.hit('back') || Input.hit('menu')) { this.stop(true); return; }
+    if (Input.hit('act') || this.t >= this.dur) { if (this.i + 1 >= this.segs.length) this.stop(false); else { Audio.blip(); this.show(this.i + 1); } }
+  },
+  stop(early) {
+    this.active = false; G.state = 'play';
+    try { const c = Audio.ctx; const now = c.currentTime; for (const n of this.nodes) { if (n.gain) { n.gain.cancelScheduledValues(now); n.gain.setTargetAtTime(0.0001, now, 0.08); } if (n.stop) { try { n.stop(now + 0.4); } catch (e) { } } } } catch (e) { }
+    this.nodes = []; const cb = this.onEnd; this.onEnd = null; if (cb) cb(early);
+  },
+  // a slow bed: sine bass, a soft chord every bar, and static under everything
+  bed(segs) {
+    const A = Audio; if (!A._unlocked || A.muted) return; const c = A.ctx; const t0 = c.currentTime + 0.1;
+    const total = segs.reduce((a, s) => a + (s.who === 'static' ? 140 : 110 + s.text.length * 2.4), 0) / 60 + 4;
+    const dark = segs.every(s => s.who === 'static');
+    // static
+    try { const len = c.sampleRate; const buf = c.createBuffer(1, len, c.sampleRate); const d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1; const src = c.createBufferSource(); src.buffer = buf; src.loop = true; const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1600; f.Q.value = 0.6; const g = c.createGain(); g.gain.value = dark ? 0.03 : 0.006; src.connect(f); f.connect(g); g.connect(A.master); src.start(t0); src.stop(t0 + total); this.nodes.push(src, g); } catch (e) { }
+    if (dark) return;
+    const key = 45; const prog = [[0, 'M'], [9, 'm'], [5, 'M'], [7, 'M']]; const barLen = 3.2;
+    const tone = (m, t, len, vol, type) => { const o = c.createOscillator(), g = c.createGain(), fl = c.createBiquadFilter(); o.type = type || 'sine'; o.frequency.value = midiHz(m); fl.type = 'lowpass'; fl.frequency.value = 900; g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.4); g.gain.setValueAtTime(vol, t + len * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + len); o.connect(fl); fl.connect(g); g.connect(A.master); o.start(t); o.stop(t + len + 0.05); this.nodes.push(o, g); };
+    for (let b = 0; b * barLen < total; b++) {
+      const ch = prog[b % prog.length]; const root = key + ch[0]; const third = ch[1] === 'm' ? 3 : 4; const tb = t0 + b * barLen;
+      tone(root - 12, tb, barLen, 0.045); tone(root + 12, tb + 0.2, barLen * 0.9, 0.02, 'triangle'); tone(root + third + 12, tb + 0.6, barLen * 0.8, 0.016, 'triangle'); tone(root + 19, tb + 1.4, barLen * 0.6, 0.012, 'triangle');
+    }
+  },
+  draw(g, t) {
+    buildEntities(); renderScene(g, t); UI.drawHud(g, t);
+    const s = this.segs[this.i]; const dark = s.who === 'static';
+    UI.panel(g, W / 2 - 80, 26, 160, 14, 0.8); drawText(g, 'KHRL  1340 AM', W / 2 - 6, 29, dark ? '#6a6a72' : '#e8b070', { align: 'center' });
+    if (!dark) { const a = 0.6 + 0.4 * Math.abs(Math.sin(t * 0.06)); g.fillStyle = `rgba(232,80,60,${a})`; g.fillRect(W / 2 + 56, 31, 4, 4); }
+    const label = s.who === 'birdie' ? (nameKnown('birdie') ? 'BIRDIE' : 'THE VOICE') : s.who === 'caller' ? (s.name || 'CALLER').toUpperCase() : s.who === 'you' ? 'YOU' : s.who === 'rec' ? '' : s.who === 'static' ? '' : (s.name || '').toUpperCase();
+    const text = gateNames(s.text); const lines = wrapText(text, 320); const w = Math.max(...lines.map(l => textWidth(l)), label ? textWidth(label) : 0) + 16; const h = 8 + lines.length * 10 + (label ? 10 : 0);
+    UI.panel(g, Math.round(W / 2 - w / 2), 46, w, h, 0.72);
+    if (label) drawText(g, label, W / 2, 50, s.who === 'birdie' ? '#e8b070' : s.who === 'you' ? '#d8dce8' : '#b8b0c8', { align: 'center' });
+    lines.forEach((ln, i) => drawText(g, ln, W / 2, 50 + (label ? 10 : 0) + i * 10, s.who === 'rec' ? '#9aa0b0' : dark ? '#8a8a92' : '#f0ead8', { align: 'center' }));
+    const p = clamp((this.i + this.t / this.dur) / this.segs.length, 0, 1); px(g, W / 2 - 60, 22, 120, 1, 'rgba(255,255,255,0.15)'); px(g, W / 2 - 60, 22, Math.round(120 * p), 1, '#e8b070');
+    UI.drawHint(g, `${UI.keyName('act')} next   ${UI.keyName('back')} turn it off`);
+  }
+};
+
+// ---------- Birdie, and the station ----------
+const Radio = {
+  init() { return { met: false, heard: 0, told: false, found: false, talks: 0, trust: 0, shifts: 0, lastShift: 0, pay: 0, micDone: false, micDay: 0, said: null, sessionAsked: false, sessionDay: 0, session: false, leaseKnown: false, lease: null, pledges: [], callinDay: 0, dark: false, darkDay: 0, dedication: false, listened: 0, lastListen: 0, callers: [], walterSaid: false, signeSaid: false, cold: false }; },
+  S() { if (!G.chars.birdie) G.chars.birdie = this.init(); return G.chars.birdie; },
+  night() { return G.tod >= 0.7; },
+  onAir() { const r = this.S(); return !r.dark && this.night(); },
+  hasRadio() { return !!(G.flags.own_radio || G.flags.house === 'mine'); },
+  // ---- the steel door on the street ----
+  door() {
+    const r = this.S();
+    if (!r.told) { Dlg.run([narr('A steel door with no handle on this side and a buzzer beside it. Somebody has put tape over the buzzer. Under the tape, four faded letters; the second one might be an H.'), narr(G.day > 3 ? 'Above, on the second floor, one window is lit. It is the only lit window on this end of the street, and it is lit every night.' : '')].filter(s => s.text !== '')); return; }
+    if (r.dark && r.met) { Dlg.run([narr('The buzzer. Nothing. The window upstairs is dark, which it never was.'), narr(G.day > r.darkDay + 1 ? 'A card taped inside the glass of the door, in her handwriting: BACK SOON. THANK YOU FOR LISTENING. - B.' : '')].filter(s => s.text !== '')); return; }
+    if (!this.night()) { Dlg.run([narr(r.met ? 'The buzzer. Nobody answers; she is asleep, the way she said. The overnight starts at nine.' : 'You peel the tape off the buzzer. K-H-R-L. You press it and nobody comes; it is daylight, and the voice on the radio said she sleeps through daylight like it is somebody else\'s problem.')]); return; }
+    if (!r.found) { r.found = true; }
+    goScene('radio', 'stairs');
+  },
+  arrive() {
+    const r = this.S(); if (r.met) return;
+    r.met = true; r.trust = 1; remember('birdie_met'); clearPortrait && clearPortrait('birdie');
+    Dlg.run([narr('Thirty-one stairs; you count them because it is that or stop. At the top, a door propped with a phone book, a red light over a desk, and a woman in a cardigan with her back to you, talking into a microphone in a voice you know.'),
+      say('birdie', "...and that was the weather, which you could have got by looking out the window, but you didn't, you got it from me, and I thank you for that. Back after this."),
+      narr('She turns around. She looks at you for a long moment, the way you would look at a bird that had come in through the window.'),
+      say('birdie', "Somebody pressed the buzzer."), say('birdie', "Thirty-one years. I thought the buzzer was disconnected. I never checked, because who would I have asked?"),
+      you("I heard the show. You said where you were."), say('birdie', "I say it every night. I say it to the river, mostly."),
+      say('birdie', "Birdie. It's not my name; it's what the man who hired me called me, and he's dead, and it stuck. Sit on the couch. Don't talk when the light's red; you can talk the rest of the time, if you're the talking kind. You don't look it."),
+      narr('You sit on the couch. The light goes red. She talks to the river for four minutes and you listen from six feet away, which is closer than anybody has been in thirty-one years.')]);
+  },
+  // ---- the menu at the desk ----
+  menu() {
+    const r = this.S(); const d = G.day; const items = [{ t: 'Talk', r: '-3 energy', do: () => this.talk() }];
+    if (r.met && !r.dark && r.lastShift !== d) items.push({ t: 'Read the weather and take calls', r: '-8 energy, $15', disabled: () => G.energy < 8, do: () => this.shift() });
+    if (r.met && !r.dark && r.shifts >= 3 && d >= 50 && !r.micDone) items.push({ t: 'Say something into the mic', r: '-4 energy', do: () => this.mic() });
+    if (r.met && !r.dark && G.chars.signe && G.chars.signe.band && !r.sessionAsked) items.push({ t: 'Ask about the Three playing live', do: () => this.askSession() });
+    if (r.met && r.sessionDay && d === r.sessionDay && !r.session && this.night()) items.push({ t: 'The session', do: () => this.session() });
+    if (r.leaseKnown && !r.lease && d <= LEASE_DAY) items.push({ t: 'About the tower', do: () => this.leaseMenu() });
+    if (r.met && r.callinDay === d && !r.lease && this.night()) items.push({ t: 'Sit in on the call-in', do: () => this.callinNight('station') });
+    items.push({ t: 'Leave', do: () => { } });
+    Menu.open(r.met ? 'Birdie' : 'The woman at the desk', items, { sub: r.dark ? 'The board is dark. She is sitting at it anyway.' : r.leaseKnown && !r.lease && d <= LEASE_DAY ? `The tower lease runs out on day ${LEASE_DAY}. ${LEASE_DAY - d} days.` : 'Red light. Four minutes of talk, then a record, then the phone.' });
+  },
+  talk() {
+    const r = this.S(); if (!talkEnergy(3)) return; r.talks++; const L = [];
+    if (r.dark) { L.push(say('birdie', fresh('birdie', ["The board's off. I come up anyway. Thirty-one years of nine o'clock; the body doesn't know.", "I talk to the river without the transmitter now. It doesn't seem to mind. It never said it minded before, either.", "You can still sit. The couch works. The couch never needed a lease."]))); Dlg.run(L); return; }
+    if (r.talks === 1) L.push(say('birdie', "The man who hired me had a heart attack in that chair in 1998. I've done every night since. Not because of him; because the chair was empty and somebody had to."), say('birdie', "The station's owned by a man in Florida who thinks it was sold in 2003. I have never corrected him. The tower's a separate matter. Don't ask about the tower yet."));
+    else if (r.talks === 2) L.push(say('birdie', "Who listens? I don't know. Nobody calls. There's a phone; it rings once a month, and it's a man who wants to know if this is the number for the plumber."), say('birdie', "But you listened. So that's one. One's a number. I have done thirty-one years on the theory that one's a number."));
+    else if (r.talks === 3 && (G.chars.walter.met || G.chars.walter.dead)) L.push(say('birdie', "There's an old man at the bus stop with a transistor. I can see him from the window, some nights, when the rain lets up. He's got it on. I can't hear it, but he's got it on."), say('birdie', "I've played 1962 for him for eleven years and never known his name. I'd like to. I wouldn't say it on air."));
+    else L.push(say('birdie', fresh('birdie', ["Four minutes of talk, then a record, then the phone. If the phone doesn't ring I talk to it anyway. It's used to it.", "The river's up. The dock told me. The dock calls sometimes; I don't know which one of them it is.", "I have never once said 'good morning' on this station. It's the overnight. It ends when the sun comes up and I'm not going to be the one to admit it.", "The records are the station's. The turntable's mine. If they ever come for the records I'll play the turntable with nothing on it.", "You cough. I can hear it from the couch. Don't apologize; I've had worse in the room. I've had a man with spoons.", "Say something on air sometime. Not yet. When you've got something.", "Don't tell anybody where this is. Or do. I can't decide. It's been a secret so long I've forgotten what it's a secret from."])));
+    if (!r.leaseKnown && (r.talks >= 3 || r.shifts >= 2) && G.day >= 55) { r.leaseKnown = true; remember('birdie_lease'); L.push(narr('She stops. She takes a folded paper from the pocket of the cardigan and does not unfold it.'), say('birdie', "The tower. The man who owns it wants three thousand dollars for the year, by day eighty, or he shuts the feed off. He says nobody's listening, so nobody'll miss it. He's not wrong that he can't prove anybody is."), say('birdie', "I have four hundred dollars and a turntable. I'm not asking. I'm telling you because you asked what the paper was, once, and I said 'later,' and this is later.")); }
+    if (r.talks === 4 && r.trust < 2) r.trust = 2;
+    Dlg.run(L);
+  },
+  // ---- a night's work: the weather, and the phone ----
+  shift() {
+    const r = this.S(); if (G.energy < 8) return; useEnergy(8); r.shifts++; r.lastShift = G.day; r.pay += 15; addMoney(15); markTalked(); remember('birdie_shift');
+    const calls = this.pickCallers(3, true);
+    const L = [narr(r.shifts === 1 ? 'She hands you a page. The forecast, in pencil. "Rain," it says, and under that, "rain," and under that, "river up a foot (dock)."' : 'The page. Rain, rain, river. She has stopped writing it out; you know it.'),
+      say('you', r.shifts === 1 ? "...Rain tonight. Rain tomorrow. The river's up a foot. That's from the dock, not the Weather Service." : "Rain. Rain. The river. You know the rest; you could say it with me."),
+      say('birdie', r.shifts === 1 ? "That's it. That's the whole job. You did it in eleven seconds and I've been doing it in ninety for thirty-one years. Now the phone." : "The phone.")];
+    for (const c of calls) L.push(...c.lines);
+    if (!calls.length) L.push(narr('The phone does not ring. She lets it not ring for four minutes, on air, and then says "that was the phone" and puts on a record.'));
+    L.push(narr(`An hour of it. At the end she takes fifteen dollars out of a coffee can and does not call it pay.${r.shifts === 3 ? ' "Three nights. That\'s more than the spoons man did."' : ''}`));
+    Dlg.run(L);
+  },
+  // who might call the station, and what they say when you are the one who picks up
+  pickCallers(n, onAir, prefer) {
+    const r = this.S(); const c = G.chars, f = G.flags; const pool = [];
+    const add = (id, need, lines) => { if (need) pool.push({ id, lines }); };
+    add('walter', c.walter.met && !c.walter.dead, [say('caller', "...Is this the station? I'm calling from the bench. The transistor's got you loud and clear. Play something from 1962; she knows which."), say('you', "Walter?"), say('caller', "Who's this? ...Oh. Oh, it's you. Well. Tell her 1962. Tell her the usual.")]);
+    add('nora', c.nora && c.nora.met && !c.nora.cold, [say('caller', "Nurses' station, fourth floor. We've got the overnight on in the break room. The girls want something to dance to and I want something to sit down to, and I win, because I'm the one on the phone."), say('you', "Nora."), say('caller', "...You're at the station? Since when do you have a life? Play something slow. Go to bed after.")]);
+    add('amos', (c.amos.job || c.amos.room) && !c.amos.dead, [say('caller', "There's a phone in the boiler room. Nobody told me. I'm calling the radio. I've never called the radio."), say('you', "Amos, it's me."), say('caller', "...You're ON the radio? Since when? Play the one about the bus. The busker one. No; play anything. I just wanted it to be somebody.")]);
+    add('nadia', c.nadia.met && !c.nadia.closed, [say('caller', "Nadia's Diner, closing up. Sam's asleep in the booth. Play something that won't wake him."), say('you', "That's a tall order on a night like this."), say('caller', "...I know that voice. What are you doing up there? Never mind. Something quiet. Then come eat, tomorrow.")]);
+    add('mei', c.mei.met && !c.mei.cold, [say('caller', "Hi. I'm calling from the market, the back room, my mom doesn't know. I draw to the overnight. I just wanted to say that, to somebody."), say('you', "Mei. Keep drawing."), say('caller', "...Oh my God. Okay. Okay. Bye.")]);
+    add('sol', c.sol && c.sol.met && !c.sol.cold, [say('caller', "Sol. Pawn and Loan. I've got the overnight on in the shop after hours; it keeps the clocks company. Tell her the horn's in the case. She'll know what it means."), say('you', "She won't, Sol. I will."), say('caller', "...Then you tell her.")]);
+    add('ortega', nameKnown('ortega'), [say('caller', "Mrs. Ortega, Harlan Arms. I've listened to this woman since my husband was alive and I've never once called and I'm calling now to say the weather's wrong. It's not raining. It's pouring."), say('you', "I'll pass it on."), say('caller', "You do that. And eat something.")]);
+    add('emmett', c.emmett && c.emmett.mailed, [say('caller', "Marina payphone. Long distance; I've got two minutes. I picked you up on the truck radio and I didn't believe it. Say something so I know."), say('you', "The blue box, Emmett."), say('caller', "...Okay. That's all. Play the old man his song.")]);
+    add('cal', nameKnown('cal'), [say('caller', "It's Cal. The corner. I'm on a payphone and I'm getting rained on and I want to request my own song. Is that allowed?"), say('you', "It's the overnight. Everything's allowed."), say('caller', "Then the one about rain. I wrote it. Tell her I wrote it.")]);
+    add('signe', c.signe && c.signe.met && c.signe.trust >= 2, [narr('A caller who does not say anything. Birdie lets the silence run. Then, over the line, very small, a cello: eight bars, and the line goes dead.'), say('birdie', "...That one calls once a week. Never says a word. I've started to think it's the best call I get.")]);
+    add('jo', G.phone && G.phone.jo && G.phone.jo.stage >= 2 && !G.phone.jo.stopped, [say('caller', "I'm calling from two states over. I found the stream; somebody put it on the internet, God knows who. I just wanted to check he was still listening."), say('you', "...Jo."), say('caller', "Oh. ...Oh, you're. Okay. Okay. I'm going to hang up and cry in the car and it's fine. Play him something.")]);
+    add('trucker', true, [say('caller', "Interstate, northbound, mile 240. You come in for about six miles and then you're gone. I've been driving this stretch for twenty years for those six miles."), say('you', "We'll try to make it seven."), say('caller', "Don't. Six is right.")]);
+    add('nurse', true, [say('caller', "Night nurse. County. I've got a man dying in six and he wants the overnight on and I can't find the station on his radio. Where is it?"), say('you', "1340. All the way to the right and then back a hair."), say('caller', "...Got it. He's smiling. Thank you.")]);
+    add('kid', true, [say('caller', "Am I on the radio?"), say('you', "You should be asleep."), say('caller', "I know. Is this the radio? ...Okay. Bye.")]);
+    add('woman', true, [say('caller', "I'm not going to say my name. I just wanted the voice to be a real person. Say something."), say('you', "It's a real person."), say('caller', "...Okay. Thank you. Goodnight.")]);
+    const used = r.callers || (r.callers = []); const fresh_ = pool.filter(p => !used.includes(p.id)); const src = fresh_.length >= n ? fresh_ : pool;
+    const out = []; const cp = src.slice();
+    if (prefer) for (const id of prefer) { const k = cp.findIndex(p => p.id === id); if (k >= 0 && out.length < n) { out.push(cp[k]); cp.splice(k, 1); } } while (out.length < n && cp.length) { const i = irnd(0, cp.length - 1); out.push(cp[i]); cp.splice(i, 1); }
+    for (const o of out) { if (!used.includes(o.id)) used.push(o.id); }
+    if (used.length > 8) used.splice(0, used.length - 8);
+    return out;
+  },
+  // ---- two minutes of dead air, and what you put in it ----
+  mic() {
+    const r = this.S(); if (!talkEnergy(4)) return;
+    Dlg.run([say('birdie', "Two minutes. Dead air's worse than anything you could say, so say it. The light's red. Go."), narr('The microphone is warm from her. The river is out there somewhere, and the bench, and the ward, and a car two states over.'),
+      choice(
+        { t: 'To Jo.', do: () => { r.micDone = true; r.micDay = G.day; r.said = 'jo'; remember('mic_jo'); return [say('you', "...This is for Joanne. If you're listening, and you're not, because you don't know this station exists. I'm in the same room I was in. I'm all right. I'm not all right; I'm all right about it. The number's the same. It always was."), narr('Ninety seconds of the two go by with nobody saying anything, which she does not cut. The light goes off.'), say('birdie', "...Somebody heard that. I don't know who. Somebody always does.")]; } },
+        { t: 'To the street.', do: () => { r.micDone = true; r.micDay = G.day; r.said = 'street'; remember('mic_street'); return [say('you', "This is for Harlan Street. The bench, the counter, the corner, the boiler room, the ward. You know who you are; you don't know that I know. There's a sentence painted on the front of this building and I've walked past it every day for two months and it's wrong. Somebody came. All of you did. That's the weather."), narr('The light goes off.'), say('birdie', "...I've done thirty-one years without saying that. Thank you for saying it on my air.")]; } },
+        { t: 'To nobody.', do: () => { r.micDone = true; r.micDay = G.day; r.said = 'nobody'; remember('mic_nobody'); return [say('you', "...It's raining. The river's up. There's a man on a bench and a light in a window and a woman who's talked to nobody for thirty-one years, and I'm the nobody, tonight. That's all. That's all I've got."), narr('The light goes off. She does not say anything for a while.'), say('birdie', "That was the best weather anybody's ever read on this station.")]; } }
+      )]);
+  },
+  // ---- the Three, live from the top floor ----
+  askSession() {
+    const r = this.S(); if (!talkEnergy(2)) return; r.sessionAsked = true;
+    Dlg.run([you("There's a band. Three people and a crate. They play Fridays under the shelter."), say('birdie', "I know. I can hear them from the window when the rain lets up. A horn, a guitar, and something underneath I can't place."), say('birdie', "Bring them up. A Friday. I have not had a live act in this room since 1998, and that was a man with spoons."), narr('Ask Cal. He will say yes before you finish the sentence.')]);
+  },
+  session() {
+    const r = this.S(); r.session = true; remember('radio_session'); if (G.chars.signe) G.chars.signe.trust += 1; r.trust += 2;
+    Dlg.run([narr('Friday, the top floor. Cal has carried the guitar up thirty-one stairs and Sol has carried the horn and Signe has carried the cello, which is the heaviest, and she is the only one not out of breath.'), say('birdie', "Live on KHRL, from the room this is happening in: the Harlan Street Three. I'm going to shut up now, which you should note the time of."), narr('The light goes red.'),
+      { fn: () => { const sp = SONGS.find(x => x.id === 'three'); if (sp) { Dlg.steps.length = Dlg.i; setTimeout(() => Song.play(sp), 80); } } }]);
+  },
+  // ---- the tower ----
+  leaseMenu() {
+    const r = this.S(); const items = [];
+    items.push({ t: `Pay the tower lease`, r: `$${LEASE_FEE}`, disabled: () => G.money < LEASE_FEE, do: () => { if (!spend(LEASE_FEE)) return; r.lease = 'paid'; remember('lease_paid'); Dlg.run([narr('Three thousand dollars, in an envelope, on the console. She does not touch it for a long time.'), say('birdie', "I said I wasn't asking."), you("You weren't."), say('birdie', "...I'm going to say it on air. Not your name. That somebody. Every night, until I'm not here, I'm going to say somebody."), narr('She says it that night. You hear it from the couch. "Somebody paid the tower. I don\'t know why. Somebody." The river does not answer, but it does not have to.')]); } });
+    items.push({ t: 'Get the block to call in', r: r.pledges.length >= 5 ? 'ready' : `${r.pledges.length} of 5`, disabled: () => r.pledges.length < 5 || r.callinDay > 0, do: () => { r.callinDay = G.day + 1; remember('callin_set'); Dlg.run([you("Tomorrow night. Everybody I could ask. They'll call. Have the tower man listen."), say('birdie', "He listens every night; he told me so, to prove nobody else does. All right. Tomorrow. I'll put the phone on the air, which I have never done, because there has never been anything on it.")]); } });
+    items.push({ t: 'Not yet', do: () => { } });
+    Menu.open('The tower', items, { sub: r.pledges.length >= 5 ? 'Five people on the block have said they will call. That might be enough for a man who says nobody is listening.' : 'Three thousand dollars, or proof that somebody is listening. Ask the people you know to call the station one night.' });
+  },
+  pledgeItem(id, who, line) {
+    const r = this.S(); if (!r.leaseKnown || r.lease || r.callinDay || r.pledges.includes(id) || G.day > LEASE_DAY) return null;
+    return { t: 'Ask them to call KHRL one night', do: () => { r.pledges.push(id); Audio.sel(); Dlg.run([you("There's a radio station at the river end. 1340. The woman who runs it is about to lose the tower because nobody can prove anybody's listening. One night, when I say. Call in."), say(who, line), narr(`${r.pledges.length} of five.`)]); } };
+  },
+  // the night the street calls
+  callinNight(where) {
+    const r = this.S(); r.lease = 'callin'; remember('lease_callin');
+    const calls = this.pickCallers(4, false, r.pledges);
+    const L = [narr(where === 'station' ? 'She puts the phone on the air. It rings before she has finished saying so.' : 'From the bed, the transistor on the sill: she puts the phone on the air. It rings before she has finished saying so.')];
+    for (const c of calls) { if (where === 'station') L.push(...c.lines); else { const first = c.lines.find(s => s.say === 'caller' || s.say === 'narrator'); if (first) L.push(first); L.push(say('birdie', this.birdieReply(c.id))); } }
+    L.push(narr(`${Math.max(r.pledges.length, 5) + 4} calls in one night, all from one street. She stops counting on air and keeps counting on her fingers.`), say('towerman', "...This is the tower. I've been listening. I listen every night; that was the point. ...Fine. Fine. The year's yours. Don't tell anybody I said fine."), say('birdie', "That was the tower. Somebody's listening. I'm going to play a record now and I'm going to take my glasses off for it."), narr('She takes her glasses off for it.'));
+    if (where === 'station') Dlg.run(L); else return L;
+  },
+  // ---- mornings ----
+  wake() {
+    const r = this.S(); const d = G.day; const j = G.phone && G.phone.jo;
+    if (!r.lease && d >= LEASE_DAY + 1 && !r.dark) { r.dark = true; r.darkDay = d; remember('khrl_dark'); if (r.met) { Dlg.run([narr('Morning. The window at the river end is dark. It was lit every night you have lived here; you did not know you were counting on it until it was not.'), narr(r.leaseKnown ? 'Day eighty-one. The tower man was as good as his word.' : 'You do not know why.')]); return true; } return false; }
+    if (r.callinDay && d === r.callinDay + 1 && !r.lease) { r.lease = 'callin'; remember('lease_callin'); Dlg.run([narr('You slept through it. The window at the river end is lit in the morning, which it never is: somebody kept the show on all night. Under your door, a page torn from a forecast pad: "NINE CALLS. HE SAID FINE. - B."')]); return true; }
+    if (r.sessionDay && d === r.sessionDay + 1 && !r.session) { r.session = true; r.trust += 1; if (G.chars.signe) G.chars.signe.trust += 1; Dlg.run([narr('Cal, on the stoop, hoarse: they played the top floor last night. Eleven minutes, live, a red light. "You weren\'t there. She said your name on air anyway. Not your name; she said \'the couch.\'"')]); return true; }
+    if (r.said === 'street' && d === r.micDay + 1) { Dlg.run([narr("On the stairs, Mrs. Ortega, who does not stop you, and does not say anything, and puts a hand flat on your chest for one second as she passes, which is a thing she has never done."), narr('The sentence on the front of the last building has been answered. Chalk, under the paint, in three different hands: SOMEBODY DID.')]); r.chalk = true; return true; }
+    if (r.said === 'nobody' && d === r.micDay + 1 && G.chars.walter.met && !G.chars.walter.dead) { Dlg.run([narr('A folded page under the door. Block capitals, an old hand: "I HEARD YOU. YOU ARE NOT NOBODY. - W.J.A." He has never once used your name either.')]); return true; }
+    return false;
+  },
+  // ---- the show, at home ----
+  listen() {
+    const r = this.S(); const d = G.day;
+    if (!r.lease && d > LEASE_DAY && !r.dark) { r.dark = true; r.darkDay = d; }
+    if (r.dark) { RadioPlayer.start([{ who: 'static', text: '...' }, { who: 'static', text: 'Static, at 1340, all the way up the dial and back. Somewhere under it, very faint, another station\'s ball game.' }, { who: 'static', text: '...' }], () => { useEnergy(2); }, 'home'); return; }
+    const segs = this.buildShow(); r.listened++; r.lastListen = d;
+    RadioPlayer.start(segs, (early) => {
+      useEnergy(early ? 2 : 5);
+      if (early) { Dlg.run([narr('You turn it off mid-sentence. She goes on without you; she is used to that.')]); return; }
+      r.heard++; remember('khrl_heard');
+      if (!r.told) { r.told = true; Dlg.run([narr('The top floor of the last building before the river; a buzzer under some tape. You know the building. It has a sentence painted on the front of it.')]); return; }
+      if (r.callinDay === d && !r.lease) { r.lease = 'callin'; remember('lease_callin'); }
+      if (d >= 97 && r.trust >= 1 && !r.dedication) { r.dedication = true; remember('khrl_dedication'); }
+    }, 'home');
+  },
+  buildShow() {
+    const r = this.S(); const d = G.day; const c = G.chars; const segs = []; const B = (t) => segs.push({ who: 'birdie', text: t }); const REC = (t) => segs.push({ who: 'rec', text: t });
+    // the call-in night, heard from home
+    if (r.callinDay === d && !r.lease) { const L = this.callinNight('home'); for (const s of L) { if (!s.text) continue; segs.push(s.say === 'narrator' ? { who: 'rec', text: s.text } : { who: s.say === 'towerman' ? 'towerman' : s.say === 'birdie' ? 'birdie' : 'caller', name: s.say === 'towerman' ? 'THE TOWER' : undefined, text: s.text }); } return segs; }
+    // the last nights
+    if (d >= 97 && r.trust >= 1) {
+      B("KHRL, 1340, the overnight. This is Birdie. It's raining. Tonight's show is for one person. Everybody else can listen, but it's not for you, and you'll know it isn't, and that's fine; I've been not talking to you for thirty-one years.");
+      B(`It's for the fourth floor of Harlan Arms. He knows which window. He came up my stairs when nobody had, and he read my weather, and ${r.said === 'street' ? 'he said the thing about the building, which I still can\'t say' : r.said === 'jo' ? 'he said something to somebody two states over and she heard it' : r.said === 'nobody' ? 'he said he was nobody, on my air, which is the only lie I have ever let stand' : 'he sat on the couch and let me talk'}.`);
+      REC('(a record: 1962, the one the bench always asks for)');
+      const who = [c.walter.met && !c.walter.dead ? 'the bench' : null, c.nora && c.nora.met ? 'the ward' : null, c.amos.room || c.amos.job ? 'the boiler room' : null, c.nadia.met ? 'the diner' : null, c.mei.met ? 'the market' : null, c.sol && c.sol.met ? 'the pawn shop' : null].filter(Boolean);
+      B(who.length ? `The phone's been ringing. ${who.join(', ')}. I'm not putting them on; they didn't call to be on. They called to say they're listening, and I said I'd tell you, and I'm telling you.` : "The phone hasn't rung. That's all right. I'm listening, and I'm telling you so.");
+      B("That's the hour. I'm here till the sun's up, which around here is a rumor. Goodnight, fourth floor. Birdie. KHRL.");
+      return segs;
+    }
+    // the opening
+    const opens = r.heard === 0 ? ["KHRL, 1340 on the AM dial, from the top floor of the last building on Harlan Street before the river. This is Birdie. It's raining. It's going to keep raining. If you're out there, you're out there."] :
+      ["KHRL, 1340. The overnight. This is Birdie, and the river's still there; I checked.", "1340. Birdie. If you can hear this you're either awake or you're the river, and the river doesn't call.", "KHRL. Top floor, river end, the building with the sentence on it. The sentence is wrong. This is Birdie.", "The overnight. I've done thirty-one years of it and I'll tell you the secret: you don't stop. This is Birdie, on KHRL.", "1340 AM. It's late. Whoever's up: I'm up too. That's the whole format."];
+    B(pick(opens));
+    // the weather
+    B(pick(["Weather. Rain. Tomorrow, rain. The river's up a foot; that's from the dock, not the Weather Service, and the dock's been right more often.", "Weather: it's doing it again. It'll do it tomorrow. The dock says the river's up; I say the dock's usually right.", "The weather is rain. That's the forecast and that's the review."]));
+    // a record
+    REC(pick(['(a record: something with strings, from before you were born)', '(a record: a man singing about a train, very slowly)', '(a record: a piano, alone, in a room with a lot of rain outside it)', '(a record: 1962, the one the bench always asks for)', '(a record: a woman singing in a language you do not have, about a river you do)']));
+    // callers, from the pool, in her voice
+    const calls = this.pickCallers(r.heard === 0 ? 1 : 2, false);
+    for (const cl of calls) { const first = cl.lines.find(s => s.say === 'caller' || s.say === 'narrator'); if (first) segs.push({ who: cl.id === 'signe' ? 'rec' : 'caller', name: this.callerName(cl.id), text: cl.id === 'signe' ? 'A caller who does not say anything. Birdie lets the silence run. Then, very small, over the line, a cello.' : first.text }); B(this.birdieReply(cl.id)); }
+    // what happened, if anything happened
+    if (r.said && d <= r.micDay + 3) { segs.push({ who: 'you', text: r.said === 'jo' ? '"...The number\'s the same. It always was."' : r.said === 'street' ? '"...Somebody came. All of you did. That\'s the weather."' : '"...I\'m the nobody, tonight. That\'s all I\'ve got."' }); B("That's from the other night. I've played it every night since. I'm going to keep playing it until the person it was for hears it, and then once more."); }
+    if (c.signe && c.signe.audition === 'yes' && !r.signeSaid) { r.signeSaid = true; B("A note came up my stairs, which nothing does. A woman in a building on this street with a cello has been put on the symphony's list. She said to say it once and not again. I'm saying it once. Twice. That's twice."); }
+    if (r.session && d <= r.sessionDay + 3) B("The Harlan Street Three were in this room on Friday. A horn, a guitar, a cello, and a woman who has not had a live act since a man with spoons in 1998. It's on tape. I'm not playing the tape. You should have been here.");
+    if (c.walter.dead && !r.walterSaid && c.walter.met) { r.walterSaid = true; B("The bench at the bus stop is empty tonight. Eleven years of 1962 and I never knew his name. I'm playing it anyway. I'll play it every night; he's not going to call and tell me to stop."); REC('(a record: 1962, the one the bench always asks for)'); }
+    if (r.leaseKnown && !r.lease && d >= LEASE_DAY - 10) B(`The tower man says nobody's listening, and in ${LEASE_DAY - d} days he's going to prove it by turning it off. If you're out there, I'm not going to ask you to do anything. I'm just telling you the number of days.`);
+    if (r.lease === 'paid') B("Somebody paid the tower. I don't know why. I'm going to say it every night, until I'm not here: somebody.");
+    if (r.lease === 'callin' && d <= r.callinDay + 4) B("Nine calls in one night. One street. The tower man said fine. I've had the glasses off since.");
+    // the close
+    B(pick(["That's the hour. I'm here till the sun's up, which around here is a rumor. Birdie. KHRL.", "Back after this. I say that every hour and I'm always back; hold that against me if you want.", "If you're listening, you're listening. That's all I've ever asked. Birdie, 1340, the overnight.", "Goodnight to the bench, goodnight to the dock, goodnight to whoever's got a window open. Birdie."]));
+    return segs;
+  },
+  callerName(id) { return { walter: nameKnown('walter') ? 'The bench' : 'An old man', nora: 'The ward', amos: 'The boiler room', nadia: 'The diner', mei: 'The market', sol: 'The pawn shop', ortega: 'Harlan Arms', emmett: 'A payphone, long distance', cal: 'The corner', signe: '', jo: 'Two states over', trucker: 'The interstate', nurse: 'County', kid: 'A kid', woman: 'A woman' }[id] || 'Caller'; },
+  birdieReply(id) {
+    return { walter: "1962. I know which. The bench gets what the bench asks for.", nora: "Something slow for the fourth floor of County. Sit down, whoever you are; you've earned it.", amos: "Never called the radio before. Well, you have now. Something for the boiler room.", nadia: "Something that won't wake the kid in the booth. I have exactly one of those.", mei: "Keep drawing. That's the whole show tonight: keep drawing.", sol: "The horn's in the case. I don't know what it means and I'm going to play a trumpet record anyway.", ortega: "The weather has been corrected. Pouring. Thank you, Harlan Arms.", emmett: "Long distance, two minutes, and he spent them on us. The old man's song, for the marina.", cal: "He wrote it. He'd like you to know he wrote it. Here it is; it's about rain.", signe: "That one calls once a week. Never says a word. I've started to think it's the best call I get.", jo: "Two states over, on a stream I didn't know existed. Somebody's out there after all. Something for a car.", trucker: "Six miles. We'll keep it at six.", nurse: "1340, all the way to the right and back a hair. Tell him it's on.", kid: "Go to sleep. The radio will be here. That's the one thing about it.", woman: "It's a real person. It always was. Goodnight." }[id] || "...";
+  },
+  endingLine() {
+    const r = this.S(); if (!r.heard && !r.met) return null;
+    if (!r.met) return { name: 'KHRL 1340', line: `You listened ${r.heard} night${r.heard === 1 ? '' : 's'}. You never went up the stairs. She said where she was every time.`, bad: r.heard < 3 };
+    if (r.dark) return { name: 'Birdie', line: `The tower went dark on day ${LEASE_DAY}. She came up the stairs every night after anyway and talked to the river without the transmitter. ${r.dedication ? 'The last show was for you; she said so to the room.' : 'You were the only one who ever pressed the buzzer.'}`, bad: true };
+    if (r.lease === 'paid') return { name: 'Birdie', line: `You paid the tower: three thousand dollars for a voice at night. She says "somebody" on air every night and has never said who. ${r.shifts} nights of weather, ${r.pay} dollars from the coffee can.${r.dedication ? ' The last show was yours.' : ''}` };
+    if (r.lease === 'callin') return { name: 'Birdie', line: `Nine calls in one night, all from one street, and the tower man said fine. She has had her glasses off since. ${r.shifts} nights of weather.${r.session ? ' The Three played the top floor.' : ''}${r.dedication ? ' The last show was yours.' : ''}` };
+    return { name: 'Birdie', line: `${r.shifts} night${r.shifts === 1 ? '' : 's'} of weather from the top floor. The first person up her stairs in thirty-one years.${r.dedication ? ' The last show was yours.' : ''}` };
+  }
+};
+
+// ---------- the door on the street, painted at boot ----------
+function paintRadioDoor(g) {
+  const x = RADIO_X, base = GROUND_Y;
+  px(g, x - 2, base - 46, 26, 46, '#2a2a30'); px(g, x, base - 44, 22, 44, '#4a4e58'); px(g, x, base - 44, 22, 1, '#6a6e78'); px(g, x, base - 44, 1, 44, '#5a5e68');
+  for (let y = base - 40; y < base - 4; y += 9) px(g, x + 2, y, 18, 1, 'rgba(0,0,0,0.18)');
+  px(g, x + 26, base - 30, 6, 8, '#3a3a44'); px(g, x + 28, base - 28, 2, 2, '#8a8a92');        // the buzzer
+  px(g, x + 25, base - 31, 8, 4, '#c8c0a8');                                                      // tape over it
+  px(g, x + 4, base - 38, 14, 6, '#2a2a30'); px(g, x + 6, base - 37, 10, 1, '#5a5a62'); px(g, x + 6, base - 35, 7, 1, '#5a5a62');   // a plate with the letters worn off
+  px(g, x - 1, base - 2, 24, 2, '#3a3c44');
+  // the mast on the roof
+  const top = GROUND_Y - 154; px(g, 2124, top - 46, 2, 44, '#5a5a62'); px(g, 2118, top - 30, 14, 1, '#5a5a62'); px(g, 2120, top - 16, 10, 1, '#5a5a62'); px(g, 2116, top - 3, 18, 2, '#4a4a52');
+  // the sentence on the building, to the right of the door
+  drawText(g, 'NO ONE', 2076, base - 40, '#b04a8a'); drawText(g, 'IS COMING', 2076, base - 30, '#b04a8a'); px(g, 2074, base - 21, 52, 1, '#b04a8a');
+}
+{
+  STREET.doors.push({ x: RADIO_X, w: 22, to: 'radio', get label() { const r = G && G.chars && G.chars.birdie; return r && r.told ? 'KHRL 1340' : 'A steel door'; } });
+  STREET.spots.radio = RADIO_X + 11;
+  // the top-floor window at the river end is lit every night, until it is not
+  const lightsOn = () => {
+    const mine = World.lights.filter(L => L.x >= 2040 && L.x <= 2140 && L.y < GROUND_Y - 60); if (!mine.length) return;
+    const top = Math.min(...mine.map(L => L.y)); let one = false;
+    for (const L of mine) { if (L.y === top && !one) { one = true; Object.defineProperty(L, 'lit', { get() { const r = G && G.chars && G.chars.birdie; return !(r && r.dark); }, configurable: true }); L.warm = true; L.flicker = false; } else L.lit = false; }
+  };
+  const bss = buildStreetStatic; buildStreetStatic = function () { const out = bss.apply(this, arguments); lightsOn(); return out; };
+  // the sentence on the building, answered
+  const dp3 = drawPuddles; drawPuddles = function (g, ents, camX, pal, t) {
+    dp3(g, ents, camX, pal, t);
+    if (G.scene !== 'street') return; const r = G.chars && G.chars.birdie; if (!r) return;
+    const sx = 2076 - camX; if (sx < -120 || sx > W + 20) return;
+    if (!r.dark && pal.night > 0.02 && Math.floor(t / 40) % 2 === 0) { g.fillStyle = 'rgba(255,60,60,0.9)'; g.fillRect(2124 - camX, GROUND_Y - 154 - 48, 2, 2); }
+    if (r.chalk) drawText(g, 'SOMEBODY DID.', sx, GROUND_Y - 17, '#e8e4d8');
+    else if (r.lease === 'paid' || r.lease === 'callin') drawText(g, 'SOMEBODY IS.', sx, GROUND_Y - 17, '#e8e4d8');
+  };
+  // the transistor on the sill, once you own it
+  const ad0 = INTERIORS.apartment.dynamic; INTERIORS.apartment.dynamic = function (g, t) { if (ad0) ad0.call(this, g, t); if (G.flags.own_radio) { g.drawImage(SPR.radio, 218, 176); if (RadioPlayer.active) px(g, 227, 178, 1, 1, '#e8c84a'); } };
+  // the radio at home: the overnight, once it is late enough
+  const tmR = tableMenu; tableMenu = function () {
+    tmR(); if (!Menu.active) return;
+    const i = Menu.items.findIndex(it => it.t === 'Turn on the radio'); const orig = i >= 0 ? Menu.items[i] : null;
+    const night = Radio.night();
+    const item = { t: 'Turn on the radio', r: night ? '1340, the overnight' : '', do: () => { if (night) Radio.listen(); else if (orig) orig.do(); else Dlg.run([narr('A station that plays what it wants. Somebody sings about a river.')]); } };
+    if (i >= 0) Menu.items[i] = item; else if (G.flags.house === 'mine') Menu.items.splice(Menu.items.length - 1, 0, Object.assign({}, item, { t: "Turn on Walter's radio" }));
+    if (night && (i >= 0 || G.flags.house === 'mine')) { const r = Radio.S(); if (r.callinDay === G.day && !r.lease) { const k = Menu.items.findIndex(it => it.t.indexOf('radio') >= 0); if (k >= 0) Menu.items[k].r = 'the call-in night'; } }
+  };
+  // the desk
+  const oes3 = onEnterScene; onEnterScene = function (sc) { oes3(sc); if (sc === 'radio') Radio.arrive(); };
+  // pledges: everybody you know, asked once
+  const P = (obj, key, id, who, line) => { const f0 = obj[key]; obj[key] = function () { f0.apply(this, arguments); const it = Radio.pledgeItem(id, who, line); if (it && Menu.active) Menu.items.splice(Menu.items.length - 1, 0, it); }; };
+  P(Amos, 'menu', 'amos', 'amos', "The radio? ...There's a phone in the boiler room. I'll call. I've never called a radio. What do I say? ...Okay. I'll say that.");
+  P(Nora, 'menu', 'nora', 'nora', "I've got the overnight on in the break room half the week already. Say the night. I'll get the whole floor to call; they'll do anything to get out of charting.");
+  P(Nadia, 'menu', 'nadia', 'nadia', "The woman with the voice? She's been on in the kitchen since before Sam. I'll call. Sam'll call. Sam'll call twice.");
+  P(Mei, 'menu', 'mei', 'mei', "I listen to her. I draw to her. I didn't know she was a real place. Yes. Yes, obviously yes.");
+  P(Walter, 'menu', 'walter', 'walter', "Eleven years I've had her on this bench and never called. ...Ruth would have called. Give me the night. I'll walk to the diner and use theirs.");
+  P(Pawn, 'menu', 'sol', 'sol', "1340. I've got it on in the shop after hours; it keeps the clocks company. Tell her Sol's calling, and tell her what a horn's worth, because I'm going to ask her on air.");
+  P(Minor, 'busker', 'cal', 'busker', "The radio lady? She's real? I've been trying to get on the radio my whole life and it was two hundred feet away. Yes. I'll call from the payphone. I'll play down the phone.");
+  P(Minor, 'granny', 'ortega', 'granny', "That woman has been on in my kitchen since Hector. Since before Hector. Of course I'll call. I'll call and tell her the weather's wrong; it always is.");
+  if (typeof Cello !== 'undefined') P(Cello, 'menu', 'signe', 'signe', "...I will call. I will not say anything. That is allowed?");
+  // Cal, asked to bring the Three up the stairs
+  const bmR = Minor.busker; Minor.busker = function () { bmR.call(this); const r = Radio.S(); if (Menu.active && r.sessionAsked && !r.sessionDay) Menu.items.splice(Menu.items.length - 1, 0, { t: 'Ask the Three to play KHRL', do: () => { let d = G.day + 1; while (d % 7 !== 5) d++; r.sessionDay = d; remember('session_set'); Dlg.run([say('busker', "The radio? The real one? The top floor with the red light? ...Yes. Friday. I'll carry the cello myself if she'll let me, which she won't."), narr(`Friday, day ${d}. After nine. The top floor.`)]); } }); };
+  // the phone the morning after you talked to Jo on air
+  const pd = Phone.daily; Phone.daily = function () { pd.call(this); const r = Radio.S(); const Pn = this.P(); if (r.said === 'jo' && G.day === r.micDay + 1 && !Pn.doneToday) { Pn.callToday = 'jo_radio'; Pn.delay = 80 + irnd(0, 80); Pn.attempts = 0; } };
+  const pa = Phone.answer; Phone.answer = function () {
+    const Pn = this.P(); if (Pn.callToday !== 'jo_radio') return pa.call(this);
+    Pn.ringing = false; Pn.doneToday = true; Pn.log.push({ day: G.day, who: 'jo' }); useEnergy(2); Audio.sel(); const j = Jo.J(); j.calls++; j.missedRow = 0; j.callDay = G.day;
+    const was = j.stopped; j.stopped = false; j.hungUp = 0; j.lastCall = false; j.stage = Math.max(j.stage, 2); j.nextDay = G.day + 4; remember('jo_heard_radio');
+    Dlg.run([say('jo', "..."), say('jo', was ? "I said I'd stop calling. Somebody put a radio station on the internet. A woman called Birdie. I was in the car." : "A woman called Birdie. There's a stream; somebody at the hospital sent it to me, I don't know who, I don't know how they knew. I was in the car."), say('jo', "You said the number's the same."), you("It is."), say('jo', "I know. I've had it on the fridge for eleven years. I'm looking at it."), narr('She does not say anything for a while. Neither do you. It is the longest the two of you have been on a phone together since you were children.'), say('jo', "Okay. Okay. I'm going to call again. Not because of the radio. Because of the fridge.")]);
+  };
+  // she is named on air, and by the couch
+  NAME_RULES.push({ id: 'birdie', re: /\bBirdie('s)?\b/g, sub: 'the woman on the radio' });
+  const nk3 = nameKnown; nameKnown = function (id) { if (id === 'birdie') { const r = G && G.chars && G.chars.birdie; return !!(RadioPlayer.active || (r && (r.met || r.heard > 0))); } return nk3(id); };
+  const dn3 = displayName; displayName = function (id, name) { if (id === 'birdie' && !nameKnown('birdie')) return 'The voice'; return dn3(id, name); };
+  // mornings and endings
+  const belR = buildEndingList; buildEndingList = function () { const out = belR(); const rl = Radio.endingLine(); if (rl) out.push(rl); return out; };
+  FRESH.birdie = FRESH.birdie || [];
+  FRESH.walter = FRESH.walter || []; FRESH.walter.push(L_("The radio woman said 'somebody' last night. Just that. 'Somebody paid the tower.' I've a feeling I know somebody.", () => G.chars.birdie && G.chars.birdie.lease === 'paid'), L_("Called the radio. First time in eleven years. Told her 1962. She knew.", () => G.chars.birdie && G.chars.birdie.pledges.includes('walter')));
+  FRESH.amos = FRESH.amos || []; FRESH.amos.push(L_("Heard you on the radio. The boiler room phone gets it if you hold the wire. 'Somebody came.' I'm going to keep that.", () => G.chars.birdie && G.chars.birdie.said === 'street'), L_("I called the radio. She put me on. I said 'this is the boiler room' like it was a place. It is a place.", () => G.chars.birdie && G.chars.birdie.lease === 'callin'));
+  FRESH.nora = FRESH.nora || []; FRESH.nora.push(L_("The break room had you on. The whole ward heard 'the ward.' Three nurses cried and one of them was me and if you tell anybody I'll take the oximeter back.", () => G.chars.birdie && G.chars.birdie.said === 'street'), L_("You read the weather on the radio. You. The man who won't say good morning in the hall.", () => G.chars.birdie && G.chars.birdie.shifts >= 2));
+  FRESH.nadia = FRESH.nadia || []; FRESH.nadia.push(L_("Sam heard you on the overnight. He's told the whole school you're famous. I didn't correct him.", () => G.chars.birdie && G.chars.birdie.shifts >= 1), L_("'The counter.' That was me. On the radio. I've got it written on the order pad so I don't forget I heard it.", () => G.chars.birdie && G.chars.birdie.said === 'street'));
+  FRESH.mei = FRESH.mei || []; FRESH.mei.push(L_("I drew Birdie. I've never seen her. I drew a voice. It's a woman at a desk with a red light; I don't know if it's right.", () => G.chars.birdie && G.chars.birdie.met), L_("You said 'the counter' and I thought you meant the market and then I thought you meant the diner and then I decided it was both.", () => G.chars.birdie && G.chars.birdie.said === 'street'));
+  FRESH.sol = FRESH.sol || []; FRESH.sol.push(L_("She played a trumpet record after my call. She didn't know what the horn meant. She played it anyway. That's a broadcaster.", () => G.chars.birdie && G.chars.birdie.pledges.includes('sol')));
+  FRESH.busker = FRESH.busker || []; FRESH.busker.push(L_("The top floor. A real board, a real mic, a real red light. I've played to it in my head since I was nine. Now I've done it once. Once is plenty. Once is enough for the rest.", () => G.chars.birdie && G.chars.birdie.session));
+}
+
 // ---- 10_game.js ----
 // ============================================================
 // game: state, loop, interactions, shop, sleep, ending, save
@@ -6567,7 +6961,7 @@ function freshState() {
     version: SAVE_VERSION, state: 'play', day: 1, money: 12, hunger: 62, energy: 100, maxEnergy: 100, tod: 0,
     inv: { bread: 1, soup: 0, rice: 0, coat: 0, radioParts: 0, signParts: 0, chess: 0, bird: 0, drawing: 0, thermos: 0, tools: 0, textbook: 0, collar: 0, ruthWatch: 0, chessClock: 0, strings: 0, checkers: 0, nurseShoes: 0, amosHeater: 0, gloves: 0, frame: 0, busPass: 0, fish: 0, letter: 0, veg: 0, type: 0, cards: 0, trumpet: 0, card: 0 },
     outfit: null, wardrobe: {},
-    flags: {}, bequests: {}, memories: [], chars: { amos: Amos.init(), mei: Mei.init(), walter: Walter.init(), nadia: Nadia.init(), nora: Nora.init(), theo: Theo.init(), sol: Pawn.init(), emmett: Emmett.init(), signe: Cello.init() },
+    flags: {}, bequests: {}, memories: [], chars: { amos: Amos.init(), mei: Mei.init(), walter: Walter.init(), nadia: Nadia.init(), nora: Nora.init(), theo: Theo.init(), sol: Pawn.init(), emmett: Emmett.init(), signe: Cello.init(), birdie: Radio.init() },
     scene: 'apartment', px: 330, facing: -1, walking: false, frame: 0, camX: 0, rain: 0.8, wind: 0.2, weatherSeed: irnd(1, 99999),
     starveDays: 0, ateToday: false, walkers: [], dogX: 0, coughT: 600, stun: 0, dockShifts: 0, deliveries: 0, jobsToday: 0, hideHud: false,
     pendingStreet: null, pendingDiner: null, dayCard: null, dead: false, t: 0, elevatorBroken: false, pills: 30, lastPill: 1, pillPenalty: 0, phone: Phone.init(), pass: Passing.init(), house: House.init(), garden: Garden.init(), beats: {}, rent: Rent.init(), casino: Casino.init(), seen: {}, busT: 0, busDir: 'out', busArrived: false,
@@ -6692,6 +7086,10 @@ function buildEntities() {
   // Nora (411)
   const nw = Nora.where();
   if (nw && nw.scene === sc) add({ id: 'nora', x: nw.x, y: nw.sit ? feet : (sc === 'diner' ? feet : feet), spec: nw.spec, dir: nw.x > G.px ? -1 : 1, sit: !!nw.sit, range: 40, on: () => (sc === 'hall' ? Nora.menu() : Nora.cameoTalk(sc)), label: G.chars.nora.met ? 'Nora' : 'Neighbor', bubble: (sc === 'hall' && G.day <= 9 && !G.chars.nora.boxes) ? 'exclaim' : null });
+  if (sc === 'radio') {
+    const rb = Radio.S(); add({ id: 'birdie', range: 60, x: INTERIORS.radio.spots.birdie, y: 212, spec: 'birdie', dir: -1, on: () => Radio.menu(), label: rb.met ? 'Birdie' : 'The woman at the desk', bubble: rb.met ? null : 'exclaim' });
+    if (rb.sessionDay && G.day === rb.sessionDay && Radio.night()) { add({ id: 'busker', x: 176, y: feet, spec: 'busker', dir: 1, range: 30, on: () => Cello.calInHall(), label: 'Cal' }); add({ id: 'signeR', x: 150, y: feet, spec: 'signe', dir: 1, range: 30, on: () => Cello.streetTalk(), label: 'Signe' }); add({ id: 'solR', x: 124, y: feet, spec: 'sol', dir: 1, range: 30, on: () => Cello.solStreet(), label: 'Sol' }); }
+  }
   if (sc === 'hall') {
     if (Cello.here() && Cello.inHall()) { const cs = Cello.S(); add({ id: 'signe', x: 200, y: feet, spec: 'signe', dir: G.px < 200 ? -1 : 1, range: 30, on: () => Cello.menu(), label: cs.met ? 'Signe' : 'Woman' }); }
     if (Cello.here() && Cello.S().dating && G.day % 3 === 0 && G.tod > 0.62 && G.tod < 0.9) add({ id: 'calHall', x: 150, y: feet, spec: 'busker', dir: 1, range: 30, on: () => Cello.calInHall(), label: 'Cal' });
@@ -6742,7 +7140,7 @@ function interact(n) {
   if (!n) return;
   if (n.kind === 'ent') { n.e.on(); return; }
   if (n.kind === 'listen410') { Cello.listen(); return; }
-  if (n.kind === 'door') { if (n.d.bus) Bus.door(); else if (n.d.to === 'house') House.enter(); else if (n.d.to === 'casino' && G.scene === 'street') Casino.door(); else if (n.d.to === 'garden' && !Garden.S().unlocked) Dlg.run([narr(G.day < 6 ? 'A chain-link gate across the alley, padlocked. Weeds behind it to the fence, and the backs of buildings.' : 'Padlocked. Through the wire: weeds, a shed, a hand-painted sign you cannot read from here. Somebody kept this once.')]); else if (G.scene === 'hall') hallDoor(n.d); else if (n.d.to === 'hall' && G.scene === 'street') enterBuilding(); else goScene(n.d.to, n.d.at); return; }
+  if (n.kind === 'door') { if (n.d.bus) Bus.door(); else if (n.d.to === 'house') House.enter(); else if (n.d.to === 'casino' && G.scene === 'street') Casino.door(); else if (n.d.to === 'radio' && G.scene === 'street') Radio.door(); else if (n.d.to === 'garden' && !Garden.S().unlocked) Dlg.run([narr(G.day < 6 ? 'A chain-link gate across the alley, padlocked. Weeds behind it to the fence, and the backs of buildings.' : 'Padlocked. Through the wire: weeds, a shed, a hand-painted sign you cannot read from here. Somebody kept this once.')]); else if (G.scene === 'hall') hallDoor(n.d); else if (n.d.to === 'hall' && G.scene === 'street') enterBuilding(); else goScene(n.d.to, n.d.at); return; }
   if (n.kind === 'lakebus') { Bus.back(); return; }
   if (n.kind === 'fish') { if (G.energy < 25) { UI.toast('Too tired to hold a rod.', '#8ab0d8'); return; } Fishing.start(); return; }
   if (n.kind === 'cabin') { cabinDoor(); return; }
@@ -7040,6 +7438,7 @@ function wakeEvents() {
   if (House.wake()) return;
   if (Beats.wake()) return;
   if (Cello.wake()) return;
+  if (Radio.wake()) return;
   { const j = Jo.J(); if (j.coming && !j.visited && d >= j.visitDay && !j.stopped) { Jo.visit(); return; } }
   if (d === 2 && !G.flags.w2) { G.flags.w2 = true; Dlg.run([narr("Lin's Market sells food. Nadia's diner and the freight dock pay cash for work. Everything costs energy. When you're out, you sleep, and the number goes down.")]); }
   if (d === 4 && !G.flags.w4) { G.flags.w4 = true; Dlg.run([narr("A flyer under your door: LIN'S MARKET - DELIVERY RUNNERS WANTED - CASH SAME DAY. Ask at the counter.")]); G.flags.deliveryAvailable = true; }
@@ -7079,6 +7478,7 @@ const Ending = {
       if (f.dogFollows) { V.push({ x: 286, y: feet + 8, sprite: 'dogSit', dir: -1, id: 'v_dog' }); lines.push(narr('The dog is on the bed. It is not allowed on the bed. Nobody says anything.')); }
       if (G.inv.chess) lines.push(narr("Walter's chess set is on the table. Knight first. You never moved anything. You did not need to."));
       { const cs = G.chars.signe; if (cs && cs.arrived && cs.trust >= 2 && G.flags.house !== 'mine') lines.push(narr(cs.band ? 'Down the hall, through two walls, a cello. The third suite, all the way through, and under the window a guitar and a trumpet finding it. They are playing it for the building. They are playing it for you.' : 'Down the hall, through two walls, a cello. The third suite. She plays it all the way through.')); }
+      { const rb = G.chars.birdie; if (rb && (rb.met || rb.heard >= 3) && Radio.hasRadio()) lines.push(narr(rb.dark ? 'The radio on the sill is on, low. Static, at 1340, where she was. You leave it on.' : rb.trust >= 1 ? 'The radio on the sill is on, low. Birdie: "This one\'s for the fourth floor of Harlan Arms. He knows which window. Everybody else be quiet a minute." Everybody else is quiet a minute.' : 'The radio on the sill is on, low. The overnight. She is talking to the river; tonight you are the river.')); }
       if (f.buskerTips >= 3) lines.push(narr('Somewhere below the window, a guitar. A song about rain. He is playing it badly and on purpose.'));
       if (V.length === 0) lines.push(narr('Nobody comes. You did not expect anybody. The room is very quiet.'), narr('Through the wall, a kettle. Down on the street, somebody laughing at something. The building goes on around you.'));
       else lines.push(narr(V.length >= 3 ? 'The room is full. It is a small room and it is full.' : 'It is a small room. Somebody is in it.'));
@@ -7209,6 +7609,7 @@ function tick() {
     case 'fishing': Fishing.update(); break;
     case 'song': Song.update(); break;
     case 'casino': Casino.update(); break;
+    case 'radio': RadioPlayer.update(); break;
     case 'ending': Ending.update(); break;
   }
 }
@@ -7223,6 +7624,7 @@ function render() {
     case 'fishing': buildEntities(); renderLake(g, t); UI.drawHud(g, t); Fishing.drawHud(g, t); UI.drawFade(g); return;
     case 'song': Song.draw(g, t); UI.drawFade(g); return;
     case 'casino': Casino.draw(g, t); UI.drawFade(g); return;
+    case 'radio': RadioPlayer.draw(g, t); UI.drawFade(g); return;
     case 'elevator': Elevator.draw(g, t); UI.drawFade(g); return;
     default:
       playDraw(g, t);
@@ -7231,11 +7633,11 @@ function render() {
   }
 }
 // boot
-World.static || buildStreetStatic(); paintLampPosts(World.static.getContext('2d')); paintCasinoDoor(World.static.getContext('2d'));
+World.static || buildStreetStatic(); paintLampPosts(World.static.getContext('2d')); paintCasinoDoor(World.static.getContext('2d')); paintRadioDoor(World.static.getContext('2d'));
 titleInit();
 requestAnimationFrame(loop);
 // debug hooks
-window.__99 = { get G() { return G; }, set G(v) { G = v; }, sleep, Amos, Mei, Walter, Nadia, Nora, Elevator, Ladder, Doctor, MG, readNote, Theo, VP, Pawn, Gifts, OUTFITS, PAWN_ITEMS, Dlg, Menu, startMinigame, buildEndingList, save, load, newGame, goScene, Ending, refresh: buildEntities, titleInit, Emmett, Bus, Fishing, Passengers, LAKE, busDay, Phone, Jo, Passing, House, LANE, homeScene, Song, SONGS, Garden, GARDEN, Beats, CEMETERY, Rent, Casino, best7, rank5, newDeck, Cello, gateNames, nameKnown };
+window.__99 = { get G() { return G; }, set G(v) { G = v; }, sleep, Amos, Mei, Walter, Nadia, Nora, Elevator, Ladder, Doctor, MG, readNote, Theo, VP, Pawn, Gifts, OUTFITS, PAWN_ITEMS, Dlg, Menu, startMinigame, buildEndingList, save, load, newGame, goScene, Ending, refresh: buildEntities, titleInit, Emmett, Bus, Fishing, Passengers, LAKE, busDay, Phone, Jo, Passing, House, LANE, homeScene, Song, SONGS, Garden, GARDEN, Beats, CEMETERY, Rent, Casino, best7, rank5, newDeck, Cello, gateNames, nameKnown, Radio, RadioPlayer };
 
 })();
 </script>
