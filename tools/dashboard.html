@@ -1,0 +1,153 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>99 Days: story</title>
+<style>
+:root{--bg:#0e1013;--bg2:#13161b;--bg3:#1a1e25;--line:#252a33;--fg:#c9d1d9;--dim:#6b7380;--dim2:#3d4450;--acc:#e8c84a;--say:#7ad0c8;--narr:#9aa4b8;--you:#d8dce8;--label:#e8a86a;--pool:#a8c8a0;--bad:#e86a6a;--ok:#8ae88a;--font:"SF Mono",Menlo,Consolas,"Liberation Mono","DejaVu Sans Mono",monospace}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:12.5px/1.5 var(--font)}
+#top{position:fixed;top:0;left:0;right:0;height:40px;background:var(--bg2);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:0 14px;z-index:5}
+#top .t{color:var(--acc);font-weight:600;letter-spacing:.04em}#top .path{color:var(--dim)}
+#q{flex:1;max-width:520px;background:var(--bg);border:1px solid var(--line);color:var(--fg);font:inherit;padding:5px 8px;border-radius:3px;outline:none}#q:focus{border-color:var(--acc)}
+button{background:var(--bg3);border:1px solid var(--line);color:var(--fg);font:inherit;padding:5px 10px;border-radius:3px;cursor:pointer;white-space:nowrap}button:hover{border-color:var(--acc);color:var(--acc)}button.primary{border-color:var(--acc);color:var(--acc)}button:disabled{opacity:.4;cursor:default}
+#status{color:var(--dim);margin-left:auto;white-space:nowrap}#status.ok{color:var(--ok)}#status.bad{color:var(--bad)}
+#side{position:fixed;top:40px;bottom:0;left:0;width:230px;background:var(--bg2);border-right:1px solid var(--line);overflow:auto;padding:10px 0}
+#side h4{margin:10px 14px 4px;color:var(--dim);font-weight:normal;text-transform:uppercase;font-size:10.5px;letter-spacing:.08em}
+#side a{display:flex;justify-content:space-between;padding:3px 14px;color:var(--fg);text-decoration:none;cursor:pointer}#side a:hover{background:var(--bg3)}#side a.on{background:var(--bg3);color:var(--acc)}#side a .n{color:var(--dim2)}
+#main{position:absolute;top:40px;left:230px;right:0;bottom:0;overflow:auto;padding:16px 28px 80px}
+h2{font-size:14px;color:var(--acc);margin:6px 0 14px;font-weight:600}h2 small{color:var(--dim);font-weight:normal;margin-left:10px}
+.sec{margin:18px 0 6px;padding-top:8px;border-top:1px dashed var(--line)}.sec .h{color:var(--dim);margin-bottom:6px}.sec .h b{color:var(--fg);font-weight:600}.sec .h .f{color:var(--dim2);margin-left:10px}
+.row{display:grid;grid-template-columns:58px 92px 1fr 28px;gap:8px;align-items:start;padding:2px 0;border-left:2px solid transparent}
+.row.dirty{border-left-color:var(--acc)}.row.saved{border-left-color:var(--ok)}.row.err{border-left-color:var(--bad)}
+.g{color:var(--dim2);text-align:right;cursor:pointer;user-select:none;padding-top:3px}.g:hover{color:var(--dim)}
+.tag{padding-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tag.say{color:var(--say)}.tag.narr{color:var(--narr);font-style:italic}.tag.you{color:var(--you)}.tag.label{color:var(--label)}.tag.pool{color:var(--pool)}
+.tree{color:var(--dim2)}
+textarea{width:100%;background:transparent;border:1px solid transparent;color:var(--fg);font:inherit;padding:3px 6px;resize:none;overflow:hidden;border-radius:2px;line-height:1.5}
+textarea:hover{border-color:var(--line)}textarea:focus{outline:none;border-color:var(--acc);background:var(--bg2)}
+.row.narr textarea{color:var(--narr);font-style:italic}.row.you textarea{color:var(--you)}.row.label textarea{color:var(--label)}.row.pool textarea{color:var(--pool)}
+.x{color:var(--dim2);cursor:pointer;text-align:center;padding-top:3px}.x:hover{color:var(--bad)}
+.meta{color:var(--dim2);font-size:11px;padding-left:6px}.meta b{color:var(--dim);font-weight:normal}
+.src{background:var(--bg3);border:1px solid var(--line);padding:6px 10px;margin:4px 0 6px 66px;white-space:pre;overflow:auto;color:var(--dim);font-size:11.5px;border-radius:3px}.src .hl{color:var(--fg)}
+.add{display:grid;grid-template-columns:1fr 240px 56px 56px 80px;gap:8px;margin:10px 0 0 66px;align-items:center}.add input{background:var(--bg);border:1px solid var(--line);color:var(--fg);font:inherit;padding:4px 6px;border-radius:2px}.add input:focus{outline:none;border-color:var(--acc)}
+/* timeline */
+.tl{position:relative;margin-top:8px}.ruler{display:grid;grid-template-columns:200px 1fr;position:sticky;top:0;background:var(--bg);z-index:2;border-bottom:1px solid var(--line);padding-bottom:4px}
+.days{position:relative;height:34px}.days .d{position:absolute;top:18px;font-size:10px;color:var(--dim2);transform:translateX(-50%)}.days .d.wk{color:var(--dim)}.days .m{position:absolute;top:0;font-size:11px;color:var(--acc)}
+.lane{display:grid;grid-template-columns:200px 1fr;min-height:22px;border-bottom:1px solid #161a20}.lane:hover{background:#111419}.lane .n{padding:3px 8px 0 0;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lane .n b{color:var(--fg);font-weight:normal}
+.track{position:relative;height:22px}.wkend{position:absolute;top:0;bottom:0;background:rgba(255,255,255,0.025)}
+.bar{position:absolute;top:6px;height:10px;border-radius:2px;background:rgba(122,208,200,0.18);border-left:2px solid var(--say);cursor:pointer}.bar:hover{background:rgba(232,200,74,0.25);border-left-color:var(--acc)}
+.bar.lt{border-left:none;border-right:2px solid var(--label);background:rgba(232,168,106,0.15)}
+.mk{position:absolute;top:4px;width:8px;height:14px;transform:translateX(-4px);background:var(--acc);border-radius:2px;cursor:pointer;opacity:.85}.mk.hol{background:var(--bad)}.mk:hover{opacity:1;outline:1px solid #fff}
+.lbl{position:absolute;top:4px;font-size:10.5px;color:var(--dim);white-space:nowrap;pointer-events:none;padding-left:4px}
+.today{position:absolute;top:0;bottom:0;width:1px;background:var(--dim2)}
+#pop{position:fixed;background:var(--bg2);border:1px solid var(--acc);padding:10px 12px;z-index:9;border-radius:4px;box-shadow:0 8px 30px rgba(0,0,0,.5);display:none;max-width:420px}#pop .c{color:var(--dim);margin-bottom:8px;white-space:pre-wrap}#pop input{width:60px;background:var(--bg);border:1px solid var(--line);color:var(--fg);font:inherit;padding:3px 6px}
+.legend{color:var(--dim);margin:6px 0 12px}.legend span{margin-right:14px}
+kbd{border:1px solid var(--line);border-radius:3px;padding:0 4px;color:var(--dim)}
+</style></head><body>
+<div id="top"><span class="t">99 DAYS</span><span class="path">src/*.js</span><input id="q" placeholder="search lines  (name, word, file)"><button id="saveAll" disabled>save changes</button><button id="build" class="primary">build index.html</button><span id="status">loading</span></div>
+<div id="side"></div>
+<div id="main"></div>
+<div id="pop"></div>
+<script>
+const $ = s => document.querySelector(s); let DATA = null; let view = { kind: 'char', id: 'amos' }; const dirty = new Map();
+const KIND = { say: 'say', sayPick: 'say', sayExpr: 'say', narr: 'narr', narrPick: 'narr', narrExpr: 'narr', you: 'you', label: 'label', pool: 'pool', poolInline: 'pool' };
+const status = (t, c) => { const s = $('#status'); s.textContent = t; s.className = c || ''; };
+async function load() { status('loading'); DATA = await (await fetch('/api/data')).json(); dirty.clear(); $('#saveAll').disabled = true; renderSide(); render(); status(`${DATA.items.length} lines, ${DATA.gates.length} day gates`); }
+function charsList() { const counts = {}; for (const it of DATA.items) counts[it.who] = (counts[it.who] || 0) + 1; const order = ['amos', 'mei', 'walter', 'nadia', 'nora', 'sol', 'theo', 'busker', 'emmett', 'signe', 'birdie', 'morrow', 'jo', 'doctor', 'granny', 'kid', 'worker', 'owner', 'pryor', 'lena', 'marsh', 'mrsLin', 'dutch', 'lou', 'widow', 'samDad', 'desk', 'voice', 'caller', 'towerman', 'dog', 'system']; const ids = [...new Set(order.concat(Object.keys(counts)))].filter(k => counts[k]); return ids.map(id => ({ id, name: DATA.names[id] || id, n: counts[id] })); }
+function renderSide() {
+  const s = $('#side'); let h = '<h4>Views</h4>'; h += `<a data-v="timeline" class="${view.kind === 'timeline' ? 'on' : ''}">Timeline<span class="n">1-99</span></a>`; h += `<a data-v="gates" class="${view.kind === 'gates' ? 'on' : ''}">Day gates<span class="n">${DATA.gates.length}</span></a>`;
+  h += '<h4>Characters</h4>'; for (const c of charsList()) h += `<a data-c="${c.id}" class="${view.kind === 'char' && view.id === c.id ? 'on' : ''}">${c.name}<span class="n">${c.n}</span></a>`;
+  s.innerHTML = h; s.querySelectorAll('a').forEach(a => a.onclick = () => { view = a.dataset.v ? { kind: a.dataset.v } : { kind: 'char', id: a.dataset.c }; $('#q').value = ''; renderSide(); render(); $('#main').scrollTop = 0; });
+}
+function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function render() { const q = $('#q').value.trim().toLowerCase(); if (q) return renderSearch(q); if (view.kind === 'timeline') return renderTimeline(); if (view.kind === 'gates') return renderGates(); renderChar(view.id); }
+function rowHtml(it) {
+  const k = KIND[it.kind] || it.kind; const tree = it.depth ? '<span class="tree">' + '│ '.repeat(it.depth - 1) + (k === 'label' ? '├▸ ' : '│ ') + '</span>' : (k === 'label' ? '<span class="tree">▸ </span>' : '');
+  const tag = k === 'say' ? (DATA.names[it.who] || it.who) : k === 'narr' ? '(narration)' : k === 'you' ? 'YOU' : k === 'label' ? 'CHOICE' : 'pool';
+  const meta = it.pool ? `<div class="meta"><b>days ${it.pool.d0}-${it.pool.d1}</b>${it.pool.need ? ' · when ' + esc(it.pool.need) : ''}</div>` : '';
+  const x = it.kind === 'pool' ? `<div class="x" title="remove this pool line" data-x="${it.id}">×</div>` : '<div></div>';
+  return `<div class="row ${k}" data-id="${it.id}"><div class="g" title="${it.file}:${it.line}  (click for source)" data-src="${it.file}|${it.line}">${it.line}</div><div class="tag ${k}">${tree}${tag}</div><div><textarea rows="1" data-id="${it.id}">${esc(it.text)}</textarea>${meta}</div>${x}</div>`;
+}
+function renderChar(id) {
+  const items = DATA.items.filter(i => i.who === id).sort((a, b) => a.file.localeCompare(b.file) || a.start - b.start);
+  const name = DATA.names[id] || id; let h = `<h2>${name}<small>${items.length} lines</small></h2>`;
+  const secs = []; for (const it of items) { const key = it.file + '#' + it.section; let s = secs.find(x => x.key === key); if (!s) { s = { key, file: it.file, section: it.section, items: [] }; secs.push(s); } s.items.push(it); }
+  const pools = secs.filter(s => s.items.every(i => i.kind === 'pool' || i.kind === 'poolInline')); const rest = secs.filter(s => !pools.includes(s));
+  for (const s of rest) { h += `<div class="sec"><div class="h"><b>${esc(s.section)}</b><span class="f">${s.file}</span></div>`; for (const it of s.items) h += rowHtml(it); h += '</div>'; }
+  if (pools.length) { h += `<div class="sec"><div class="h"><b>Pool lines</b><span class="f">rotating lines; each shows when its day range and condition allow</span></div>`; for (const s of pools) { h += `<div class="meta" style="margin:6px 0 2px 66px">${s.file} · ${esc(s.section)}</div>`; for (const it of s.items) h += rowHtml(it); } }
+  else h += `<div class="sec"><div class="h"><b>Pool lines</b><span class="f">none yet</span></div>`;
+  h += `<div class="add"><input id="np-text" placeholder="a new line for ${name}"><input id="np-need" list="needs" placeholder="condition (optional), e.g. () => G.day >= 30"><input id="np-d0" type="number" value="1" min="1" max="99"><input id="np-d1" type="number" value="99" min="1" max="99"><button id="np-add">add line</button></div><datalist id="needs">${DATA.needs.map(n => `<option value="${esc(n)}">`).join('')}</datalist></div>`;
+  $('#main').innerHTML = h; wire();
+  $('#np-add').onclick = async () => { const text = $('#np-text').value.trim(); if (!text) return; const r = await post('/api/pool/add', { who: id, text, need: $('#np-need').value, d0: +$('#np-d0').value, d1: +$('#np-d1').value }); if (r.ok) { status('line added', 'ok'); await load(); } else status(r.error, 'bad'); };
+}
+function renderSearch(q) {
+  const hay = i => (i.text + ' ' + i.who + ' ' + i.file + ' ' + i.section + ' ' + (DATA.names[i.who] || '')).toLowerCase();
+  let re = null; try { re = new RegExp('\\b' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b'); } catch (e) { }
+  let items = re ? DATA.items.filter(i => re.test(hay(i))) : []; if (!items.length) items = DATA.items.filter(i => hay(i).includes(q)); items = items.slice(0, 400);
+  let h = `<h2>search<small>${items.length} lines for "${esc(q)}"</small></h2>`; let last = '';
+  for (const it of items) { const key = (DATA.names[it.who] || it.who) + ' · ' + it.section; if (key !== last) { h += `<div class="sec"><div class="h"><b>${esc(key)}</b><span class="f">${it.file}</span></div></div>`; last = key; } h += rowHtml(it); }
+  $('#main').innerHTML = h; wire();
+}
+function wire() {
+  document.querySelectorAll('textarea').forEach(t => { fit(t); t.oninput = () => { fit(t); const it = DATA.items.find(i => i.id === t.dataset.id); const row = t.closest('.row'); if (t.value !== it.text) { dirty.set(it.id, t.value); row.classList.add('dirty'); } else { dirty.delete(it.id); row.classList.remove('dirty'); } $('#saveAll').disabled = dirty.size === 0; }; t.onblur = () => { if (dirty.has(t.dataset.id)) saveOne(t.dataset.id); }; });
+  document.querySelectorAll('.g[data-src]').forEach(g => g.onclick = async () => { const [f, line] = g.dataset.src.split('|'); const row = g.closest('.row'); const ex = row.nextElementSibling; if (ex && ex.classList.contains('src')) { ex.remove(); return; } const r = await (await fetch(`/api/source?f=${encodeURIComponent(f)}&line=${line}`)).json(); const div = document.createElement('div'); div.className = 'src'; div.innerHTML = r.lines.map((l, i) => `<span class="${r.from + i == line ? 'hl' : ''}">${String(r.from + i).padStart(4)}  ${esc(l.slice(0, 220))}</span>`).join('\n'); row.after(div); });
+  document.querySelectorAll('.x[data-x]').forEach(x => x.onclick = async () => { const it = DATA.items.find(i => i.id === x.dataset.x); if (!confirm('Remove this pool line from the game?\n\n' + it.text)) return; const r = await post('/api/pool/remove', { file: it.file, callStart: it.pool.callStart, callEnd: it.pool.callEnd }); if (r.ok) { status('line removed', 'ok'); await load(); } else status(r.error, 'bad'); });
+}
+function fit(t) { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; }
+async function post(url, body) { return (await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json(); }
+async function saveOne(id) {
+  const it = DATA.items.find(i => i.id === id); const text = dirty.get(id); if (text === undefined) return; const row = document.querySelector(`.row[data-id="${CSS.escape(id)}"]`);
+  const r = await post('/api/edit', { file: it.file, start: it.start, end: it.end, raw: it.raw, quote: it.quote, text, tpl: it.tpl });
+  if (r.ok) { status('saved ' + it.file + ':' + it.line, 'ok'); dirty.delete(id); if (row) { row.classList.remove('dirty'); row.classList.add('saved'); } await reloadQuiet(); }
+  else { status(r.error, 'bad'); if (row) row.classList.add('err'); }
+  $('#saveAll').disabled = dirty.size === 0;
+}
+async function reloadQuiet() { const keep = new Map(dirty); DATA = await (await fetch('/api/data')).json(); dirty.clear(); for (const [k, v] of keep) if (DATA.items.find(i => i.id === k)) dirty.set(k, v); }
+async function saveAll() { for (const id of [...dirty.keys()]) await saveOne(id); if (!dirty.size) { status('all saved', 'ok'); } }
+$('#saveAll').onclick = saveAll;
+document.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') document.activeElement.blur(); saveAll(); } });
+$('#build').onclick = async () => { status('building...'); const r = await post('/api/build', {}); status(r.ok ? r.out.replace(/\n/g, ' · ') : r.error, r.ok ? 'ok' : 'bad'); };
+$('#q').oninput = () => render();
+// ---- timeline ----
+const CAL = { MONTHS: ['Dec', 'Jan', 'Feb', 'Mar', 'Apr'], LEN: [31, 31, 28, 31, 30], START: 27, dateOf(day) { let m = 0, d = this.START + day - 1; while (d > this.LEN[m]) { d -= this.LEN[m]; m++; } return { m, d, wd: day % 7 }; } };
+const X = day => ((day - 1) / 98 * 100) + '%';
+function renderTimeline() {
+  let h = `<h2>timeline<small>day 1 (Mon Dec 27) to day 99 (Mon Apr 4). Click a marker or bar to change its day.</small></h2>`;
+  h += `<div class="legend"><span style="color:var(--bad)">■ holiday, dock closed</span><span style="color:var(--acc)">■ calendar day / exact-day event</span><span style="color:var(--say)">▌ from this day on</span><span style="color:var(--label)">▐ until this day</span></div>`;
+  h += '<div class="tl"><div class="ruler"><div></div><div class="days">';
+  for (let d = 1; d <= 99; d++) { const x = CAL.dateOf(d); if (x.d === 1 || d === 1) h += `<div class="m" style="left:${X(d)}">${CAL.MONTHS[x.m]}</div>`; if (d === 1 || d % 7 === 1) h += `<div class="d ${x.wd === 1 ? 'wk' : ''}" style="left:${X(d)}">${d}</div>`; }
+  h += '</div></div>';
+  const wk = () => { let s = ''; for (let d = 1; d <= 99; d++) if (d % 7 === 0 || d % 7 === 6) s += `<div class="wkend" style="left:${X(d)};width:${100 / 98}%"></div>`; return s; };
+  // calendar lane
+  const cal = DATA.gates.filter(g => g.op === 'event' || g.op === 'holiday'); const seen = new Set();
+  h += `<div class="lane"><div class="n"><b>Calendar</b></div><div class="track">${wk()}`;
+  for (const g of cal) { if (g.op === 'event' && cal.some(x => x.op === 'holiday' && x.day === g.day)) continue; h += `<div class="mk ${g.op === 'holiday' ? 'hol' : ''}" style="left:${X(g.day)}" data-g="${g.id}" title="day ${g.day}: ${esc(g.ctx)}"></div>`; }
+  h += '</div></div>';
+  { const evs = cal.filter(g => g.op === 'event').sort((a, b) => a.day - b.day); const rows = [[], [], []]; let last = [-99, -99, -99];
+    for (const g of evs) { let r = last.findIndex(l => g.day - l >= 10); if (r < 0) r = 2; rows[r].push(g); last[r] = g.day; }
+    for (const row of rows) h += `<div class="lane" style="min-height:14px"><div class="n">${row === rows[0] ? 'labels' : ''}</div><div class="track">${row.map(g => `<div class="lbl" style="left:${X(g.day)}" title="day ${g.day}: ${esc(g.ctx)}">${esc(g.ctx.length > 16 ? g.ctx.slice(0, 15) + '…' : g.ctx)}</div>`).join('')}</div></div>`; }
+  // rent Mondays (fixed in code, informational)
+  h += `<div class="lane"><div class="n">Rent, Mondays</div><div class="track">${wk()}${[8, 15, 22, 29, 36, 43, 50, 57, 64, 71, 78, 85, 92, 99].map(d => `<div class="lbl" style="left:${X(d)};color:var(--dim2)">$</div>`).join('')}</div></div>`;
+  // per character lanes
+  const byWho = {}; for (const g of DATA.gates) { if (g.op === 'event' || g.op === 'holiday') continue; (byWho[g.who] = byWho[g.who] || []).push(g); }
+  const order = charsList().map(c => c.id).concat(Object.keys(byWho)); const done = new Set();
+  for (const who of order) { if (done.has(who) || !byWho[who]) continue; done.add(who); const gs = byWho[who].sort((a, b) => a.day - b.day);
+    h += `<div class="lane"><div class="n"><b>${esc(DATA.names[who] || who)}</b> <span style="color:var(--dim2)">${gs.length}</span></div><div class="track">${wk()}</div></div>`;
+    for (const g of gs) { const title = `${g.section}  (${g.file}:${g.line})\n${g.ctx}`; let el; if (g.op === '>=' || g.op === '>' || g.op === 'const') el = `<div class="bar" style="left:${X(g.day)};right:0" data-g="${g.id}" title="${esc(title)}"></div>`; else if (g.op === '<=' || g.op === '<') el = `<div class="bar lt" style="left:0;width:${X(g.day)}" data-g="${g.id}" title="${esc(title)}"></div>`; else el = `<div class="mk" style="left:${X(g.day)}" data-g="${g.id}" title="${esc(title)}"></div>`;
+      h += `<div class="lane"><div class="n" title="${esc(title)}">${esc(g.section.replace(/^\w+\./, ''))} <span style="color:var(--dim2)">${g.op === 'const' ? '=' : g.op} ${g.day}</span></div><div class="track">${el}<div class="lbl" style="left:${X(Math.min(g.day, 90))}">${esc(g.ctx.slice(0, 60))}</div></div></div>`; }
+  }
+  h += '</div>'; $('#main').innerHTML = h;
+  document.querySelectorAll('[data-g]').forEach(el => el.onclick = e => gatePop(e, el.dataset.g));
+}
+function renderGates() {
+  const gs = DATA.gates.slice().sort((a, b) => a.day - b.day || a.file.localeCompare(b.file)); let h = `<h2>day gates<small>${gs.length} numbers in the code that compare against the day. Click a number to change it.</small></h2>`;
+  for (const g of gs) h += `<div class="row" style="grid-template-columns:58px 92px 120px 1fr"><div class="g" data-src="${g.file}|${g.line}">${g.line}</div><div class="tag say">${esc(DATA.names[g.who] || g.who)}</div><div><span style="color:var(--acc);cursor:pointer" data-g="${g.id}">${g.op === 'const' ? '=' : g.op} day ${g.day}</span></div><div style="color:var(--dim)">${esc(g.section)} <span style="color:var(--dim2)">${g.file}</span><br>${esc(g.ctx)}</div></div>`;
+  $('#main').innerHTML = h; wire(); document.querySelectorAll('[data-g]').forEach(el => el.onclick = e => gatePop(e, el.dataset.g));
+}
+function gatePop(e, id) {
+  const g = DATA.gates.find(x => x.id === id); const p = $('#pop'); p.style.display = 'block'; p.style.left = Math.min(window.innerWidth - 440, e.clientX + 8) + 'px'; p.style.top = (e.clientY + 8) + 'px';
+  p.innerHTML = `<div class="c">${esc(DATA.names[g.who] || g.who)} · ${esc(g.section)}\n${esc(g.file)}:${g.line}\n${esc(g.ctx)}</div><label>${g.op === 'const' ? '=' : g.op} day <input id="gd" type="number" min="1" max="99" value="${g.day}"></label> <button id="gsave">save</button> <button id="gx">cancel</button>`;
+  $('#gx').onclick = () => p.style.display = 'none'; $('#gd').focus(); $('#gd').select();
+  const save = async () => { const r = await post('/api/gate', { file: g.file, start: g.start, end: g.end, was: g.day, day: +$('#gd').value }); p.style.display = 'none'; if (r.ok) { status('day changed', 'ok'); await load(); } else status(r.error, 'bad'); };
+  $('#gsave').onclick = save; $('#gd').onkeydown = ev => { if (ev.key === 'Enter') save(); if (ev.key === 'Escape') p.style.display = 'none'; };
+}
+document.addEventListener('click', e => { if (!e.target.closest('#pop') && !e.target.dataset.g) $('#pop').style.display = 'none'; });
+load();
+</script>
+</body></html>
