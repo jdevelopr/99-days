@@ -5949,7 +5949,7 @@ function displayName(id, name) {
 
 // ---- 09s_story_casino.js ----
 // ============================================================
-// The room under the plain door. Dutch runs it. Blackjack, slots, hold'em against two regulars. Cash in, cash out.
+// The room under the plain door. Dutch runs it. Blackjack, roulette, hold'em against two regulars. Cash in, cash out.
 // Cal gives you the words after the third song.
 // ============================================================
 SPECS.dutch = { skin: '#d8b090', hair: '#c8c8d0', hairStyle: 'short', shirt: '#2a2a34', pants: '#2a2a34', shoes: '#1a1a1e', coat: '#5a2a3a', old: true, glasses: true };
@@ -5960,22 +5960,6 @@ SPEAKERS.dutch = { name: 'Dutch', color: '#d8a0b0', spec: 'dutch' };
 SPEAKERS.dealer = { name: 'Dealer', color: '#c8c8d8', spec: 'dealer' };
 SPEAKERS.lou = { name: 'Lou', color: '#d8b070', spec: 'lou' };
 SPEAKERS.widow = { name: 'The Widow', color: '#b0b0c0', spec: 'widow' };
-S('slot', [
-  '..kkkkkkkkkkkk..',
-  '.kKKKKKKKKKKKKk.',
-  'kKkkkkkkkkkkkkKk',
-  'kKkwwwkwwwkwwwKk',
-  'kKkwrwkwywkwgwKk',
-  'kKkwwwkwwwkwwwKk',
-  'kKkkkkkkkkkkkkKk',
-  'kKKKKKKKKKKKKKKk',
-  'kKKKyKKKKKKKKKKk',
-  'kKKKKKKKKKKKKKKk',
-  'kKkkkkkkkkkkkkKk',
-  'kKKKKKKKKKKKKKKk',
-  '.kkkkkkkkkkkkkk.',
-  '...kk......kk...',
-  '...kk......kk...'], { k: '#2a2230', K: '#8a3a3a', w: '#f0f0e8', r: '#d84a3a', y: '#e8c84a', g: '#4a9a4a' });
 
 // ---------- cards ----------
 const SUITS = ['h', 'd', 'c', 's']; const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
@@ -6017,7 +6001,7 @@ INTERIORS.casino = {
   id: 'casino', outdoor: false, floorY: FEET_Y, x0: 60, x1: 430, ceil: GROUND_Y - 58, ambient: [70, 52, 58], cool: false,
   lamp: { x: 250, y: GROUND_Y - 40 }, window: null,
   doors: [{ x: 74, w: 22, to: 'street', label: 'Up to the street', at: 'casino' }], spawnX: 104, spawnDir: 1, spawns: { stairs: 104 },
-  spots: { slots: 132, blackjack: 196, poker: 290, bar: 380, lou: 270, widow: 312 },
+  spots: { roulette: 128, blackjack: 196, poker: 290, bar: 380, lou: 270, widow: 312 },
   paint(g) {
     const I = this; const ceil = I.ceil;
     paintRoom(g, I, '#3a2228', '#2a2226', gg => { for (let x = I.x0; x < I.x1; x += 10) px(gg, x, GROUND_Y, 1, 64, 'rgba(0,0,0,0.2)'); });
@@ -6026,8 +6010,6 @@ INTERIORS.casino = {
     px(g, 62, ceil, 40, GROUND_Y - ceil, '#1a1418'); for (let i = 0; i < 7; i++) px(g, 66 + i * 4, GROUND_Y - 8 - i * 7, 30 - i * 4, 3, '#2a2228');   // stairs up, at the left
     px(g, 140, ceil + 8, 60, 26, '#1a1a20'); px(g, 142, ceil + 10, 56, 22, '#6a7a8a'); px(g, 144, ceil + 12, 12, 8, 'rgba(255,255,255,0.15)');           // mirror
     px(g, 408, ceil, 20, GROUND_Y - ceil, '#5a1a2a'); for (let y = ceil; y < GROUND_Y; y += 6) px(g, 408, y, 20, 1, '#4a1020');                              // curtain
-    // the slot machine
-    g.drawImage(SPR.slot, 124, GROUND_Y - 26);
     // bottles behind the bar
     for (let i = 0; i < 6; i++) px(g, 356 + i * 8, ceil + 26, 3, 10, ['#6a3a2a', '#3a6a3a', '#c8a84a', '#6a3a2a', '#8a8a92', '#3a3a6a'][i]); px(g, 352, ceil + 36, 52, 2, '#4a2a1a');
     // green-shaded pendants over the tables
@@ -6041,6 +6023,10 @@ INTERIORS.casino = {
     // poker table (oval), chips
     px(g, 246, GROUND_Y - 6, 88, 16, '#1e5a34'); px(g, 246, GROUND_Y - 6, 88, 1, '#3a8a54'); px(g, 244, GROUND_Y + 8, 92, 3, '#4a3020'); px(g, 250, GROUND_Y + 11, 4, 6, '#3a2a1a'); px(g, 326, GROUND_Y + 11, 4, 6, '#3a2a1a');
     for (let i = 0; i < 5; i++) px(g, 262 + i * 12, GROUND_Y - 4, 4, 2, ['#d84a3a', '#4a6ad8', '#2a2a2a', '#d84a3a', '#e8e8e8'][i]);
+    // the roulette table: a felt with the layout, and the wheel at its head
+    px(g, 100, GROUND_Y - 8, 60, 16, '#1e5a34'); px(g, 100, GROUND_Y - 8, 60, 1, '#3a8a54'); px(g, 98, GROUND_Y + 6, 64, 3, '#4a3020'); px(g, 104, GROUND_Y + 9, 4, 6, '#3a2a1a'); px(g, 152, GROUND_Y + 9, 4, 6, '#3a2a1a');
+    for (let i = 0; i < 6; i++) px(g, 122 + i * 6, GROUND_Y - 5, 5, 10, i % 2 ? '#8a2a2a' : '#1a1a20'); px(g, 122, GROUND_Y - 5, 36, 1, '#c8c0a0');
+    g.save(); g.translate(110, GROUND_Y - 2); g.fillStyle = '#4a3020'; g.beginPath(); g.ellipse(0, 0, 11, 6, 0, 0, Math.PI * 2); g.fill(); for (let k = 0; k < 12; k++) { g.fillStyle = k % 2 ? '#8a2a2a' : '#1a1a20'; g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 9, k * Math.PI / 6, (k + 1) * Math.PI / 6); g.closePath(); g.save(); g.scale(1, 0.55); g.fill(); g.restore(); } g.restore();
     // the bar
     fCounter(g, 350, 404, '#4a2a1a', '#3a2016', {});
   }
@@ -6064,7 +6050,7 @@ const Casino = {
   },
   arrive() {
     const c = this.S(); c.visits++;
-    if (c.visits === 1) Dlg.run([narr('Three tables, a bar, a slot machine older than you, and eleven people who do not look up. Green lamps. No clock anywhere; you look, and there is not one.'), say('dutch', "House rules. Cash on the table, nobody plays on a promise. You win, you leave with it. You lose, you leave. No crying at my bar; I've got a mop for that and it's the mop's night off."), say('dutch', "Blackjack's Rennie. Poker's whoever's sitting. The machine's the machine. Go on.")]);
+    if (c.visits === 1) Dlg.run([narr('Three tables, a bar, a roulette wheel older than you, and eleven people who do not look up. Green lamps. No clock anywhere; you look, and there is not one.'), say('dutch', "House rules. Cash on the table, nobody plays on a promise. You win, you leave with it. You lose, you leave. No crying at my bar; I've got a mop for that and it's the mop's night off."), say('dutch', "Blackjack's Rennie. Poker's whoever's sitting. The wheel's Marguerite's, and Marguerite is me on a Tuesday. Go on.")]);
   },
   // ----- Dutch -----
   dutchMenu() {
@@ -6076,7 +6062,7 @@ const Casino = {
     const L = [];
     if (c.dutchTalks === 1) L.push(say('dutch', "Dutch. Nobody's called me anything else since 1981 and I've stopped correcting it."), say('dutch', "Forty years down here. I've seen every kind of face come down those stairs. Yours is the kind that's got a number on it. I don't ask what number."));
     else if (c.net >= 4000 && !c.warned1) { c.warned1 = true; L.push(say('dutch', "Four thousand. I keep a book. Four is where I start reading it twice."), say('dutch', "Twelve. That's the number. Anybody takes twelve off my tables, the door forgets them. I'm telling you now so it's not a surprise, because I don't like surprises and I don't think you do either.")); }
-    else L.push(say('dutch', fresh('dutch', ["Lou's here every night. Lou's been here every night for eleven years. I've stopped charging him for the coffee; it seemed cruel.", "The Widow's not a widow. She just plays like one.", "No clocks. People ask. If you need a clock you need to go home, and I'm not in the business of telling people that.", "The machine pays out when it wants. I've never once fixed it. I've never once needed to.", "Cal's sister used to deal here. Long time ago. Don't ask him; he'll tell you the wrong story.", "Rent's a hundred a week up there, I hear. Down here it's whatever you bring, and I don't send notes.", G.flags.vp ? "That's a good suit. I've had a lot of good suits at that table. They leave in worse ones." : "You look like a man who counts. Don't. It won't help and Rennie will notice."])));
+    else L.push(say('dutch', fresh('dutch', ["Lou's here every night. Lou's been here every night for eleven years. I've stopped charging him for the coffee; it seemed cruel.", "The Widow's not a widow. She just plays like one.", "No clocks. People ask. If you need a clock you need to go home, and I'm not in the business of telling people that.", "The wheel's from a boat. A riverboat, 1961. It's never once been fixed and it's never once needed to be.", "Cal's sister used to deal here. Long time ago. Don't ask him; he'll tell you the wrong story.", "Rent's a hundred a week up there, I hear. Down here it's whatever you bring, and I don't send notes.", G.flags.vp ? "That's a good suit. I've had a lot of good suits at that table. They leave in worse ones." : "You look like a man who counts. Don't. It won't help and Rennie will notice."])));
     Dlg.run(L);
   },
   // ----- Lou -----
@@ -6099,10 +6085,9 @@ const Casino = {
     Dlg.run([say('widow', fresh('widow', [c.widowTalks === 1 ? "Sit or don't. Talking's for the bar." : "...", "Lou has a tell. It's that he's Lou.", "I don't play for money. I play for the quiet. The money's how you keep score of the quiet.", "You're sick. I can see it in how you hold the cards. Doesn't matter; the cards can't.", "Dutch and I came up together. She went behind the bar. I stayed at the table. Same job."]))]);
   },
   // ----- tables -----
-  slotsMenu() {
-    const c = this.S();
-    const items = [{ t: 'Pull ($20)', disabled: () => G.money < 20, do: () => this.startGame(new SlotsGame(20)) }, { t: 'Pull ($100)', disabled: () => G.money < 100, do: () => this.startGame(new SlotsGame(100)) }, { t: 'Walk away', do: () => { } }];
-    Menu.open('The machine', items, { sub: 'Three reels. Sevens pay fifty to one. It has never once been fixed.' });
+  rouletteMenu() {
+    const items = [{ t: 'Sit down at the wheel', disabled: () => G.money < 25, do: () => this.startGame(new RouletteGame()) }, { t: 'Walk away', do: () => { } }];
+    Menu.open('The wheel', items, { sub: 'Single zero. Straight up pays thirty-five to one. Dutch spins it herself.' });
   },
   blackjackMenu() {
     const c = this.S(); const bets = [25, 100, 250, 500]; if (G.day >= 40 || c.won >= 2000) bets.push(1000);
@@ -6139,24 +6124,91 @@ const Bar = {
 };
 function panelBox(g, x, y, w, h, title) { UI.panel(g, x, y, w, h, 0.85); if (title) drawText(g, title, x + w / 2, y + 4, '#e8c84a', { align: 'center' }); }
 
-// ---------- SLOTS ----------
-class SlotsGame {
-  constructor(bet) { this.bet = bet; }
-  start() { this.reels = [0, 0, 0]; this.t = 0; this.spinning = [true, true, true]; this.stopAt = [50, 80, 110]; this.result = null; addMoney(-this.bet); const c0 = Casino.S(); c0.pulls++; c0.net -= this.bet; c0.session -= this.bet; c0.lost += this.bet; this.sym = ['7', 'BAR', 'BELL', 'CHERRY', 'LEMON', 'PLUM']; this.final = [0, 1, 2].map(() => this.pickSym()); this.done = false; this.sel = 0; }
-  pickSym() { const r = Math.random(); return r < 0.06 ? 0 : r < 0.16 ? 1 : r < 0.32 ? 2 : r < 0.6 ? 3 : r < 0.8 ? 4 : 5; }
-  payout(f) { const b = this.bet; if (f[0] === f[1] && f[1] === f[2]) return [50, 20, 10, 6, 4, 3][f[0]] * b; const ch = f.filter(x => x === 3).length; if (ch >= 2) return 2 * b; if (ch === 1) return b; return 0; }
+// ---------- ROULETTE (single zero; Dutch spins it herself) ----------
+const WHEEL = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+const REDS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+const RBETS = [
+  { k: 'red', t: 'Red', pays: 1, hit: n => n > 0 && REDS.has(n) }, { k: 'black', t: 'Black', pays: 1, hit: n => n > 0 && !REDS.has(n) },
+  { k: 'odd', t: 'Odd', pays: 1, hit: n => n > 0 && n % 2 === 1 }, { k: 'even', t: 'Even', pays: 1, hit: n => n > 0 && n % 2 === 0 },
+  { k: 'low', t: '1-18', pays: 1, hit: n => n >= 1 && n <= 18 }, { k: 'high', t: '19-36', pays: 1, hit: n => n >= 19 },
+  { k: 'd1', t: '1st 12', pays: 2, hit: n => n >= 1 && n <= 12 }, { k: 'd2', t: '2nd 12', pays: 2, hit: n => n >= 13 && n <= 24 }, { k: 'd3', t: '3rd 12', pays: 2, hit: n => n >= 25 },
+  { k: 'num', t: 'Number', pays: 35, hit: (n, pick) => n === pick },
+];
+const RAMTS = [25, 100, 250, 500, 1000];
+class RouletteGame {
+  start() { this.phase = 'bet'; this.bet = 0; this.amt = 1; this.num = 17; this.spins = 0; this.t = 0; this.msg = ''; this.hist = []; }
+  // the wheel spins one way, the ball the other; the ball slows, drops, bounces, settles in a pocket
+  spin() {
+    const c = Casino.S(); this.wager = RAMTS[this.amt]; addMoney(-this.wager); c.net -= this.wager; c.session -= this.wager; c.lost += this.wager; c.pulls++;
+    this.result = Math.floor(Math.random() * 37); this.resIdx = WHEEL.indexOf(this.result);
+    this.phase = 'spin'; this.t = 0; this.wheelA = Math.random() * Math.PI * 2; this.wheelV = 0.09; this.ballA = Math.random() * Math.PI * 2; this.ballV = -0.34; this.ballR = 44; this.settled = false; this.dropT = 150 + Math.floor(Math.random() * 40);
+    Audio.tone(220, 0.3, 'sawtooth', 0.02, 1.3);
+  }
   update() {
     this.t++;
-    for (let i = 0; i < 3; i++) { if (this.spinning[i]) { if (this.t % 4 === 0) this.reels[i] = (this.reels[i] + 1) % 6; if (this.t >= this.stopAt[i]) { this.spinning[i] = false; this.reels[i] = this.final[i]; Audio.tone(300 + i * 120, 0.06, 'square', 0.03); } } }
-    if (!this.spinning.some(x => x) && !this.done) { this.done = true; const pay = this.payout(this.final); this.pay = pay; if (pay > 0) { Audio.good(); Casino.settle(pay, pay >= this.bet * 10 ? 'jackpot' : null); } else Audio.bad(); if (pay >= this.bet * 50) remember('casino_sevens'); }
-    if (this.done) { const acts = [{ t: `Pull again ($${this.bet})`, off: G.money < this.bet }, { t: 'Walk away' }]; this.sel = Bar.nav(acts, this.sel); if (Input.hit('act')) { if (this.sel === 0 && G.money >= this.bet) this.start(); else { Casino.cur = null; G.state = 'play'; } } if (Input.hit('back')) { Casino.cur = null; G.state = 'play'; } }
+    if (this.phase === 'bet') {
+      if (Input.hit('left')) { this.bet = (this.bet + RBETS.length - 1) % RBETS.length; Audio.blip(); }
+      if (Input.hit('right')) { this.bet = (this.bet + 1) % RBETS.length; Audio.blip(); }
+      if (RBETS[this.bet].k === 'num') { if (Input.held('up') && this.t % 4 === 0) this.num = (this.num + 1) % 37; if (Input.held('down') && this.t % 4 === 0) this.num = (this.num + 36) % 37; }
+      else { if (Input.hit('up')) { this.amt = Math.min(RAMTS.length - 1, this.amt + 1); Audio.blip(); } if (Input.hit('down')) { this.amt = Math.max(0, this.amt - 1); Audio.blip(); } }
+      if (Input.hit('act')) { if (G.money >= RAMTS[this.amt]) this.spin(); else Audio.bad(); }
+      if (Input.hit('back')) { Casino.cur = null; G.state = 'play'; }
+      return;
+    }
+    if (this.phase === 'spin') {
+      // wheel: slow decay. ball: fast, decays, then drops onto the track and rides the wheel
+      this.wheelV *= 0.995; this.wheelA += this.wheelV;
+      if (this.t < this.dropT) { this.ballV *= 0.992; this.ballA += this.ballV; if (this.t % 9 === 0) Audio.tone(1800 + Math.random() * 200, 0.02, 'square', 0.008); }
+      else if (!this.settled) {
+        // drop: the ball falls inward, clatters across the frets, and lands in the pocket of the result
+        const k = this.t - this.dropT; this.ballR = Math.max(28, 44 - k * 0.5);
+        const target = this.wheelA + (this.resIdx / 37) * Math.PI * 2 + Math.PI / 37;
+        let d = ((target - this.ballA) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+        this.ballA += this.wheelV + d * 0.08 + (k < 25 ? Math.sin(k * 1.7) * 0.05 : 0); if (k < 30 && k % 6 === 0) Audio.tone(900 + Math.random() * 300, 0.03, 'square', 0.02);
+        if ((k > 45 && Math.abs(d) < 0.01) || k > 160) { this.settled = true; this.ballR = 28; this.ballA = target; Audio.tone(600, 0.06, 'square', 0.03); }
+      } else { this.ballA = this.wheelA + (this.resIdx / 37) * Math.PI * 2 + Math.PI / 37; if (this.wheelV < 0.012) { this.wheelV *= 0.93; if (this.wheelV < 0.001) this.resolve(); } }
+      return;
+    }
+    if (this.phase === 'done') {
+      const acts = [{ t: 'Bet again' }, { t: 'Leave the wheel' }]; this.sel = Bar.nav(acts, this.sel || 0);
+      if (Input.hit('act')) { if (this.sel === 0) { this.phase = 'bet'; this.t = 0; } else { Casino.cur = null; G.state = 'play'; } }
+      if (Input.hit('back')) { Casino.cur = null; G.state = 'play'; }
+    }
+  }
+  resolve() {
+    const b = RBETS[this.bet]; const n = this.result; const win = b.hit(n, this.num); this.spins++; this.hist.unshift(n); this.hist.length = Math.min(this.hist.length, 8);
+    this.phase = 'done'; this.sel = 0; this.t = 0;
+    if (win) { const pay = this.wager * (b.pays + 1); Casino.settle(pay, b.k === 'num' ? 'straightup' : null); this.pay = pay - this.wager; this.msg = `${n} ${n === 0 ? 'green' : REDS.has(n) ? 'red' : 'black'}. ${b.t} pays $${pay - this.wager}.`; Audio.good(); }
+    else { this.pay = -this.wager; this.msg = `${n} ${n === 0 ? 'green' : REDS.has(n) ? 'red' : 'black'}. The house.`; Audio.bad(); }
   }
   draw(g, t) {
-    panelBox(g, 140, 60, 200, 110, 'THE MACHINE');
-    const cols = ['#c83a3a', '#20222a', '#b08a20', '#c83a3a', '#8a9a20', '#7a3a9a'];
-    for (let i = 0; i < 3; i++) { const x = 160 + i * 60; px(g, x, 84, 50, 44, '#f4f0e8'); px(g, x, 84, 50, 1, '#ffffff'); const s = this.sym[this.reels[i]]; drawText(g, s, x + 25, 102, cols[this.reels[i]], { align: 'center' }); if (this.spinning[i]) { px(g, x, 84 + (t * 6) % 44, 50, 2, 'rgba(0,0,0,0.12)'); } }
-    drawText(g, `$${this.bet} a pull`, 240, 140, '#8a92a4', { align: 'center' });
-    if (this.done) { drawText(g, this.pay > 0 ? `PAYS $${this.pay}` : 'Nothing.', 240, 154, this.pay > 0 ? '#8ae88a' : '#8a92a4', { align: 'center' }); Bar.draw(g, [{ t: `Pull again ($${this.bet})`, off: G.money < this.bet }, { t: 'Walk away' }], this.sel); }
+    panelBox(g, 30, 22, 420, 178, 'THE WHEEL');
+    // the wheel, drawn flat, top-down, at the left
+    const cx = 120, cy = 118, R = 56;
+    g.save(); g.translate(cx, cy);
+    g.fillStyle = '#3a2a1a'; g.beginPath(); g.arc(0, 0, R + 6, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#6a5a3a'; g.beginPath(); g.arc(0, 0, R + 2, 0, Math.PI * 2); g.fill();
+    const wa = this.phase === 'bet' ? t * 0.004 : this.wheelA;
+    for (let i = 0; i < 37; i++) { const a0 = wa + (i / 37) * Math.PI * 2, a1 = a0 + Math.PI * 2 / 37; const n = WHEEL[i]; g.fillStyle = n === 0 ? '#2a7a3a' : REDS.has(n) ? '#9a2a2a' : '#1e1e26'; g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, R, a0, a1); g.closePath(); g.fill(); }
+    g.fillStyle = '#4a3a2a'; g.beginPath(); g.arc(0, 0, 24, 0, Math.PI * 2); g.fill(); g.fillStyle = '#8a7a5a'; g.beginPath(); g.arc(0, 0, 20, 0, Math.PI * 2); g.fill();
+    for (let k = 0; k < 4; k++) { const a = wa * 1 + k * Math.PI / 2; g.strokeStyle = '#c8b070'; g.lineWidth = 2; g.beginPath(); g.moveTo(Math.cos(a) * 4, Math.sin(a) * 4); g.lineTo(Math.cos(a) * 18, Math.sin(a) * 18); g.stroke(); }
+    g.fillStyle = '#e8d8a0'; g.beginPath(); g.arc(0, 0, 4, 0, Math.PI * 2); g.fill();
+    // numbers on the rim, every third so it reads at this size
+    for (let i = 0; i < 37; i += 3) { const a = wa + ((i + 0.5) / 37) * Math.PI * 2; drawText(g, '' + WHEEL[i], Math.round(Math.cos(a) * (R - 9)), Math.round(Math.sin(a) * (R - 9)) - 3, '#e8e0d0', { align: 'center' }); }
+    // the ball
+    if (this.phase !== 'bet') { const bx = Math.cos(this.ballA) * this.ballR, by = Math.sin(this.ballA) * this.ballR; g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.arc(bx + 1, by + 1, 3, 0, Math.PI * 2); g.fill(); g.fillStyle = '#f4f0e8'; g.beginPath(); g.arc(bx, by, 3, 0, Math.PI * 2); g.fill(); }
+    g.restore();
+    // the layout, at the right: which bet, how much
+    const lx = 200;
+    drawText(g, 'BET', lx, 44, '#8a92a4'); drawText(g, 'LEFT/RIGHT to choose', lx + 60, 44, '#5a6070');
+    RBETS.forEach((b, i) => { const col = i % 3, row = Math.floor(i / 3); const x = lx + col * 70, y = 56 + row * 14; const on = i === this.bet; UI.panel(g, x, y - 2, 64, 12, on ? 0.9 : 0.5); drawText(g, b.t + (b.k === 'num' ? ' ' + this.num : ''), x + 4, y, on ? '#f8f0d8' : '#c8ccd8'); drawText(g, `${b.pays}:1`, x + 60, y, '#8a92a4', { align: 'right' }); });
+    if (RBETS[this.bet].k === 'num') drawText(g, 'UP/DOWN picks the number', lx, 112, '#5a6070'); else drawText(g, `UP/DOWN sets the stake: $${RAMTS[this.amt]}`, lx, 112, '#e8c84a');
+    if (RBETS[this.bet].k === 'num') drawText(g, `Stake $${RAMTS[this.amt]}`, lx, 122, '#e8c84a');
+    if (this.hist.length) drawText(g, 'Last: ' + this.hist.join(' '), lx, 136, '#8a92a4');
+    if (this.phase === 'spin') drawText(g, this.settled ? `${this.result}.` : this.t < this.dropT ? 'Dutch spins. The ball goes the other way.' : 'The ball drops...', lx, 150, '#c8ccd8');
+    if (this.phase === 'done') drawText(g, this.msg + (this.pay > 0 ? `  +$${this.pay}` : `  -$${-this.pay}`), lx, 150, this.pay > 0 ? '#8ae88a' : '#e86a6a');
+    if (this.phase === 'bet') UI.drawHint(g, `${UI.keyName('act')} spin ($${RAMTS[this.amt]})   ${UI.keyName('back')} leave`);
+    else if (this.phase === 'done') Bar.draw(g, [{ t: 'Bet again' }, { t: 'Leave the wheel' }], this.sel || 0);
   }
 }
 
@@ -6491,7 +6543,7 @@ function nearest() {
     else if (Math.abs(G.px - sp.clocks) < 16 && bd > 14) best = { kind: 'clocks', label: 'The clocks' };
     else if (mine && Math.abs(G.px - sp.table) < 16 && bd > 14) best = { kind: 'table', label: 'Table' };
   }
-  if (G.scene === 'casino') { const sp = INTERIORS.casino.spots; if (Math.abs(G.px - sp.slots) < 14 && bd > 14) best = { kind: 'slots', label: 'The machine' }; else if (Math.abs(G.px - sp.poker) < 12 && bd > 12) best = { kind: 'poker', label: 'The poker table' }; }
+  if (G.scene === 'casino') { const sp = INTERIORS.casino.spots; if (Math.abs(G.px - sp.roulette) < 16 && bd > 14) best = { kind: 'roulette', label: 'The wheel' }; else if (Math.abs(G.px - sp.poker) < 12 && bd > 12) best = { kind: 'poker', label: 'The poker table' }; }
   if (G.scene === 'cemetery') { if (Math.abs(G.px - 240) < 24 && bd > 20) best = { kind: 'grave', label: 'Ruth Ashby' }; else if (Beats.S().stoneIn && Math.abs(G.px - 375) < 20 && bd > 20) best = { kind: 'grave2', label: 'Hector Ortega' }; }
   if (G.scene === 'garden') { if (Math.abs(G.px - GARDEN.spots.beds) < 70 && bd > 20) best = { kind: 'beds', label: Garden.stage() === 0 ? 'The weeds' : 'The beds' }; else if (Math.abs(G.px - GARDEN.spots.bench) < 12 && bd > 12) best = { kind: 'bench', label: "Hector's bench" }; }
   if (G.scene === 'lane' && House.S().listed && Math.abs(G.px - LANE.spots.sign) < 14 && bd > 14) best = { kind: 'sign', label: House.S().owner ? 'SOLD' : 'FOR SALE' };
@@ -6514,7 +6566,7 @@ function interact(n) {
   if (n.kind === 'mailbox') { mailLetter(); return; }
   if (n.kind === 'sign') { House.sign(); return; }
   if (n.kind === 'beds') { Garden.menu(); return; }
-  if (n.kind === 'slots') { Casino.slotsMenu(); return; }
+  if (n.kind === 'roulette') { Casino.rouletteMenu(); return; }
   if (n.kind === 'poker') { Casino.pokerMenu(); return; }
   if (n.kind === 'grave') { const b = Beats.S(); Dlg.run([narr(`RUTH ASHBY, 1939. Beside it, WALTER J. ASHBY, 1937, and a line ${b.walterEpitaph === 'type' ? 'that says HE SET THE TYPE' : b.walterEpitaph === 'bus' ? 'that says HE WAITED FOR THE 14' : 'left blank'}.${G.chars.walter.dead ? ' The second date is cut now. The stonemason spelled Ashby right the first time.' : ''}`)]); return; }
   if (n.kind === 'grave2') { Dlg.run([narr('HECTOR ORTEGA. HE FIXED THINGS. Grey, not black. There is a tamale on the base, wrapped in foil, and a pigeon considering it.')]); return; }
