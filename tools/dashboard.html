@@ -24,7 +24,10 @@ textarea:hover{border-color:var(--line)}textarea:focus{outline:none;border-color
 .row.narr textarea{color:var(--narr);font-style:italic}.row.you textarea{color:var(--you)}.row.label textarea{color:var(--label)}.row.pool textarea{color:var(--pool)}
 .x{color:var(--dim2);cursor:pointer;text-align:center;padding-top:3px}.x:hover{color:var(--bad)}
 .meta{color:var(--dim2);font-size:11px;padding-left:6px}.meta b{color:var(--dim);font-weight:normal}
-.src{background:var(--bg3);border:1px solid var(--line);padding:6px 10px;margin:4px 0 6px 66px;white-space:pre;overflow:auto;color:var(--dim);font-size:11.5px;border-radius:3px}.src .hl{color:var(--fg)}
+.src{background:var(--bg3);border:1px solid var(--line);margin:4px 0 6px 66px;color:var(--dim);font-size:11.5px;border-radius:3px}.src.dirty{border-color:var(--acc)}.src.err{border-color:var(--bad)}
+.srchead{display:flex;justify-content:space-between;align-items:center;padding:4px 10px;border-bottom:1px solid var(--line);color:var(--dim2)}.srcbtns{display:flex;gap:10px;align-items:center}.srchead .hint{color:var(--dim2)}.srchead button{padding:2px 8px;font-size:11px}
+.srcbody{display:grid;grid-template-columns:44px 1fr}.nums{padding:6px 0;text-align:right;color:var(--dim2);user-select:none;overflow:hidden;line-height:1.5}.nums span{display:block;padding-right:8px}.nums .hl{color:var(--acc)}
+.srcta{width:100%;background:transparent;border:none;color:var(--fg);font:inherit;font-size:11.5px;line-height:1.5;padding:6px 10px;resize:none;white-space:pre;overflow-x:auto;overflow-y:hidden;border-left:1px solid var(--line)}.srcta:focus{outline:none;background:var(--bg2)}
 .add{display:grid;grid-template-columns:1fr 240px 56px 56px 80px;gap:8px;margin:10px 0 0 66px;align-items:center}.add input{background:var(--bg);border:1px solid var(--line);color:var(--fg);font:inherit;padding:4px 6px;border-radius:2px}.add input:focus{outline:none;border-color:var(--acc)}
 /* timeline */
 .tl{position:relative;margin-top:8px}.ruler{display:grid;grid-template-columns:200px 1fr;position:sticky;top:0;background:var(--bg);z-index:2;border-bottom:1px solid var(--line);padding-bottom:4px}
@@ -37,26 +40,35 @@ textarea:hover{border-color:var(--line)}textarea:focus{outline:none;border-color
 .lbl{position:absolute;top:4px;font-size:10.5px;color:var(--dim);white-space:nowrap;pointer-events:none;padding-left:4px}
 .today{position:absolute;top:0;bottom:0;width:1px;background:var(--dim2)}
 #pop{position:fixed;background:var(--bg2);border:1px solid var(--acc);padding:10px 12px;z-index:9;border-radius:4px;box-shadow:0 8px 30px rgba(0,0,0,.5);display:none;max-width:420px}#pop .c{color:var(--dim);margin-bottom:8px;white-space:pre-wrap}#pop input{width:60px;background:var(--bg);border:1px solid var(--line);color:var(--fg);font:inherit;padding:3px 6px}
+.money{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap}.money .cur{color:var(--dim)}.mval{width:78px;background:var(--bg);border:1px solid var(--line);color:var(--acc);font:inherit;padding:3px 6px;border-radius:2px;text-align:right}.mval:focus{outline:none;border-color:var(--acc);background:var(--bg2)}
+.mlabel{padding-top:4px}.formula{display:block;color:var(--dim);font-size:11px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:350px}.mrow{padding:5px 0;border-bottom:1px solid #14171c}.mrow .meta .g{display:inline;padding:0;color:var(--dim2)}.mrow .meta .g:hover{color:var(--acc)}
 .legend{color:var(--dim);margin:6px 0 12px}.legend span{margin-right:14px}
 kbd{border:1px solid var(--line);border-radius:3px;padding:0 4px;color:var(--dim)}
+.git{color:var(--dim);white-space:nowrap;cursor:pointer;padding:3px 8px;border:1px solid transparent;border-radius:3px}.git:hover{border-color:var(--line)}.git.behind{color:var(--acc)}.git.ahead{color:var(--say)}.git.bad{color:var(--bad)}
+#gitpop{position:fixed;top:46px;right:14px;width:520px;background:var(--bg2);border:1px solid var(--acc);padding:12px 14px;z-index:9;border-radius:4px;box-shadow:0 8px 30px rgba(0,0,0,.5);display:none}
+#gitpop h3{margin:0 0 8px;font-size:12.5px;color:var(--acc);font-weight:600}#gitpop .info{color:var(--dim);margin-bottom:8px;white-space:pre-wrap}#gitpop .info b{color:var(--fg);font-weight:normal}
+#gitpop input[type=text]{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--fg);font:inherit;padding:5px 8px;border-radius:2px;margin-bottom:8px}#gitpop input[type=text]:focus{outline:none;border-color:var(--acc)}
+#gitpop .log{color:var(--dim);white-space:pre-wrap;margin-top:8px;max-height:60vh;overflow:auto}#gitpop .log.ok{color:var(--ok)}#gitpop .log.bad{color:var(--bad)}#gitpop .btns{display:flex;gap:8px;align-items:center}#gitpop .btns .r{margin-left:auto;color:var(--dim2);cursor:pointer}
+.hunk{border:1px solid var(--line);border-radius:3px;padding:6px 8px;margin:6px 0}.hunk .f{color:var(--dim2);font-size:11px;margin-bottom:4px}.hunk label{display:grid;grid-template-columns:16px 52px 1fr;gap:4px;align-items:start;cursor:pointer;padding:3px 0;color:var(--fg)}.hunk label .t{white-space:pre-wrap}.hunk input{margin:3px 0 0;accent-color:var(--acc)}.hunk label .k{color:var(--dim)}.hunk label b{color:var(--acc);font-weight:normal;background:rgba(232,200,74,.1);border-radius:2px}.hunk label .ctx{color:var(--dim)}
 </style></head><body>
-<div id="top"><span class="t">99 DAYS</span><span class="path">src/*.js</span><input id="q" placeholder="search lines  (name, word, file)"><button id="saveAll" disabled>save changes</button><button id="build" class="primary">build index.html</button><span id="status">loading</span></div>
+<div id="top"><span class="t">99 DAYS</span><span class="path">src/*.js</span><input id="q" placeholder="search lines  (name, word, file)"><button id="saveAll" disabled>save changes</button><button id="build" class="primary">build index.html</button><button id="sync" title="commit, pull, rebuild, push">sync</button><span id="git" class="git" title="git"></span><span id="status">loading</span></div>
 <div id="side"></div>
 <div id="main"></div>
 <div id="pop"></div>
+<div id="gitpop"></div>
 <script>
-const $ = s => document.querySelector(s); let DATA = null; let view = { kind: 'char', id: 'amos' }; const dirty = new Map();
+const $ = s => document.querySelector(s); let DATA = null; Object.defineProperty(window, "DATA", { get: () => DATA }); let view = { kind: 'char', id: 'amos' }; const dirty = new Map();
 const KIND = { say: 'say', sayPick: 'say', sayExpr: 'say', narr: 'narr', narrPick: 'narr', narrExpr: 'narr', you: 'you', label: 'label', pool: 'pool', poolInline: 'pool' };
 const status = (t, c) => { const s = $('#status'); s.textContent = t; s.className = c || ''; };
 async function load() { status('loading'); DATA = await (await fetch('/api/data')).json(); dirty.clear(); $('#saveAll').disabled = true; renderSide(); render(); status(`${DATA.items.length} lines, ${DATA.gates.length} day gates`); }
 function charsList() { const counts = {}; for (const it of DATA.items) counts[it.who] = (counts[it.who] || 0) + 1; const order = ['amos', 'mei', 'walter', 'nadia', 'nora', 'sol', 'theo', 'busker', 'emmett', 'signe', 'birdie', 'morrow', 'jo', 'doctor', 'granny', 'kid', 'worker', 'owner', 'pryor', 'lena', 'marsh', 'mrsLin', 'dutch', 'lou', 'widow', 'samDad', 'desk', 'voice', 'caller', 'towerman', 'dog', 'system']; const ids = [...new Set(order.concat(Object.keys(counts)))].filter(k => counts[k]); return ids.map(id => ({ id, name: DATA.names[id] || id, n: counts[id] })); }
 function renderSide() {
-  const s = $('#side'); let h = '<h4>Views</h4>'; h += `<a data-v="timeline" class="${view.kind === 'timeline' ? 'on' : ''}">Timeline<span class="n">1-99</span></a>`; h += `<a data-v="gates" class="${view.kind === 'gates' ? 'on' : ''}">Day gates<span class="n">${DATA.gates.length}</span></a>`;
+  const s = $('#side'); let h = '<h4>Views</h4>'; h += `<a data-v="timeline" class="${view.kind === 'timeline' ? 'on' : ''}">Timeline<span class="n">1-99</span></a>`; h += `<a data-v="gates" class="${view.kind === 'gates' ? 'on' : ''}">Day gates<span class="n">${DATA.gates.length}</span></a>`; h += `<a data-v="money" class="${view.kind === 'money' ? 'on' : ''}">Money<span class="n">${DATA.money.length}</span></a>`;
   h += '<h4>Characters</h4>'; for (const c of charsList()) h += `<a data-c="${c.id}" class="${view.kind === 'char' && view.id === c.id ? 'on' : ''}">${c.name}<span class="n">${c.n}</span></a>`;
   s.innerHTML = h; s.querySelectorAll('a').forEach(a => a.onclick = () => { view = a.dataset.v ? { kind: a.dataset.v } : { kind: 'char', id: a.dataset.c }; $('#q').value = ''; renderSide(); render(); $('#main').scrollTop = 0; });
 }
 function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-function render() { const q = $('#q').value.trim().toLowerCase(); if (q) return renderSearch(q); if (view.kind === 'timeline') return renderTimeline(); if (view.kind === 'gates') return renderGates(); renderChar(view.id); }
+function render() { const q = $('#q').value.trim().toLowerCase(); if (q) return renderSearch(q); if (view.kind === 'timeline') return renderTimeline(); if (view.kind === 'gates') return renderGates(); if (view.kind === 'money') return renderMoney(); renderChar(view.id); }
 function rowHtml(it) {
   const k = KIND[it.kind] || it.kind; const tree = it.depth ? '<span class="tree">' + '│ '.repeat(it.depth - 1) + (k === 'label' ? '├▸ ' : '│ ') + '</span>' : (k === 'label' ? '<span class="tree">▸ </span>' : '');
   const tag = k === 'say' ? (DATA.names[it.who] || it.who) : k === 'narr' ? '(narration)' : k === 'you' ? 'YOU' : k === 'label' ? 'CHOICE' : 'pool';
@@ -84,9 +96,21 @@ function renderSearch(q) {
   for (const it of items) { const key = (DATA.names[it.who] || it.who) + ' · ' + it.section; if (key !== last) { h += `<div class="sec"><div class="h"><b>${esc(key)}</b><span class="f">${it.file}</span></div></div>`; last = key; } h += rowHtml(it); }
   $('#main').innerHTML = h; wire();
 }
+// the source viewer: the lines around a match, editable in place, saved back to the file if they still parse
+function srcEditor(f, line, r) {
+  const div = document.createElement('div'); div.className = 'src'; div.dataset.src = f + '|' + line; const orig = r.lines.join('\n');
+  div.innerHTML = `<div class="srchead"><span>${esc(f)} · lines ${r.from}-${r.from + r.lines.length - 1}</span><span class="srcbtns"><span class="hint">edit here · <kbd>ctrl/cmd S</kbd> saves · <kbd>esc</kbd> closes</span><button class="srcsave" disabled>save lines</button></span></div><div class="srcbody"><div class="nums">${r.lines.map((l, i) => `<span class="${r.from + i === line ? 'hl' : ''}">${r.from + i}</span>`).join('')}</div><textarea class="srcta" spellcheck="false" wrap="off"></textarea></div>`;
+  const ta = div.querySelector('textarea'); ta.value = orig; const btn = div.querySelector('.srcsave'); const nums = div.querySelector('.nums');
+  const fitS = () => { ta.style.height = 'auto'; ta.style.height = (ta.scrollHeight + 2) + 'px'; nums.innerHTML = ta.value.split('\n').map((_, i) => `<span class="${r.from + i === line ? 'hl' : ''}">${r.from + i}</span>`).join(''); };
+  ta.oninput = () => { btn.disabled = ta.value === orig; div.classList.toggle('dirty', ta.value !== orig); fitS(); };
+  ta.onscroll = () => { nums.scrollTop = ta.scrollTop; };
+  const save = async () => { if (ta.value === orig) return; btn.disabled = true; const res = await post('/api/source/edit', { file: f, from: r.from, was: r.lines, text: ta.value }); if (res.ok) { status('lines saved', 'ok'); await load(); } else { status(res.error, 'bad'); btn.disabled = false; div.classList.add('err'); } };
+  btn.onclick = save; ta.onkeydown = ev => { if ((ev.metaKey || ev.ctrlKey) && ev.key === 's') { ev.preventDefault(); ev.stopPropagation(); save(); } if (ev.key === 'Escape') { div.remove(); } if (ev.key === 'Tab') { ev.preventDefault(); const a = ta.selectionStart; ta.value = ta.value.slice(0, a) + '  ' + ta.value.slice(ta.selectionEnd); ta.selectionStart = ta.selectionEnd = a + 2; ta.oninput(); } };
+  setTimeout(fitS, 0); return div;
+}
 function wire() {
   document.querySelectorAll('textarea').forEach(t => { fit(t); t.oninput = () => { fit(t); const it = DATA.items.find(i => i.id === t.dataset.id); const row = t.closest('.row'); if (t.value !== it.text) { dirty.set(it.id, t.value); row.classList.add('dirty'); } else { dirty.delete(it.id); row.classList.remove('dirty'); } $('#saveAll').disabled = dirty.size === 0; }; t.onblur = () => { if (dirty.has(t.dataset.id)) saveOne(t.dataset.id); }; });
-  document.querySelectorAll('.g[data-src]').forEach(g => g.onclick = async () => { const [f, line] = g.dataset.src.split('|'); const row = g.closest('.row'); const ex = row.nextElementSibling; if (ex && ex.classList.contains('src')) { ex.remove(); return; } const r = await (await fetch(`/api/source?f=${encodeURIComponent(f)}&line=${line}`)).json(); const div = document.createElement('div'); div.className = 'src'; div.innerHTML = r.lines.map((l, i) => `<span class="${r.from + i == line ? 'hl' : ''}">${String(r.from + i).padStart(4)}  ${esc(l.slice(0, 220))}</span>`).join('\n'); row.after(div); });
+  document.querySelectorAll('.g[data-src]').forEach(g => g.onclick = async (ev) => { ev.stopPropagation(); const [f, line] = g.dataset.src.split('|'); const row = g.closest('.row'); const ex = row.nextElementSibling; if (ex && ex.classList.contains('src')) { if (ex.dataset.src === g.dataset.src) { ex.remove(); return; } ex.remove(); } const r = await (await fetch(`/api/source?f=${encodeURIComponent(f)}&line=${line}`)).json(); row.after(srcEditor(f, +line, r)); });
   document.querySelectorAll('.x[data-x]').forEach(x => x.onclick = async () => { const it = DATA.items.find(i => i.id === x.dataset.x); if (!confirm('Remove this pool line from the game?\n\n' + it.text)) return; const r = await post('/api/pool/remove', { file: it.file, callStart: it.pool.callStart, callEnd: it.pool.callEnd }); if (r.ok) { status('line removed', 'ok'); await load(); } else status(r.error, 'bad'); });
 }
 function fit(t) { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; }
@@ -135,6 +159,25 @@ function renderTimeline() {
   h += '</div>'; $('#main').innerHTML = h;
   document.querySelectorAll('[data-g]').forEach(el => el.onclick = e => gatePop(e, el.dataset.g));
 }
+function renderMoney() {
+  let h = `<h2>money<small>every price, fee, wage and payout that is a number in the code. Change a number and every place it is written in that function changes with it.</small></h2>`;
+  let cat = '';
+  for (const e of DATA.money) {
+    if (e.cat !== cat) { cat = e.cat; h += `<div class="sec"><div class="h"><b>${esc(cat)}</b></div></div>`; }
+    const one = e.kind !== 'formula' && e.kind !== 'list';
+    let val;
+    if (one) val = `<span class="money"><span class="cur">$</span><input type="text" class="mval" data-m="${e.id}" value="${esc(String(e.value))}" spellcheck="false"></span>`;
+    else { // several numbers inside one expression: one field per number, the expression shown around them
+      val = `<span class="formula">${esc(e.value)}</span><span class="money">` + e.spots.map((sp, i) => `<input type="text" class="mval" data-m="${e.id}" data-i="${i}" value="${esc(sp.was)}" spellcheck="false" title="${esc(sp.ctx)}">`).join('') + `</span>`; }
+    const where = e.spots.map(sp => `<span class="g" data-src="${e.file}|${sp.line}" title="${esc(sp.ctx)}">${sp.kind} ${sp.line}</span>`).join(' ');
+    h += `<div class="row mrow" style="grid-template-columns:${one ? '150px' : '360px'} 1fr 160px"><div>${val}</div><div><div class="mlabel">${esc(e.label)}</div><div class="meta"><b>${esc(DATA.names[e.who] || e.who)}</b> · ${esc(e.section)} <span style="color:var(--dim2)">${e.file}</span> · ${where}</div></div><div class="meta" style="padding-top:6px">${e.spots.length > 1 && one ? e.spots.length + ' places' : ''}</div></div>`;
+  }
+  $('#main').innerHTML = h; wire();
+  document.querySelectorAll('.mval').forEach(inp => { const e = DATA.money.find(x => x.id === inp.dataset.m); const orig = inp.value;
+    const commit = async () => { const v = inp.value.trim(); if (v === orig) return; if (!/^\d+(\.\d+)?$/.test(v)) { status('numbers only', 'bad'); inp.value = orig; return; }
+      const spots = inp.dataset.i !== undefined ? [e.spots[+inp.dataset.i]] : e.spots; const r = await post('/api/money', { spots, value: v }); if (r.ok) { status(`${e.label}: ${orig} → ${v}`, 'ok'); await load(); } else { status(r.error, 'bad'); inp.value = orig; } };
+    inp.onkeydown = ev => { if (ev.key === 'Enter') inp.blur(); if (ev.key === 'Escape') { inp.value = orig; inp.blur(); } }; inp.onblur = commit; });
+}
 function renderGates() {
   const gs = DATA.gates.slice().sort((a, b) => a.day - b.day || a.file.localeCompare(b.file)); let h = `<h2>day gates<small>${gs.length} numbers in the code that compare against the day. Click a number to change it.</small></h2>`;
   for (const g of gs) h += `<div class="row" style="grid-template-columns:58px 92px 120px 1fr"><div class="g" data-src="${g.file}|${g.line}">${g.line}</div><div class="tag say">${esc(DATA.names[g.who] || g.who)}</div><div><span style="color:var(--acc);cursor:pointer" data-g="${g.id}">${g.op === 'const' ? '=' : g.op} day ${g.day}</span></div><div style="color:var(--dim)">${esc(g.section)} <span style="color:var(--dim2)">${g.file}</span><br>${esc(g.ctx)}</div></div>`;
@@ -148,6 +191,42 @@ function gatePop(e, id) {
   $('#gsave').onclick = save; $('#gd').onkeydown = ev => { if (ev.key === 'Enter') save(); if (ev.key === 'Escape') p.style.display = 'none'; };
 }
 document.addEventListener('click', e => { if (!e.target.closest('#pop') && !e.target.dataset.g) $('#pop').style.display = 'none'; });
+
+// ---- git sync: commit here, pull theirs, rebuild, push ----
+let GIT = null;
+function gitPill() { const el = $('#git'); if (!GIT) { el.textContent = ''; return; } if (!GIT.repo) { el.textContent = 'no git'; el.className = 'git'; el.title = GIT.error; return; }
+  const parts = []; if (GIT.behind) parts.push(`${GIT.behind} new from friend`); if (GIT.dirty.length) parts.push(`${GIT.dirty.length} changed here`); if (GIT.ahead) parts.push(`${GIT.ahead} to push`);
+  if (!GIT.remote) parts.push('no remote'); else if (GIT.fetchError) parts.push('offline');
+  el.textContent = GIT.branch + (parts.length ? ' · ' + parts.join(', ') : ' · in sync'); el.className = 'git ' + (GIT.behind ? 'behind' : (GIT.dirty.length || GIT.ahead) ? 'ahead' : GIT.fetchError ? 'bad' : ''); el.title = GIT.last || ''; }
+async function gitRefresh(fetch) { try { GIT = await (await window.fetch('/api/git/status' + (fetch ? '?fetch=1' : ''))).json(); } catch (e) { GIT = null; } gitPill(); }
+function gitOpen() { const p = $('#gitpop'); if (p.style.display === 'block') { p.style.display = 'none'; return; }
+  let info = ''; if (!GIT || !GIT.repo) info = (GIT && GIT.error) || 'git not available'; else {
+    info = `branch <b>${esc(GIT.branch)}</b>` + (GIT.remote ? ` → ${esc(GIT.remote)}` : ' (no remote yet)') + (GIT.last ? `\nlast: ${esc(GIT.last)}` : '');
+    if (GIT.dirty.length) info += `\n\nchanged here: ${GIT.dirty.slice(0, 6).map(esc).join(', ')}${GIT.dirty.length > 6 ? ' …' : ''}`;
+    if (GIT.behind) info += `\n\nyour friend pushed ${GIT.behind} commit${GIT.behind === 1 ? '' : 's'}:\n  ${GIT.theirs.map(esc).join('\n  ')}`;
+    if (GIT.fetchError) info += `\n\ncould not reach ${esc(GIT.remote)}: ${esc(GIT.fetchError)}`; }
+  p.innerHTML = `<h3>sync</h3><div class="info">${info}</div><input id="gmsg" type="text" placeholder="what did you change? (commit message)" value="dialogue edits"><div class="btns"><button id="gdo" class="primary">commit, pull, build, push</button><button id="gfetch">check</button><span class="r" id="gx">close</span></div><div class="log" id="glog"></div>`;
+  p.style.display = 'block'; $('#gx').onclick = () => p.style.display = 'none'; $('#gfetch').onclick = async () => { $('#glog').className = 'log'; $('#glog').textContent = 'checking...'; await gitRefresh(true); p.style.display = 'none'; gitOpen(); };
+  $('#gmsg').onkeydown = ev => { if (ev.key === 'Enter') $('#gdo').click(); if (ev.key === 'Escape') p.style.display = 'none'; };
+  $('#gdo').onclick = async () => { if (dirty.size) await saveAll(); const b = $('#gdo'); b.disabled = true; $('#glog').className = 'log'; $('#glog').textContent = 'syncing...'; status('syncing...');
+    const r = await post('/api/git/sync', { message: $('#gmsg').value }); b.disabled = false; gitResult(r); };
+  $('#gmsg').focus(); $('#gmsg').select(); }
+async function gitResult(r) { const lines = (r.log || []).slice();
+  if (r.ok) { $('#glog').className = 'log ok'; $('#glog').textContent = lines.join('\n') + '\nin sync.'; status('synced', 'ok'); GIT = r.status; gitPill(); const inf = $('#gitpop .info'); if (inf && GIT.repo) inf.innerHTML = `branch <b>${esc(GIT.branch)}</b> → ${esc(GIT.remote)}\nlast: ${esc(GIT.last)}`; await load(); return; }
+  if (r.conflict) { gitConflict(r.conflict, lines); status('conflict: pick lines', 'bad'); return; }
+  $('#glog').className = 'log bad'; $('#glog').textContent = lines.concat([r.error]).join('\n'); status('sync failed', 'bad'); await gitRefresh(false); }
+// show only the part of each conflicting hunk that actually differs, with a little context
+function diffBits(a, b) { let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++; let j = 0; while (j < a.length - i && j < b.length - i && a[a.length - 1 - j] === b[b.length - 1 - j]) j++;
+  const ctx = 28; const pre = a.slice(Math.max(0, i - ctx), i).replace(/^\S*\s/, ''), post = a.slice(a.length - j, a.length - j + ctx).replace(/\s\S*$/, '');
+  return { pre: (i > ctx ? '…' : '') + pre, a: a.slice(i, a.length - j), b: b.slice(i, b.length - j), post: post + (j > ctx ? '…' : '') }; }
+function gitConflict(c, lines) { const g = $('#glog'); g.className = 'log'; let h = lines.map(esc).join('\n') + '\n\n';
+  c.hunks.forEach((hk, n) => { const d = diffBits(hk.theirs.trim(), hk.mine.trim()); h += `<div class="hunk"><div class="f">${esc(hk.file)}</div>` +
+    `<label><input type="radio" name="h${n}" value="mine" checked><span class="k">yours</span><span class="t"><span class="ctx">${esc(d.pre)}</span><b>${esc(d.b) || '(nothing)'}</b><span class="ctx">${esc(d.post)}</span></span></label>` +
+    `<label><input type="radio" name="h${n}" value="theirs"><span class="k">theirs</span><span class="t"><span class="ctx">${esc(d.pre)}</span><b>${esc(d.a) || '(nothing)'}</b><span class="ctx">${esc(d.post)}</span></span></label></div>`; });
+  h += `<div class="btns" style="margin-top:8px"><button id="gmerge" class="primary">keep these and push</button><span style="color:var(--dim2)">both versions stay in the history either way</span></div>`;
+  g.innerHTML = h; $('#gmerge').onclick = async () => { const choices = c.hunks.map((hk, n) => ({ file: hk.file, idx: hk.idx, pick: document.querySelector(`input[name=h${n}]:checked`).value })); $('#gmerge').disabled = true; status('merging...'); const r = await post('/api/git/resolve', { message: c.message, choices }); gitResult(r); }; }
+$('#sync').onclick = gitOpen; $('#git').onclick = gitOpen;
+gitRefresh(true); setInterval(() => { if ($('#gitpop').style.display !== 'block') gitRefresh(true); }, 90000);
 load();
 </script>
 </body></html>

@@ -125,7 +125,51 @@ function collect() {
   }
   // needs catalog for new pool lines
   const needs = [...new Set(items.filter(i => i.pool && i.pool.need).map(i => i.pool.need))].sort();
-  return { files, items, gates, needs, names: NAMES };
+  return { files, items, gates, needs, names: NAMES, money: collectMoney() };
+}
+
+// ---------------- money ----------------
+// Every price, fee, wage and payout that is a number in the code. One price is often written in three places on a line
+// (the menu label '$35', the check G.money < 35, and spend(35)); those are grouped so one edit changes all of them.
+const MONEY_CONST = { RENT: 'Rent, every Monday', CURE_COST: "Halvorsen's cure (the ladder)", NANO_COST: 'The nano treatment', HOUSE_COST: "Walter's house", LEASE_FEE: "KHRL's lease (the radio station)" };
+const GAME_NAMES = { DishGame: 'Dish shift at the diner', CrateGame: 'Crates at the loading dock', DeliveryGame: 'Delivery run', DataGame: 'Data entry (the ladder)', CutsGame: 'The cuts (VP office)', RouletteGame: 'Roulette', BlackjackGame: 'Blackjack', HoldemGame: 'Poker' };
+function collectMoney() {
+  const files = fs.readdirSync(SRC).filter(f => /^(07|08|09|10)/.test(f) && f.endsWith('.js')).sort(); const out = []; const groups = {};
+  for (const file of files) {
+    const S = scan(file); const src = S.src; const inStr = pos => S.toks.some(t => pos > t.start && pos < t.end);
+    const lineOf = pos => src.slice(0, pos).split('\n').length; const ctxOf = line => S.lines[line - 1].trim().slice(0, 150);
+    const spot = (pos, len, kind) => ({ file, start: pos, end: pos + len, was: src.slice(pos, pos + len), line: lineOf(pos), kind, ctx: ctxOf(lineOf(pos)) });
+    // class names, for the pay formulas
+    const classes = []; { const re = /^class (\w+)/gm; let m; while ((m = re.exec(src))) classes.push({ pos: m.index, name: m[1] }); }
+    const classAt = pos => { let b = null; for (const c of classes) if (c.pos <= pos) b = c; return b ? b.name : null; };
+    const who = pos => { const def = S.defAt(lineOf(pos)); return (def && (SECTION2CHAR[def.name] || (def.obj && OBJ2CHAR[def.obj]))) || FILE2CHAR[file] || 'system'; };
+    const sect = pos => { const def = S.defAt(lineOf(pos)); return def ? (def.obj ? def.obj + '.' + def.name : def.name) : classAt(pos) || '(top level)'; };
+    const objOf = pos => { const def = S.defAt(lineOf(pos)); return (def && def.obj) || classAt(pos) || file; };
+    const labelOnLine = pos => { const ln = S.lines[lineOf(pos) - 1]; const col = pos - (src.lastIndexOf('\n', pos - 1) + 1); const before = ln.slice(0, col); const m = before.match(/\bt:\s*(['"`])((?:\\.|(?!\1).)*)\1(?![^{]*\bt:)/g); if (!m) return null; const last = m[m.length - 1]; const mm = last.match(/\bt:\s*(['"`])((?:\\.|(?!\1).)*)\1/); return mm ? mm[2].replace(/\$\{[^}]*\}/g, '…') : null; };
+    const push = (e) => out.push(Object.assign({ file, who: who(e.spots[0].start), section: sect(e.spots[0].start) }, e));
+    let m;
+    // constants
+    { const re = /\b([A-Z][A-Z_]*(?:COST|FEE|RENT|PRICE|WAGE))\s*=\s*(\d+)/g; while ((m = re.exec(src))) { if (/TALK/.test(m[1])) continue; const pos = m.index + m[0].lastIndexOf(m[2]); push({ id: file + ':' + pos, cat: 'Rent, goals & fees', label: MONEY_CONST[m[1]] || m[1], name: m[1], value: +m[2], kind: 'const', spots: [spot(pos, m[2].length, 'const')] }); } }
+    // lists of amounts: roulette wagers, poker buy-ins
+    { const re = /\b(RAMTS|ins)\s*=\s*\[([^\]]*)\]/g; while ((m = re.exec(src))) { const re2 = /\d+/g; let k; const base = m.index + m[0].indexOf(m[2]); const spots = []; while ((k = re2.exec(m[2]))) spots.push(spot(base + k.index, k[0].length, 'list')); if (spots.length < 2) continue; push({ id: file + ':' + m.index, cat: 'Casino', label: m[1] === 'RAMTS' ? 'Roulette wager sizes' : 'Poker buy-ins', value: spots.map(x => x.was).join(', '), kind: 'list', spots }); } }
+    // Mei's application fee
+    { const re = /feeNeeded\(\)\s*\{\s*return[^}]*?(\d+)\s*:\s*(\d+)/g; while ((m = re.exec(src))) { const p1 = m.index + m[0].lastIndexOf(m[1] + ' :'), p2 = m.index + m[0].length - m[2].length; push({ id: file + ':' + p1, cat: 'Spending', label: "Mei's application fee, if she trusts you", value: +m[1], kind: 'fee', spots: [spot(p1, m[1].length, 'fee')] }); push({ id: file + ':' + p2, cat: 'Spending', label: "Mei's application fee, if she doesn't", value: +m[2], kind: 'fee', spots: [spot(p2, m[2].length, 'fee')] }); } }
+    // shop prices: price: N with a name on the same line
+    { const re = /\bprice:\s*(\d+)/g; while ((m = re.exec(src))) { const pos = m.index + m[0].length - m[1].length; const ln = S.lines[lineOf(pos) - 1]; const col = pos - (src.lastIndexOf('\n', pos - 1) + 1); const nms = ln.slice(0, col).match(/\bname:\s*(['"])((?:\\.|(?!\1).)*)\1/g); const nm = nms ? nms[nms.length - 1].match(/\bname:\s*(['"])((?:\\.|(?!\1).)*)\1/) : null; const keys = ln.slice(0, col).match(/\b(\w+):\s*\{/g); const key = keys ? keys[keys.length - 1].match(/(\w+)/) : ln.match(/\b(\w+)\s*=\s*\{/); const isFood = /FOOD/.test(ln) || /^\s*\w+:\s*\{\s*name/.test(ln) && file === '08_story_a.js'; push({ id: file + ':' + pos, cat: isFood ? "Lin's Market" : "Sol's pawn shop", label: nm ? nm[2].replace(/\\'/g, "'") : (key ? key[1] : 'item'), name: key ? key[1] : null, value: +m[1], kind: 'price', spots: [spot(pos, m[1].length, 'price')] }); } }
+    // food defined inline as FOOD.x = { name, price }
+    // casino wagers and fields
+    { const re = /\b(wage|cost|buyin|bb|down|pot|stack|blind|ante)\s*:\s*(\d+)/g; while ((m = re.exec(src))) { if (/^(07|09d|09s)/.test(file) === false || +m[2] === 0) continue; const pos = m.index + m[0].length - m[2].length; const ln = S.lines[lineOf(pos) - 1]; const nm = ln.match(/\bname:\s*(['"`])((?:\\.|(?!\1).)*)\1/) || ln.match(/\bt:\s*(['"`])((?:\\.|(?!\1).)*)\1/); push({ id: file + ':' + pos, cat: file.startsWith('09s') ? 'Casino' : 'Work & pay', label: (nm ? nm[2].replace(/\$\{[^}]*\}/g, '…') + ' · ' : '') + m[1], value: +m[2], kind: 'field', spots: [spot(pos, m[2].length, 'field')] }); } }
+    // pay formulas: this.pay = ... ; and this.base = N
+    { const re = /this\.(pay|base)\s*=\s*([^;]+);/g; while ((m = re.exec(src))) { if (/this\.wager|pay - this|this\.pay = -/.test(m[0])) continue; const expr = m[2]; const re2 = /(?<![\w.])\d+(?:\.\d+)?(?![\w])/g; let k; const base = m.index + m[0].indexOf(expr); const spots = []; while ((k = re2.exec(expr))) spots.push(spot(base + k.index, k[0].length, 'formula')); if (!spots.length || /^\s*\d+\s*$/.test(expr) && m[1] === 'pay') continue; const cls = classAt(m.index); const fkey = file + '|' + cls + '|' + expr; const prev = out.find(e => e.fkey === fkey); if (prev) { prev.spots.push(...spots); continue; } push({ id: file + ':' + m.index, fkey, cat: 'Work & pay', label: (GAME_NAMES[cls] || cls || sect(m.index)) + (m[1] === 'base' ? ' · base pay' : ' · payout'), value: expr.replace(/this\./g, '').replace(/Math\./g, ''), kind: 'formula', spots }); } }
+    // spend / earn / threshold / '$N' labels, grouped by object + amount
+    { const res = [[/\bspend\((\d+)\)/g, 'spend'], [/\baddMoney\((-?\d+)\)/g, 'earn'], [/G\.money\s*(?:<|>=|<=|>)\s*(\d+)/g, 'check'], [/\$(\d+)(?![\d{])/g, 'label']];
+      for (const [re, kind] of res) { re.lastIndex = 0; while ((m = re.exec(src))) { const numTxt = m[1].replace('-', ''); const pos = m.index + m[0].lastIndexOf(numTxt); if (kind === 'label' && !inStr(pos)) continue; if (kind !== 'label' && inStr(pos)) continue; const v = +numTxt; if (kind === 'earn' && m[1].startsWith('-')) { /* paying out of pocket: still a cost */ } let key = file + '|' + objOf(pos) + '|' + v; if (kind === 'label') { const g0 = groups[key]; if (!(g0 && g0.spots.some(x => sect(x.start) === sect(pos)))) key += '|' + sect(pos); } const sp = spot(pos, numTxt.length, kind === 'earn' && m[1].startsWith('-') ? 'pay out' : kind); if (kind === 'label') { const tk = S.toks.find(t => pos > t.start && pos < t.end); if (tk) sp.str = decode(tk.raw).slice(0, 60); } if (!groups[key]) { groups[key] = { id: file + ':' + pos, file, cat: null, label: null, value: v, kind: 'amount', spots: [], who: who(pos), section: sect(pos), earn: false }; out.push(groups[key]); } const g = groups[key]; g.spots.push(sp); if (kind === 'earn' && !m[1].startsWith('-')) g.earn = true; const lb = labelOnLine(pos); if (lb && !g.label) g.label = lb; } }
+    }
+  }
+  for (const e of out) { if (e.kind === 'amount') { e.cat = e.earn ? 'Work & pay' : /09s/.test(e.file) ? 'Casino' : 'Spending'; const kinds = new Set(e.spots.map(x => x.kind)); if (kinds.size === 1 && kinds.has('label')) e.label = 'mentioned in: ' + (e.spots[0].str || e.label || e.section); else if (!e.label) { if (false) { } else if (kinds.size === 1 && kinds.has('check')) e.label = 'needs at least · ' + e.section; else e.label = (e.earn ? 'earn · ' : 'pay · ') + e.section; } e.spots.sort((a, b) => a.start - b.start); } }
+  const order = ['Rent, goals & fees', "Lin's Market", "Sol's pawn shop", 'Spending', 'Work & pay', 'Casino'];
+  out.sort((a, b) => order.indexOf(a.cat) - order.indexOf(b.cat) || a.file.localeCompare(b.file) || a.spots[0].start - b.spots[0].start);
+  return out;
 }
 
 // ---------------- writing ----------------
@@ -156,10 +200,100 @@ function addPool(body) {
   const stmt = `\nFRESH.${who} = FRESH.${who} || []; FRESH.${who}.push(L_(${args.join(', ')}));`;
   src = src.replace(/\s*$/, '') + stmt + '\n'; fs.writeFileSync(p, src); return { ok: true };
 }
+function editMoney(body) {
+  const v = String(body.value).trim(); if (!/^\d+(\.\d+)?$/.test(v)) return { ok: false, error: 'Numbers only.' };
+  const byFile = {}; for (const sp of body.spots || []) (byFile[sp.file] = byFile[sp.file] || []).push(sp);
+  for (const f of Object.keys(byFile)) { const p = path.join(SRC, f); let src = fs.readFileSync(p, 'utf8'); const sps = byFile[f].sort((a, b) => b.start - a.start);
+    for (const sp of sps) { if (src.slice(sp.start, sp.end) !== sp.was) return { ok: false, error: 'The file changed since it was loaded. Reload the dashboard.' }; src = src.slice(0, sp.start) + v + src.slice(sp.end); }
+    fs.writeFileSync(p, src); }
+  return { ok: true };
+}
+function editSource(body) {
+  // replace a handful of lines shown in the source viewer, if they are still what the viewer showed
+  const p = path.join(SRC, path.basename(body.file)); const lines = fs.readFileSync(p, 'utf8').split('\n'); const from = body.from - 1, n = (body.was || []).length;
+  if (lines.slice(from, from + n).join('\n') !== (body.was || []).join('\n')) return { ok: false, error: 'The file changed since it was loaded. Reload the dashboard.' };
+  const next = lines.slice(0, from).concat(String(body.text).replace(/\r/g, '').split('\n'), lines.slice(from + n)).join('\n');
+  try { new Function(next); } catch (e) { return { ok: false, error: 'That would break the file: ' + e.message }; }
+  fs.writeFileSync(p, next); return { ok: true };
+}
 function editGate(body) { return replaceRange(body.file, body.start, body.end, String(body.was), String(Math.max(1, Math.min(99, +body.day)))); }
 function build() {
   try { const out = cp.execSync('node build.js', { cwd: ROOT }).toString(); fs.copyFileSync(path.join(ROOT, 'dist', '99days.html'), path.join(ROOT, 'index.html')); return { ok: true, out: out.trim() + '\nindex.html updated.' }; }
   catch (e) { return { ok: false, error: (e.stdout || '').toString() + (e.stderr || '').toString() + e.message }; }
+}
+
+// ---------------- git sync ----------------
+// Two people, one repo: commit what changed here, pull what the other person pushed, rebuild, push.
+function git(args, opts) { return cp.execFileSync('git', args, Object.assign({ cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 20000 }, opts || {})).trim(); }
+function gitTry(args, opts) { try { return { ok: true, out: git(args, opts) }; } catch (e) { return { ok: false, out: ((e.stdout || '') + (e.stderr || '') || e.message).toString().trim() }; } }
+function gitStatus(fetch) {
+  if (!gitTry(['rev-parse', '--is-inside-work-tree']).ok) return { repo: false, error: 'This folder is not a git repository yet. Run: git init, then add a remote and push once.' };
+  const branch = gitTry(['rev-parse', '--abbrev-ref', 'HEAD']).out || '?';
+  const remote = gitTry(['remote']).out.split('\n').filter(Boolean)[0] || null;
+  const dirty = gitTry(['status', '--porcelain']).out.split('\n').filter(Boolean).map(l => l.replace(/^[ MADRCU?!]{1,2}\s+/, '').replace(/^.* -> /, ''));
+  let ahead = 0, behind = 0, fetched = false, fetchError = null, upstream = null;
+  if (remote) {
+    const up = gitTry(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']); if (up.ok) upstream = up.out;
+    if (fetch) { const f = gitTry(['fetch', '--quiet', remote], { timeout: 12000 }); fetched = f.ok; if (!f.ok) fetchError = f.out.split('\n')[0]; }
+    if (upstream) { const ab = gitTry(['rev-list', '--left-right', '--count', 'HEAD...@{u}']); if (ab.ok) { const m = ab.out.split(/\s+/); ahead = +m[0] || 0; behind = +m[1] || 0; } }
+  }
+  const last = gitTry(['log', '-1', '--format=%h %an, %ar: %s']).out;
+  const theirs = behind ? gitTry(['log', '--format=%an: %s', 'HEAD..@{u}']).out.split('\n').filter(Boolean).slice(0, 8) : [];
+  return { repo: true, branch, remote, upstream, dirty, ahead, behind, fetched, fetchError, last, theirs };
+}
+function conflictHunks() {
+  const files = gitTry(['diff', '--name-only', '--diff-filter=U']).out.split('\n').filter(Boolean); const hunks = [];
+  for (const f of files) { const txt = fs.readFileSync(path.join(ROOT, f), 'utf8'); const re = /^<<<<<<< [^\n]*\n([\s\S]*?)^=======\n([\s\S]*?)^>>>>>>> [^\n]*\n/gm; let m, i = 0; while ((m = re.exec(txt))) hunks.push({ file: f, idx: i++, theirs: m[1], mine: m[2] }); }
+  return hunks;
+}
+function applyChoices(choices) {
+  const byFile = {}; for (const c of choices) (byFile[c.file] = byFile[c.file] || {})[c.idx] = c.pick;
+  for (const f of Object.keys(byFile)) { const p = path.join(ROOT, f); let i = 0; const txt = fs.readFileSync(p, 'utf8').replace(/^<<<<<<< [^\n]*\n([\s\S]*?)^=======\n([\s\S]*?)^>>>>>>> [^\n]*\n/gm, (m, theirs, mine) => (byFile[f][i++] === 'theirs' ? theirs : mine)); fs.writeFileSync(p, txt); gitTry(['add', '--', f]); }
+}
+function finishSync(st, msg, committed, log) {
+  // rebuild so index.html matches the merged source, commit the build if it changed, push
+  const b = build(); if (!b.ok) return { ok: false, log, error: 'build failed after merge: ' + b.error };
+  log.push('rebuilt index.html');
+  if (gitTry(['status', '--porcelain']).out.trim()) { gitTry(['add', '-A']); const c = gitTry(['commit', '-q', '-m', committed ? msg + ' (build)' : 'build index.html']); if (c.ok) log.push('committed the build'); }
+  const push = gitTry(st.upstream ? ['push', '--quiet'] : ['push', '--quiet', '-u', st.remote, st.branch], { timeout: 30000 });
+  if (!push.ok) return { ok: false, log, error: 'push failed: ' + push.out.split('\n').filter(Boolean).slice(-2).join(' ') };
+  log.push('pushed to ' + st.remote + '/' + st.branch);
+  return { ok: true, log, status: gitStatus(false) };
+}
+function gitSync(body) {
+  const st = gitStatus(false); if (!st.repo) return { ok: false, error: st.error };
+  if (!st.remote) return { ok: false, error: 'No remote yet. Push this folder to GitHub once (git remote add origin ..., git push -u origin main), then sync from here.' };
+  if (fs.existsSync(path.join(git(['rev-parse', '--git-dir']), 'rebase-merge')) || fs.existsSync(path.join(git(['rev-parse', '--git-dir']), 'rebase-apply'))) return { ok: false, error: 'A merge is half done in this folder. Run: git rebase --abort in the terminal, then sync again.' };
+  const log = []; const msg = (body.message || '').trim() || 'dialogue edits';
+  const who = gitTry(['config', 'user.name']); if (!who.ok || !who.out) return { ok: false, error: 'git needs a name for commits. Run once: git config --global user.name "Your Name" and git config --global user.email "you@example.com"' };
+  // 1. commit what changed here
+  let committed = false;
+  if (st.dirty.length) { const a = gitTry(['add', '-A']); if (!a.ok) return { ok: false, error: a.out, log }; const c = gitTry(['commit', '-q', '-m', msg]); if (!c.ok) return { ok: false, error: c.out, log }; committed = true; log.push(`committed ${st.dirty.length} file${st.dirty.length === 1 ? '' : 's'}: "${msg}"`); }
+  else log.push('nothing new to commit here');
+  // 2. pull what they pushed (rebase, so the history stays a straight line)
+  const pull = gitTry(['-c', 'merge.conflictStyle=merge', 'pull', '--rebase', '--quiet', st.remote], { timeout: 30000 });
+  if (!pull.ok) {
+    const hunks = conflictHunks();
+    if (hunks.length) { gitTry(['rebase', '--abort']); log.push(`you both changed the same ${hunks.length === 1 ? 'line' : hunks.length + ' lines'}; pick which to keep`); return { ok: false, log, conflict: { hunks, message: msg }, error: 'conflict' }; }
+    if (!st.upstream && /no tracking information|There is no tracking/i.test(pull.out)) { log.push('no upstream branch yet; setting it on push'); }
+    else { gitTry(['rebase', '--abort']); return { ok: false, log, error: 'pull failed: ' + pull.out.split('\n').slice(-3).join(' ') }; }
+  } else { const got = st.behind; log.push(got ? `pulled ${got} commit${got === 1 ? '' : 's'} from ${st.remote}` : 'nothing new from ' + st.remote); }
+  return finishSync(st, msg, committed, log);
+}
+function gitResolve(body) {
+  // the user picked mine/theirs for every conflicting hunk: redo the pull, apply the picks, continue, push
+  const st = gitStatus(false); if (!st.repo || !st.remote) return { ok: false, error: 'not a repo with a remote' };
+  const log = []; const msg = (body.message || '').trim() || 'dialogue edits'; const choices = body.choices || [];
+  const pull = gitTry(['-c', 'merge.conflictStyle=merge', 'pull', '--rebase', '--quiet', st.remote], { timeout: 30000 });
+  if (pull.ok) { log.push('pulled cleanly this time'); return finishSync(st, msg, true, log); }
+  const hunks = conflictHunks(); if (!hunks.length) { gitTry(['rebase', '--abort']); return { ok: false, log, error: 'pull failed: ' + pull.out.split('\n').slice(-3).join(' ') }; }
+  if (hunks.length !== choices.length) { gitTry(['rebase', '--abort']); return { ok: false, log, error: 'The conflict changed since it was shown (your friend pushed again?). Sync again.' }; }
+  applyChoices(choices);
+  let cont = gitTry(['-c', 'core.editor=true', 'rebase', '--continue']);
+  if (!cont.ok && /no changes|nothing to commit/i.test(cont.out)) cont = gitTry(['rebase', '--skip']);
+  if (!cont.ok) { gitTry(['rebase', '--abort']); return { ok: false, log, error: 'could not finish the merge: ' + cont.out.split('\n').slice(-2).join(' ') }; }
+  const mine = choices.filter(c => c.pick !== 'theirs').length; log.push(`merged: kept ${mine} of yours, ${choices.length - mine} of theirs`);
+  return finishSync(st, msg, true, log);
 }
 
 // ---------------- server ----------------
@@ -167,6 +301,7 @@ const HTML = () => fs.readFileSync(path.join(__dirname, 'dashboard.html'), 'utf8
 http.createServer((req, res) => {
   const send = (code, obj, type) => { res.writeHead(code, { 'Content-Type': type || 'application/json; charset=utf-8' }); res.end(type ? obj : JSON.stringify(obj)); };
   if (req.method === 'GET' && (req.url === '/' || req.url.startsWith('/?'))) return send(200, HTML(), 'text/html; charset=utf-8');
+  if (req.method === 'GET' && req.url.startsWith('/api/git/status')) { try { return send(200, gitStatus(/fetch=1/.test(req.url))); } catch (e) { return send(500, { repo: false, error: e.message }); } }
   if (req.method === 'GET' && req.url === '/api/data') { try { return send(200, collect()); } catch (e) { return send(500, { error: e.stack }); } }
   if (req.method === 'GET' && req.url.startsWith('/api/source')) { const u = new URL(req.url, 'http://x'); const f = u.searchParams.get('f'); const line = +u.searchParams.get('line'); try { const lines = fs.readFileSync(path.join(SRC, path.basename(f)), 'utf8').split('\n'); const a = Math.max(0, line - 4), b = Math.min(lines.length, line + 3); return send(200, { from: a + 1, lines: lines.slice(a, b) }); } catch (e) { return send(404, { error: 'no file' }); } }
   if (req.method === 'POST') {
@@ -177,7 +312,11 @@ http.createServer((req, res) => {
         if (req.url === '/api/pool/remove') return send(200, removePool(body));
         if (req.url === '/api/pool/add') return send(200, addPool(body));
         if (req.url === '/api/gate') return send(200, editGate(body));
+        if (req.url === '/api/money') return send(200, editMoney(body));
+        if (req.url === '/api/source/edit') return send(200, editSource(body));
         if (req.url === '/api/build') return send(200, build());
+        if (req.url === '/api/git/sync') return send(200, gitSync(body));
+        if (req.url === '/api/git/resolve') return send(200, gitResolve(body));
       } catch (e) { return send(500, { ok: false, error: e.stack }); }
       send(404, { ok: false, error: 'no such route' });
     }); return;
