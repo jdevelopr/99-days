@@ -125,7 +125,17 @@ function collect() {
   }
   // needs catalog for new pool lines
   const needs = [...new Set(items.filter(i => i.pool && i.pool.need).map(i => i.pool.need))].sort();
-  return { files, items, gates, needs, names: NAMES, money: collectMoney() };
+  return { files, items, gates, needs, names: NAMES, money: collectMoney(), arcs: readArcs() };
+}
+
+// ---------------- arcs ----------------
+// Story summaries and beats per character, kept in tools/arcs.json so they travel with the repo and can be edited from the dashboard.
+const ARCS_PATH = path.join(__dirname, 'arcs.json');
+function readArcs() { try { return JSON.parse(fs.readFileSync(ARCS_PATH, 'utf8')); } catch (e) { return {}; } }
+function editArc(body) {
+  const id = String(body.id || ''); if (!/^[a-zA-Z]\w*$/.test(id)) return { ok: false, error: 'bad id' };
+  const arcs = readArcs(); const beats = String(body.beats || '').replace(/\r/g, '').split('\n').map(l => l.replace(/^\s*(\d+[.)]|[-*])\s*/, '').trim()).filter(Boolean);
+  arcs[id] = { arc: String(body.arc || '').trim(), beats }; fs.writeFileSync(ARCS_PATH, JSON.stringify(arcs, null, 2) + '\n'); return { ok: true };
 }
 
 // ---------------- money ----------------
@@ -313,6 +323,7 @@ http.createServer((req, res) => {
         if (req.url === '/api/pool/add') return send(200, addPool(body));
         if (req.url === '/api/gate') return send(200, editGate(body));
         if (req.url === '/api/money') return send(200, editMoney(body));
+        if (req.url === '/api/arc') return send(200, editArc(body));
         if (req.url === '/api/source/edit') return send(200, editSource(body));
         if (req.url === '/api/build') return send(200, build());
         if (req.url === '/api/git/sync') return send(200, gitSync(body));

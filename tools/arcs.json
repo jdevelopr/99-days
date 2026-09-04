@@ -1,0 +1,454 @@
+{
+  "amos": {
+    "arc": "A carpenter put on the street by a fall off a roof and an insurer who said he wasn't on the clock. Feed him and he tells you his name; from there the arc is a ladder: coat, ID, a job, a room with a door that locks, and a carved bird. Ignore him and he gets sick on the cardboard and dies.",
+    "beats": [
+      "Stage 0: 'Spare anything?' Give food/money, refuse, or walk past (-1 trust). Each new day of giving raises fed.",
+      "fed >= 3: 'Name's Amos' (met). Stage 1 needs fed >= 3, met, day >= 4.",
+      "Stage 1, trust >= 3: the roof, the two vertebrae, 'Rent doesn't take years.' Stage 2 at trust >= 5, fed >= 4, day >= 9.",
+      "Stage 2: 'Why do you do this?' Tell him you're dying (+2), 'because I can' (+1), or don't say.",
+      "fed >= 6: the seam is gone; Lin's has work coats ($45). Give him the coat: +3 trust, blocks sickness for good.",
+      "With the coat: the ID story; day >= 12 pay $25 and go with him (stage 3).",
+      "Stage 3: the dock hires day labor. Hire routes: foreman after 3 dock shifts, or as shift lead, or Nadia after the diner is saved.",
+      "Stage 4: first paycheck in three years. 12 days after the job: a room in the basement (stage 5), the cardboard swept away.",
+      "Stage 5: the carved oak bird. Coffee visits every 4th day. Day >= 20, trust >= 4: the call to his daughter Renee in Cleveland; trust >= 6 and the letter comes a week later.",
+      "Gifts: his tools from Sol (+4; four days later the dovetailed box), the heater (+2, glow in the alley).",
+      "Neglect: day 12 unfed, or day 16 with one feeding and 8 days since, he gets sick; seven days sick and he dies. Rescue: feed him 4 times while sick or the clinic ($35). Never met by day 14: gone, flowers on the cardboard.",
+      "Betrayals: pawn the bird (-5, 'I'm going to stand here and not ask'); cut him from the VP office (-8, 'You cut me'); brush him off in the street (side beats freeze until you apologise).",
+      "Ending: dead / room / job / ID / coat / fed twice / walked past. Walter's house can make him a homeowner. Bedside: brings the chair up if he has a room or job."
+    ]
+  },
+  "mei": {
+    "arc": "The teenager behind the counter at Lin's, drawing the street between customers, with an illustration program she can't afford and a mother who needs her at the register. The arc is whether anyone asks to see the sketchbook and then pays the fee; it ends with an acceptance letter, a missed deadline, or her going cold.",
+    "beats": [
+      "Stage 0: 'You buying? Bread's five.' Buying food counts purchases. Stage 1 at purchases >= 3, talked, day >= 4.",
+      "Stage 1: she flips the book face-down. 'Can I see?' (+2, the drawing has Amos in it) or 'None of my business.'",
+      "Buy her a sketchbook ($14, +2).",
+      "Day >= 9: the program, six weeks, seventy-five dollars, 'Mom needs me here.' THE fork: 'You should apply' (+2, stage 2) / 'Your mom does need you' (pushed, -2) / 'Drawing's not a real job' (pushed x2, -4).",
+      "Cold: pushed >= 3 and she only ever says 'Bread's five' again. Everything below is locked.",
+      "Day >= 20, stage 2: Mrs. Lin confronts you in the store. 'She should go' (mom secretly pays half) / 'It's her choice' / '...' (three days of monosyllables).",
+      "Day 16-50: pay the fee ($75, $40 at trust >= 6, halved if mom won). Sets applied, +3. After day 50 unpaid: missed, the money went to the cooler repair.",
+      "With the sketchbook: she has drawn you from memory (the portrait). After hours with the shutter down: the night portrait.",
+      "Gifts: the Bridgman textbook (+2), the bus pass (+1; the next Saturday Mrs. Lin covers while she takes the bus to the school).",
+      "Day >= 84, stage 3: 'I got in. With a grant. Half.' The hug. 'Bread's still five.' Phone friends get 'The envelope' at the counter.",
+      "Betrayal: pawn her drawing (-5, 'Sol's has a drawing in the window. It's of you.').",
+      "Ending: cold / accepted / applied / missed / sketchbook / seen / 'Bread's five'. Bedside: she draws you if accepted or applied; brings the full sketchbook if you bought it."
+    ]
+  },
+  "walter": {
+    "arc": "Walter Ashby, retired typesetter, waits every day for the 14, a bus cut in March, because Ruth set her watch by it. He is on a timer (dies day 68-73), so the arc is how much of him you collect before then: sits on the bench, a radio, chess, the river, and the offer of his house at 1961 prices.",
+    "beats": [
+      "Talk: 'Waiting for the 14. You?' Talking never counts; sitting does. Sit once a day (+1 trust). First sit: 'Walter. Walter Ashby.'",
+      "Eight scripted sits in order: the 14 and Ruth's watch; forty-one years of type; St. Bartholomew's; 'I'm afraid of the part just before'; the mills; the thermostat; your cough; 'Sit. Don't say anything.'",
+      "Sit 2: the dead transistor radio Ruth gave him ('79). Buy radio parts at Lin's ($10), fix it (+3; he hums that afternoon).",
+      "Sit 4: chess offer. Sit 5: the board on his knees, you lose in nineteen moves. Sit 6: stage 3, 'Walk with him to the river'.",
+      "River walk (+4): tell him you're dying ('I've known for weeks') or ask about Ruth.",
+      "Saturdays, sat >= 4: the cemetery. His stone is bought; choose the epitaph: 'He set the type' / 'He waited for the 14' / blank.",
+      "Sat >= 5, afternoon: walk him home. Seven stopped clocks, Ruth's chair, the will: the house to whoever pays the $20,000 he paid in 1961. Or 'Give it to Amos.'",
+      "Three days before he dies (sat >= 6): the matchbox of lead type, 4 1 2 and a full stop. Sat >= 8: Ruth's father's chess board.",
+      "Gifts: Ruth's watch from Sol (+5, 'four minutes fast'), the chess clock (+2). Pawn his board: -5.",
+      "Death day 68-73: Mrs. Ortega brings the envelope and Ruth's photo (sat >= 6) / the busker tells you (sat >= 3) / the bench is just empty.",
+      "House: listed two days later, 30 days to sign if invited. Sign it yourself (leave 412; day 99 is in his front room) or give it to Amos. Miss it and a couple from Dayton paint the door red.",
+      "Ending: sat >= 6 / >= 3 / once / never. Plus the house line, the lead type, the epitaph. Bedside: his chess set on the table, knight first."
+    ]
+  },
+  "nadia": {
+    "arc": "Nadia runs her father's 26-year-old diner alone with a nine-year-old in the booth; the rent goes up on day 60 and she is short. The arc is a four-point checklist filled by fixing her sign, sending customers and working for free; on day 60 she makes rent (free soup called the 412) or closes and takes Sam to Dayton.",
+    "beats": [
+      "Work a dish shift or talk: 'Sink's in the back. I'm Nadia. Don't break them.' Stage 1 at 3 shifts, day >= 5.",
+      "Stage 1: the rent rise in two months, the dying sign transformer ($22 at Lin's). Fix the sign (+3): 'It looks like 1994.'",
+      "Afternoons: Sam in the booth, 'It's done!' / 'It's not done.'",
+      "4 shifts: 'Can you work tonight and let me pay you next week?' Unlocks free shifts (+2 each, once a day).",
+      "Customers: every 'Mention Nadia's diner' on Amos, Mei, Walter, Nora, Cal counts one. Stage 2 at day >= 10 with any of sign/free shift/customer.",
+      "Day >= 25: Sam's father at the counter after eighteen months. Go to the counter (+2) / stay in the booth (he leaves $20 for the jar) / walk him out (+1, Sam sees it). He turns up at Dutch's poker table after.",
+      "With tools or the garden: fix the walk-in; the following Thursday the inspector gives the first A in the building's history.",
+      "Sell her lake fish ($12), 'Catch of the day'. Gifts: the frame for her father's 1971 photo (+2), checkers for Sam (+1).",
+      "Day 60: score = sign(1) + customers(2) + free shifts(2) + trust>=6(1). Score >= 4 saves the diner: 'It was you. Every column.' The 412 soup, free, forever. Otherwise CLOSED, THANK YOU FOR 26 YEARS.",
+      "Saved: she can hire Amos. Closed: one last day on the street; the long hug at the bus stop if trust >= 3.",
+      "Ending: saved / closed (with or without the hug) / plates washed / never learned her name. Bedside: the 412 and a spoon, Sam's card in the hall; or a card from Dayton."
+    ]
+  },
+  "nora": {
+    "arc": "Nora Reyes, night-shift nurse, moves into 411 on day 8, thirty feet through the wall. The arc is whether you let a professional caretaker be told the truth about the cough; if you do she goes from neighbour to the person they call at the end. Deflect twice and she goes politely cold.",
+    "beats": [
+      "Day 8-9: boxes in the hall. Help with them (+2, met). Before day 8 the door is empty.",
+      "First talk: 'Nora, 411, as of about an hour ago.' Home off shift early morning; leaving for shift in the evening.",
+      "Second talk: she asks about the cough. Tell her (+3, told, stage 1) / 'Damp building' (pushed, -1) / 'I'd rather not' (pushed).",
+      "Cold: pushed twice without telling her. Flat lines, TV through the door, no diner or river cameos, no gifts, bad ending.",
+      "Stage 1, morning: the congee thermos (+35 hunger). Day >= 18, trust >= 4: her brother's leukaemia, stage 2.",
+      "While Amos is sick: 'Ask her to look at Amos' cures him (+2 both).",
+      "Trust >= 5: knocking works in the afternoon (she falls asleep mid-sentence); two knocks on the wall every fifth night.",
+      "Day 30, trust >= 4: three in the morning, she sits on your floor after losing a nineteen-year-old.",
+      "Day >= 45: 'It's going to get worse and then it's going to be over; what do you want that stretch to be?' Company / quiet / unsure.",
+      "Day >= 45: the health-care proxy form from Okafor's drawer. Name Nora (+3) or Jo, or leave it blank.",
+      "Cameos: the diner late every third day (trust >= 2, day >= 15); the river bench at dawn every fourth day (trust >= 4, day >= 40).",
+      "Day 80, trust >= 7: Okafor asked who to call. She volunteered.",
+      "Passing: walk past her four mornings and she stops you with keys in her teeth. Brush her off and she appears half as often until you apologise.",
+      "Ending: cold / the one they called / said the thing nobody says / brought congee / helped with the boxes / never learned her name. Bedside if stage >= 2 and not cold."
+    ]
+  },
+  "sol": {
+    "arc": "Sol Abramson, 73, forty-one years behind brass wire with a ledger of everything people meant to come back for, including his dead son's trumpet. The arc is becoming a name in the book rather than a customer; it ends with him playing the horn for you, or with your name written down for pawning a friend's gift.",
+    "beats": [
+      "Five items a day, reseeded daily, weighted toward gifts for people you've met and the four key items: Amos's tools, Mei's textbook, Ruth's watch, the dog collar.",
+      "First talk: 'You looking to buy, or you looking to be a name?' Trust ticks every second talk.",
+      "3 talks, day >= 6: the ledger. Reed A. 2021 tools; Ashby W. 2009 ladies' watch; Marsh C. a trumpet, 'when I know you better'.",
+      "Once Walter is met: the watch is Ruth's, take it to him ($140, +5 Walter). Once Amos is met: Reed's tools ($180, +4 Amos).",
+      "Stage 2 at trust >= 3, day >= 12. Stage 3 at day >= 20: the Marsh kid, twenty dollars, 'my son played; nineteen years and I still can't put a trumpet in a window.'",
+      "Day >= 30: a woman redeems a 1998 ring, first redemption in twenty-seven years; he closes at four.",
+      "Stage 3: 'Ask him to play it': the solo '1994', first four notes cracked. The mute ($40) changes the sound and lets him play after hours.",
+      "Or: 'The trumpet in the window' gives it to you; give it to Cal, who plays one long note under the shelter while Sol listens through the glass.",
+      "Theo reunited: Theo redeems his own trumpet for twenty dollars and Sol gives the money back.",
+      "The Harlan Street Three: after Signe's duet, 'Ask him to bring the horn'; Friday night he plays with the guitar and cello (+2).",
+      "Phone friend (stage 2): the January call, 'You picked up.' Then 'Ask to see the page': your name with a number and PICKED UP.",
+      "Cold: pawn any friend's gift (Amos's bird, Walter's board, Mei's drawing, Nora's thermos). He writes it down and never looks up again; the giver notices too (-5).",
+      "Ending: pawned gifts (bad) / he played the trumpet once, for you / the ledger with your name and no object / you bought things."
+    ]
+  },
+  "theo": {
+    "arc": "Theo Marsh, 16, the face on the MISSING poster, living rough by the river since a fight with his father in March. A small investigation, four clues from four people, ends with him walking back around the corner to his brother Cal, or vanishing because you pushed him or told his father where he sleeps.",
+    "beats": [
+      "Read the poster on the street wall. Nothing else unlocks until you do.",
+      "'Ask about the poster' on the busker: brothers, the March fight, 'hospital or morgue'. Names him Cal.",
+      "Four clues: Amos (the alley in March), Nora (the ER in April, a fake name), Sam (draws on the railing at dawn), Danny at the dock (T. Marsh on the day sheet, Tuesdays).",
+      "Two clues: he appears at the river railing before dawn from the next day.",
+      "Optional: 'Tell him what you heard' to Cal. 'He's alive. Tell him I'm not Dad.'",
+      "River visit 1: 'Your brother plays on the corner' / 'You should go home' (pushed) / 'Nice drawing'.",
+      "Visit 2: 'Cal has a couch' (he thinks Cal is at Dad's) / 'Go home' (pushed) / 'What are you drawing?'",
+      "Visit 3, pushed < 2: 'If it's just Cal. Not Dad. Not the police.' Agreed.",
+      "Gone: pushed twice. The poster fades and re-tapes. Everything closes.",
+      "Two days after finding him: Mr. Marsh under the poster, Cal ten feet away. 'He's alive, that's all I'll say' (resets pushes) / 'The river. Dawn.' (Theo is gone by morning) / 'I don't know anything.'",
+      "'Tell him about Theo' on Cal: eleven minutes on the corner, the grey hoodie coming around from 4th. Cal takes the poster down.",
+      "After: Theo on the corner on even days; the song 'Sixth Street'; the harmonica from Sol; the trumpet redeemed.",
+      "Ending: reunited / gone (two flavours, both bad) / agreed but never told Cal / clues only / asked only / read once / never read."
+    ]
+  },
+  "marsh": {
+    "arc": "Theo's father is one scene and a shadow across two arcs: the reason Theo left, the phone number on the poster, and one three-way choice about whether to hand a runaway's location to the man he ran from.",
+    "beats": [
+      "Established off-screen by Cal: the fight in March, 'he'd be back by dinner', four months ago.",
+      "Theo: 'If you're from Dad, no.' The agreement's terms: not Dad, not the police, not a surprise.",
+      "Two days after two clues: he stands under his son's poster with his hand flat over his own phone number.",
+      "'He's alive. That's all I'll say.' keeps the arc alive and undoes one push.",
+      "'The river. Dawn.' ends Theo's story from a scene Theo is not in: only a marker on the rail and a half-drawn bridge.",
+      "'I don't know anything.' He leaves a card on the guitar case; Cal pockets it unread.",
+      "No ending of his own; Theo's line carries it. 'Don't tell Dad' when Theo learns one note on the harmonica."
+    ]
+  },
+  "busker": {
+    "arc": "Cal Marsh, 23, plays the same lullaby on the corner under his missing brother's poster because it's the last place anyone saw him. He is the game's jukebox and its most passive griever; other arcs converge on his corner (Theo, Walter's song, Sol's trumpet, Signe's cello). Ends with a bad couch on 6th and a new song, or a dollar in a case.",
+    "beats": [
+      "From day 3 on the corner. Nameless until you ask about the poster.",
+      "Tip $1 (tips count). Tip 3: 'This one's for you. It's about rain. Everything I write is about rain.'",
+      "Listen a while: the songs rotate. Rain on Harlan (Amos), The 14 (Walter), Fourth Floor (you and Nora), Something From 1962 (Walter's request, different lyric once Walter is dead).",
+      "Gift: guitar strings ($55). 'The E's been fishing line since March.'",
+      "Mention Nadia's diner: a customer for her rent; later 'People stayed.'",
+      "Theo: ask about the poster, tell him what you heard, tell him about Theo. The reunion is on his corner.",
+      "Sol's trumpet: one long note under the shelter in the rain, Sol listening through the glass.",
+      "Phone friend (Walter dead, sat >= 3, tips >= 2): he wrote the old man a song, 'it's got a bus in it'. Fridays: hear it.",
+      "Signe: bring the cellist down; the duet; Friday band night (the Harlan Street Three, he names it); five days later two coffees at 410 and no guitar; eventually a key.",
+      "After the reunion: 'Sixth Street'. With the band: 'Under the Shelter', no words.",
+      "Ending: covered by Theo's line if reunited; else tips >= 3 'you were his best audience' / a dollar in a case / nothing. Day 99: a guitar under your window, played badly on purpose."
+    ]
+  },
+  "emmett": {
+    "arc": "Emmett, nineteen years on a pier at the end of the 14, was given eight months in 2006, sold everything, said the goodbyes, and didn't die. The mirror of your arc: what the years after the number cost. Ends with his daughter Lena casting from his pier, or him out past the point in the boat because you told him what he owed.",
+    "beats": [
+      "Getting there: the 14 runs Sundays (or every day once Walter is dead). $10 or Mei's bus pass, 30 energy. He's gone from the pier after dusk.",
+      "First talk: 'People running from something, people running out of something.' 'Out of.' is the gate (told); without it the arc stalls at stage 1 forever.",
+      "Visit 2: the eight months, 2006, the house and the truck, 'You can't un-say a goodbye. So I stayed.'",
+      "Fishing: six casts, timing; his tips widen the window. The tackle box ($55) maxes them. Fish feed you and sell to Nadia.",
+      "Stage 2 (3 visits, told): Lena, 22 at the time, the goodbye he did anyway. 'Write to her' (+2) / 'That's yours to carry' / 'You owe her a call' (pushed).",
+      "Pushed twice: 'I'm going to fish off the boat for a while. The pier's yours.' Gone.",
+      "Trust >= 3: he has written the letter, four nights and most of a bottle. Take it; post it in the blue mailbox on Harlan Street.",
+      "Ten days after mailing: the reply. Stage 3. Lena comes the Sunday after next: 'I'd like to unteach it, if there's time.' A week later, two grandchildren with cut-down rods and Emmett laughing.",
+      "Storm: arrive in heavy rain and the boat tears loose; he tells you about the night he got the number. Cabin (trust >= 4): the jar of ash from the letter he burned in 2009; lake or shelf.",
+      "Porch: sleep at the lake. Typewriter: write to him; a postcard five days later, 'BRING THE RADIO WOMAN.'",
+      "Phone friend while the letter is out: the marina payphone, 'Did it go?'",
+      "Ending: never named / gone (bad) / Lena came / the answer came / what the years cost / 'Wrist, not arm.'"
+    ]
+  },
+  "lena": {
+    "arc": "Emmett's daughter, twenty-two when he said goodbye and never called. She exists as the letter's destination, then as a woman on the pier quoting the one line that wasn't about fish.",
+    "beats": [
+      "Named in Emmett's stage 2: the goodbye he did anyway.",
+      "The letter goes out; ten days later the reply; the Sunday after next she is on the pier.",
+      "'I'm sorry I taught you not to expect me. I'd like to unteach it, if there's time.'",
+      "A week later on a Sunday: her two children with rods he cut down himself.",
+      "The photograph: 'Lena took one here in '88.' Ending: 'She is coming back in June.'"
+    ]
+  },
+  "signe": {
+    "arc": "Signe Holm, a Danish cellist who walked out of an audition in Copenhagen, lets 410 on day 40 and apologises for existing. The arc is about being listened to without being talked at. Ends with her a stranger through a wall, a woman who plays under a busker's guitar on a corner, or a name on the symphony's sub list.",
+    "beats": [
+      "Day 40: she moves in. What you hear through the wall changes with days since arrival.",
+      "Listen at 410 during practice (afternoon). Knock outside practice hours to meet her; during them, PRACTICING 4-6. SORRY.",
+      "After listening: 'Ask about the piece' (Bach, the third suite, the sarabande).",
+      "Listens >= 2: tell Cal about the cellist. Ask her about the busker: 'No.' Ask again: yes. The duet on the corner in the evening.",
+      "After the duet: ask Sol to bring the horn. Friday: the Harlan Street Three under the shelter (+2 her, +2 Sol). 'Listen to the Three' on Fridays after.",
+      "Five days on: Cal at 410 with two coffees and no guitar. 'Ask about Cal.' Cal in the hallway.",
+      "With the band: ask Birdie for a live session; Cal sets a Friday; eleven minutes on KHRL.",
+      "Day >= 80 with the band: the audition note, four lines. The night before, the whole suite in 410: 'Because I don't say anything' (+2) / 'You'll play it tomorrow' (+1) / 'Play it again' (+2).",
+      "Result: yes if you were there and trust >= 3 (the suite through two walls, a one-word note); no: 'I stood outside. I am sorry.'",
+      "Valentine's card, rosin from Sol, the KHRL pledge.",
+      "Ending: never met (bad) / sub list / the corner and Cal's key / you stood in the hall and listened / four words and a nod. Plus 'The Harlan Street Three'. Day 99: a cello through two walls."
+    ]
+  },
+  "birdie": {
+    "arc": "Birdie has done the overnight from the top floor of the last building before the river for thirty-one years, broadcasting to a street with NO ONE IS COMING painted on it. The arc is proving somebody is listening before the tower lease runs out on day 80. Ends with the tower paid, the block calling in, or the window dark.",
+    "beats": [
+      "You need a radio: Sol's transistor ($90) or Walter's. At night, 'Turn on the radio': KHRL 1340, weather and requests.",
+      "Hear a whole show and she tells you where the station is. The steel door at the end of the block opens at night after that.",
+      "Up thirty-one stairs: the couch, 'don't talk when the light's red.' Met.",
+      "Work a shift once a day (-8 energy, $15): callers are people you actually know, plus a trucker, a nurse, a kid.",
+      "Talks: the man who died in the chair; nobody calls, one's a number; Walter's transistor on the bench.",
+      "Day >= 55 (3 talks or 2 shifts): the paper. $3,000 by day 80 or the feed is cut.",
+      "Route A: pay the lease. Route B: ask five people to call in one night; then 'Get the block to call in'; the tower man says 'Fine.' Sleep through it and a page comes under the door: NINE CALLS.",
+      "Day >= 50, 3 shifts: say something into the mic. To Jo (she hears it and calls) / to the street (chalk on the wall: SOMEBODY DID) / to nobody (Walter's note: YOU ARE NOT NOBODY).",
+      "With the Three: the live session, eleven minutes.",
+      "Neglect: day 81 unpaid, the window goes dark; static; BACK SOON on the buzzer. She keeps climbing the stairs.",
+      "Day >= 97: the last show is addressed to the fourth floor of Harlan Arms.",
+      "Ending: never went up (bad if heard < 3) / dark (bad) / paid / nine calls / weather nights. Day 99: the radio on the sill."
+    ]
+  },
+  "morrow": {
+    "arc": "Morrow has been super of Harlan Arms twenty-two years, lost his voice in 1998 and writes everything in block capitals on a pad, keeping every page in a drawer. Rent is $100 a week on Mondays; three misses puts a padlock on 412. Ends with him clearing your room like any other, or the way you told him to.",
+    "beats": [
+      "The lobby: checkerboard floor, mailboxes, the corkboard, his grille. First rent Monday day 8; a toast the day before.",
+      "Meet him at the grille in the daytime: '412.' 'RENT MONDAYS. I KNOW YOU KNOW.' Pay arrears or a week ahead at his window.",
+      "Talks: the throat (1998); the elevator and the boiler; 'nobody notices a building that's standing'; he took the lock off the basement door for Amos.",
+      "Day >= 2: 'Ask about the heat.' Next morning a man arguing with a pipe at six a.m.; the radiator works (+6 energy mornings).",
+      "3 talks: 'Ask about the drawer.' Twenty-two years of pages; yours near the top: YOU WROTE BACK. MOST DON'T.",
+      "Day >= 70: WHO GETS YOUR THINGS. Amos / Nora / Jo / whoever gets the room / I don't know yet.",
+      "The board is the whole game as paper: rent, holidays, the lost dog, 410 TO LET, the poster, the diner, FRIDAYS, KHRL, the garden, Walter, the house, dinner, your birthday.",
+      "Miss rent: RENT. - M. Miss two: ONE MORE AND THE LOCK GOES ON. Miss three: padlock on 412, your things sealed; sleep on Amos's floor or the bench.",
+      "Pay it all and he comes up with the bolt cutters and says nothing, which from Morrow is an apology. PAID. THANK YOU. - M.",
+      "Day >= 93: THE PADLOCK IS OFF MY DESK. I'M NOT GOING TO NEED IT.",
+      "Ending: the underlined word if you answered; else the heat, the drawer, 'He does not like the curb.' Rent line: locked out (bad) or weeks paid. Day 99: four flights with the pad."
+    ]
+  },
+  "jo": {
+    "arc": "Jo is your sister, unspoken-to for six years since she sold your father's house, and still your emergency contact, so the clinic calls her. The arc is a beige wall phone and whether you pick it up. Ends with her in the one chair off the 10:40, or with her saying she's going to stop calling and doing it.",
+    "beats": [
+      "Around day 3 the phone rings at home. Answering costs 2 energy and never makes you late.",
+      "Call 1: 'The clinic called me. I'm still your emergency contact.' It's true / you shouldn't have that number / hang up.",
+      "Call 2: the house. You were right to sell / you sold him before he was cold / it doesn't matter. Then: 'Can I come?' Don't (declined) / okay (a visit in 4-6 days).",
+      "Decline twice and she stops asking and talks about Micah instead; the calls keep their warmth.",
+      "The visit: she says the thing out loud for the first time in six years; Amos and Nora each get a line. Take the $80 envelope or refuse. She leaves on the 4:10 and calls Sundays.",
+      "After: Micah's tooth, the marked deck, 'I'm going to ask what you ate', an open line that is the best call yet. 'Call Jo' once a day.",
+      "Neglect: hang up twice or miss two in a row and the next call is the last: 'It's been the same number for eleven years.' Miss three before ever answering and she just stops.",
+      "Recovery: dial her ('I said I'd stop. I didn't say I'd stop answering'), or say 'To Jo' on the KHRL mic and she finds the stream.",
+      "Day 43: 'I wasn't going to call. I called.' The health-care proxy can name her. Morrow's page can name her.",
+      "Ending: the 10:40 and the chair / stopped (bad) / talked N times / called once / the phone rang N times and you let it (bad). Bedside if she visited."
+    ]
+  },
+  "micah": {
+    "arc": "Jo's eight-year-old son, offscreen throughout: a mailed tooth, a fish card, the question of what you bought with the eighty dollars, and a drawing of you that is mostly a hat.",
+    "beats": [
+      "Named once Jo talks about him; 'the kid on the line' before that.",
+      "He names the dog Harlan. Day 99: 'Micah drew you. It's mostly a hat.'"
+    ]
+  },
+  "doctor": {
+    "arc": "Dr. Okafor gave you the ninety-nine-day number before the game starts and spends it telling you exactly what exists and what she thinks of it: a free trial that slips, a $20,000 place in a queue, and a $50,000 shot with a seventy percent response rate. Ends with the cohort closed and refunded, and, if you find the money, eight shots and scans that don't move.",
+    "beats": [
+      "The post-it: OKAFOR - TUES. Ask about THE OTHER OPTION. Pills $20 for thirty; miss three days and the cough gets worse.",
+      "First talk: the free trial is recruiting; Halvorsen upstate is $20,000 for a place in line, not a chair. 'Eat anyway.'",
+      "Day 40-59: the public trial has been pushed six months. Day 44: the forty-five day check, bring the bottle, she'll count.",
+      "Pay Halvorsen ($20,000): 'I want you to hear me say queue.' Nine days later the letter: the cohort closed; the deposit is at her office.",
+      "Collect the refund and she tells you about NB-7 in the same breath: forty patients, seventy percent, $50,000, non-refundable. 'Don't decide in this room.'",
+      "Pay it: a shot every two days, -8 energy each. Milestones at 1, 3, 5 ('Holding is the word'), 8 (scans next week). Late shots get written down.",
+      "Eight shots, day >= 88: 'There's no change. You're in the thirty.' Keep giving them / fifty thousand / '...' and she takes your hand.",
+      "Day 60-89: 'Is there anyone I should call, when it's time?' The proxy form in the drawer (Nora or Jo).",
+      "Day 90+: 'There is nothing left in my bag that changes this. Keep warm.'",
+      "No ending of her own: it's in 'The money'. The clinic's free-care fund can take a bequest."
+    ]
+  },
+  "desk": {
+    "arc": "The clinic front desk: appointment calls and the reminder to bring the bottle because she'll count.",
+    "beats": [
+      "Day >= 5 with pills low: the refill call. Day 44: the forty-five day check."
+    ]
+  },
+  "worker": {
+    "arc": "Morrow Freight's dock is the game's ladder: crates, then a terminal in a trailer, then a corner office. The money is measured against $20,000 and $50,000 while the days spent climbing are the days you have. Ray Kowalski, the foreman, gets a name after eight shifts.",
+    "beats": [
+      "Work the crates (-35 energy, pay by stack). Good stacks count. Closed weekends and holidays.",
+      "Two good stacks: 'there may be a promotion in your future.' Four, day >= 6: shift lead, six to six, $70 cash. Take it or keep 'Ask about the office job' forever.",
+      "Data entry: copy manifest numbers into a CRT against the clock; a wrong digit costs a dollar. -65 energy.",
+      "Manager shifts 1, 5, 10: 'the guy who doesn't drop things'; the street happens without you; the owner wants Saturdays, 'I told him you're sick. He said so?'",
+      "Six days in: Amos, 'You've got the office walk now.' Fourteen: Nora, 'it's not worth the days, as a nurse and as the wall.'",
+      "Late rule: the shift must be the first thing you do. Any conversation makes you late; three in a row and you're back on the crates. Answering the phone or being stopped in the street never counts.",
+      "Eight shifts: 'Never asked my name. Kowalski. Ray. My father was Ray.'",
+      "Amos: put in a word after 3 shifts, or write his name on the day sheet yourself as manager.",
+      "Day 70 (or once refunded): the coffee can. Envelopes for Mei's tuition, Nadia's rent, Amos's deposit, Walter's stone, Nora's brother, the clinic, Mrs. Ortega, the busker.",
+      "Ending: 'The money'. Bad if you die with $500+ in the can nobody knew about, or made manager and never paid the deposit. Late mornings count as credit."
+    ]
+  },
+  "danny": {
+    "arc": "Danny Pruitt, day labour on the dock every third day: smoke breaks, talks about you, and the one who saw T. Marsh on the day sheet on Tuesdays.",
+    "beats": [
+      "Days divisible by 3 from day 8, daytime, until he is cut. Theo clue: the day-labour sheet.",
+      "Cut from the VP office: gloves left on the crate."
+    ]
+  },
+  "owner": {
+    "arc": "A man in a car with cufflinks who wants payroll down and offers you a corner office to do it, on the condition that you can look at a folder and not see a face. Ends with you doing it and being paid double, refusing and losing the chair, or being late three times and finding it filled by someone who was there at eight-forty.",
+    "beats": [
+      "Four clean manager shifts: the car at the dock. '$120 a day plus bonus. Nine sharp.' Take it (the suit) or keep 'Ask the owner about the chair'.",
+      "The cuts: eight strangers with one-line notes plus everyone still employed. Left keeps, right cuts, six seconds a folder; target 28% of payroll.",
+      "Named folders in red: Ray Kowalski ('expensive'), Danny Pruitt, Amos D. Reed if he works the dock. A known face pays a double bonus.",
+      "From shift two the memo reads: one of Kowalski's people, minimum. Do it: double. Don't: the chair.",
+      "Cut the foreman: twenty years in a milk crate; a new foreman who doesn't know your name. Cut Amos: his name in your handwriting, -8 trust, 'You cut me.'",
+      "Bring a list with no faces: fired on the spot, the suit taken back. Zero cuts: 'Look at your envelope. Now look at the door.'",
+      "Late: somebody else sat in the chair; 'there is not a third time'; three and you're back at the terminal, 'which today sounds like a mercy.'",
+      "Passing: the brush-off line is 'I'm gonna be late for work.'",
+      "Ending: in 'The money': VP days and cut count, Amos or Kowalski among them; lost the chair over a list with no faces."
+    ]
+  },
+  "pryor": {
+    "arc": "Mr. Pryor, a man in a good coat on the Sunday 14 with a laptop he isn't reading, visiting a father in a home at the end of the line for forty minutes a week and looking at his phone for thirty of them. Ends with the father on the pier holding a rod, and then a suit on the bus.",
+    "beats": [
+      "Ride 1: 'Pryor. I do this every Sunday. The lake. There's a home out there.'",
+      "Ride 2: his father used to fish and asks about a boat that never existed. 'Bring him to the pier.' (the home has a van) / 'Forty minutes is forty minutes.'",
+      "Ride 3 with the idea: 'We did it. The van, the chair, the pier. He held a rod for an hour and I didn't look at my phone.'",
+      "Ten days on, a Sunday: Pryor in a suit, third from the back, no laptop. 'Tuesday. In his sleep. I'm on the bus because it's Sunday.'"
+    ]
+  },
+  "granny": {
+    "arc": "Mrs. Ortega, seventy-eight, second floor, oranges in the gutter and an endless supply of tamales. Helping her twice earns the key to her dead husband Hector's overgrown lot behind the diner; the arc is whether that lot becomes food again before you die, and whether she can walk through the gate.",
+    "beats": [
+      "On the street days 6, 10, 15, 27, 40, 55, 72, 88, 91. Help with the bags (once a day, a tamale). 'You're the one in 412. I see you feeding Amos. Good.'",
+      "Day 10: the Christmas lights must come down; help or they do it in the dark. Gloves from Sol count as a help.",
+      "Helped twice: the key on red wool, Hector's coffee can of seed packets. 'Bring people. A garden with one man in it is just a man digging.'",
+      "Clear twice, plant (tomatoes, beans, peppers, in packet order). Tend daily; three days dry and it wilts. Winter slows it; cold frames need Amos and his tools; spring (day 84) speeds it.",
+      "Recruit Amos (trust >= 3, the rain barrel two days later), Nora (every third day), Mei (marigolds, then she draws it).",
+      "Every fifth day she stands at the gate with both hands on the wire and won't come past it. Hector's bench out from under the tarp; she sits on it without saying anything.",
+      "Stage 5: harvest; a warm tomato eaten standing in the bed. Vegetables to Nadia: 'My father let him have that lot. I used to steal the beans.'",
+      "Full garden: she comes in, a hand on a tomato, 'Thirty-one now.' Sits.",
+      "The 14: the headstone fund, $900 for good granite; carry the cooler at the marina; forty-one Sundays and she has it. A week later the van, the cemetery, HE FIXED THINGS.",
+      "Day 91: Sunday dinner, a table for four with nine people at it, two flans. Helped three times: tamales at your door every fifth day from day 80. A $900 envelope in the coffee can.",
+      "Ending: garden never cleared (bad) / didn't come up in time / harvest count and helpers, her on the bench or at the gate. Plus the oranges line and Hector's stone."
+    ]
+  },
+  "kid": {
+    "arc": "Sam, nine, homework in the corner booth, insists it's done. He has no arc of his own; he is the stake in Nadia's, plus a checkers-for-a-card exchange. Ends in the booth doing fractions or in Dayton mailing you a card.",
+    "beats": [
+      "Introduced by Nadia in the afternoons. 'Do you know how to do fractions? Don't tell Mom I asked.'",
+      "Checkers from Sol: he takes them at once; you lose the first game while Nadia stops wiping the counter.",
+      "Day >= 60 with the checkers: he wins in one move and pays out the drawing: GET BETTER OR DON'T BUT COME BACK.",
+      "Phone friend: the worksheet in the diner, five-eighths, the 412 put down without asking.",
+      "His father at the counter; in 'walk him out' he sees it from the window. Theo clue: draws on the railing at dawn.",
+      "Radio caller: 'Am I on the radio?' 'You should be asleep.'",
+      "Day 99: a card in the hall, terrible, you're going to love it; or one from Dayton. (The lost boy on day 9 is a different kid: walk him to the clinic or not.)"
+    ]
+  },
+  "sam": {
+    "arc": "Sam's pool lines: fractions, checkers warnings, 'Mom says you're sick.'",
+    "beats": [
+      "Afternoons in the booth. See Sam (kid) for the arc."
+    ]
+  },
+  "samDad": {
+    "arc": "Sam's father, the man in the too-good coat, back at Nadia's after eighteen months and then at Dutch's poker table every sixth night. You can take his money at cards and put it on the diner counter for Sam's school.",
+    "beats": [
+      "Day >= 25 in the diner: 'Eighteen months. I want to see him first.' Counter (+2 Nadia) / booth (he leaves $20 for the jar) / walk him out (+1, Sam sees).",
+      "After: at the poker table every sixth night in the Widow's seat, playing wild.",
+      "Win $300 off him and the narration tells you where it belongs. 'Put $X on the counter' at Nadia's (+3); she doesn't ask; the jar.",
+      "Ending: in the casino line, with or without the counter."
+    ]
+  },
+  "mrsLin": {
+    "arc": "Mei's mother, the register and the cooler repair. One confrontation about the art school, and the Saturday she covers so Mei can take the bus.",
+    "beats": [
+      "Day >= 20 with Mei at stage 2: she confronts you in the store. 'She should go' (she secretly pays half the fee) / 'It's her choice' / '...' (Mei goes quiet three days).",
+      "The bus pass: the next Saturday she's at the register. 'She took a bus; she said you gave her the bus. Bread is five.'",
+      "Radio caller: a case of soup for the diner."
+    ]
+  },
+  "meiMom": {
+    "arc": "See Mrs. Lin.",
+    "beats": []
+  },
+  "dutch": {
+    "arc": "Dutch has run the unmarked basement casino for forty years, the only place money can be made or destroyed at speed. A rising gambling economy with one ceiling: take $12,000 off her tables and the door forgets you.",
+    "beats": [
+      "The plain door at the river end. Cal gives you the words after three full songs. Say 'Twelve minutes' after dark.",
+      "House rules: cash on the table, no clocks, Rennie deals, the wheel is hers. First talk: 'yours is the kind that's got a number on it.'",
+      "Roulette (single zero, $25-1000), blackjack (dealer stands on 17, 3:2), hold'em vs Lou and the Widow. Bigger stakes after day 40 or $2,000 won.",
+      "Net $4,000: the warning. Twelve thousand, named out loud so it won't be a surprise.",
+      "Net $12,000: paid out, ejected, barred. The slot opens and closes.",
+      "Ending: never said the words / barred on day N / up or down $X over N nights. Bad if down $1,000+ and you never gave Lou anything back."
+    ]
+  },
+  "lou": {
+    "arc": "Lou Marchetti, eleven years every night at the poker table, a daughter at Ohio State and a spring semester he keeps not covering. Your winnings come out of his pocket; it ends with you handing them back or him pawning Sol's watch a fourth time.",
+    "beats": [
+      "Talk 1: 'Overall I'm up. Don't ask Dutch.' Talk 3: the daughter, 'I'll have it Friday.' He is not up.",
+      "Pots you take from him accrue. At $600 down: Sol's watch pawned a fourth time; Sol mentions it.",
+      "Cash out at $600+: the offer. Give it back (he sits at the bar with the free coffee; it all went to Ohio State) or keep it.",
+      "Ending clause: his daughter finished the spring / he pawned the watch a fourth time, you had most of it / still there every night."
+    ]
+  },
+  "widow": {
+    "arc": "The tight player in the third seat who refuses to be a storyline: no trust, no flags, no ending. 'I play for the quiet. The money's how you keep score of the quiet.'",
+    "beats": [
+      "'Sit or don't. Talking's for the bar.'",
+      "She sees you're sick in how you hold the cards. Came up with Dutch; same job.",
+      "Displaced by Sam's father on his nights. 'Felted. The Widow does not look up.'"
+    ]
+  },
+  "voice": {
+    "arc": "Everyone on the other end of the beige wall phone: the clinic, the friends who call once (Nadia, Nora, Mei, Amos, Emmett, Sol, Cal), and the wrong numbers, including the pharmacy looking for Mrs. Ortega.",
+    "beats": [
+      "Friend calls are one-time and each is paid off later in person.",
+      "The wrong number for Mrs. Ortega earns a tamale."
+    ]
+  },
+  "caller": {
+    "arc": "KHRL's callers: whoever you actually know, plus a trucker, a nurse, a kid, a woman. The call-in night is nine of them.",
+    "beats": [
+      "Callers are picked from people you've met with trust >= 2.",
+      "Pledges: ask five people to call in one night."
+    ]
+  },
+  "towerman": {
+    "arc": "The man who owns the tower lease. One word on the call-in night: 'Fine.'",
+    "beats": []
+  },
+  "inspector": {
+    "arc": "The health inspector, the Thursday after the walk-in is fixed: the first A in the building's history.",
+    "beats": []
+  },
+  "dog": {
+    "arc": "A stray behind a fence at the river end, ribs like a radiator, hit before for taking things. Three pieces of bread and it stops going back through the fence; it follows you for the rest of the game and is on the bed at the end.",
+    "beats": [
+      "From day 2 at the fence. Crouch; give bread three times (it eats without taking its eyes off you; takes it gently; leans on your leg).",
+      "Fed three times it doesn't go back through the fence. Follows you everywhere.",
+      "Sol's collar: the tag says 412, Biscuit, or nothing. Micah names it Harlan.",
+      "Lost dog notice on the board until then. Day 75: slower on the stairs; so was the dog.",
+      "Ending: slept at the foot of your bed / remembered you through the fence. Day 99: on the bed, not allowed, nobody says anything."
+    ]
+  },
+  "system": {
+    "arc": "Game text: the intro, the day cards, the calendar, the weather, the ending list. Day 1 is Monday December 27; day 99 is early April. Key mornings: NYE fireworks at the railing (day 5), Twelfth Night lights (10), MLK Day (22), Groundhog Day (38), your birthday (43: cake at the diner, Jo calls), Valentine's card (50), Presidents' Day (57), St Patrick's (81), spring (84), Sunday dinner (91), April Fools' (96).",
+    "beats": [
+      "Rent Mondays from day 8. Dock closed weekends and holidays.",
+      "Passing: walk past Amos or Nora four days and they stop you; the brush-off closes them until you apologise.",
+      "One story conversation per person per day; filler after.",
+      "Names are gated: Hector is 'her husband' and Ruth 'his wife' until you learn them.",
+      "Day 99: the room fills with whoever you earned."
+    ]
+  },
+  "you": {
+    "arc": "You, on the air: whatever you said into the mic.",
+    "beats": []
+  },
+  "player": {
+    "arc": "Unattributed player lines.",
+    "beats": []
+  },
+  "woman": {
+    "arc": "The woman who redeems a 1998 ring at Sol's, the first redemption in twenty-seven years.",
+    "beats": []
+  }
+}

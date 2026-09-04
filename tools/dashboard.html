@@ -41,6 +41,11 @@ textarea:hover{border-color:var(--line)}textarea:focus{outline:none;border-color
 .today{position:absolute;top:0;bottom:0;width:1px;background:var(--dim2)}
 #pop{position:fixed;background:var(--bg2);border:1px solid var(--acc);padding:10px 12px;z-index:9;border-radius:4px;box-shadow:0 8px 30px rgba(0,0,0,.5);display:none;max-width:420px}#pop .c{color:var(--dim);margin-bottom:8px;white-space:pre-wrap}#pop input{width:60px;background:var(--bg);border:1px solid var(--line);color:var(--fg);font:inherit;padding:3px 6px}
 .money{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap}.money .cur{color:var(--dim)}.mval{width:78px;background:var(--bg);border:1px solid var(--line);color:var(--acc);font:inherit;padding:3px 6px;border-radius:2px;text-align:right}.mval:focus{outline:none;border-color:var(--acc);background:var(--bg2)}
+.arc{border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:3px;background:var(--bg2);margin:0 0 16px;padding:8px 12px}
+.arctop{display:flex;gap:12px;align-items:baseline}.arcttl{color:var(--acc);font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}.arcsum{flex:1;color:var(--fg);line-height:1.55}.arcsum i{color:var(--dim2)}
+.arcbtns{white-space:nowrap;color:var(--dim);font-size:11px}.arcbtns span{cursor:pointer;margin-left:10px}.arcbtns span:hover{color:var(--acc)}
+.beats{display:none;margin:8px 0 2px;padding-left:22px;color:var(--narr);line-height:1.5}.beats li{padding:1px 0 1px 4px}.beats li::marker{color:var(--dim2)}.arc.open .beats{display:block}
+.arcform{display:none;margin-top:8px}.arc.editing .arcform{display:block}.arc.editing .arctop .arcsum,.arc.editing .beats{display:none}.arcform textarea{display:block;width:100%;background:var(--bg);border:1px solid var(--line);color:var(--fg);font:inherit;padding:6px 8px;border-radius:2px;margin-bottom:6px;overflow:hidden;line-height:1.5}.arcform textarea.arcb{color:var(--narr)}.arcform textarea:focus{outline:none;border-color:var(--acc)}.arcform .btns{display:flex;gap:8px}
 .mlabel{padding-top:4px}.formula{display:block;color:var(--dim);font-size:11px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:350px}.mrow{padding:5px 0;border-bottom:1px solid #14171c}.mrow .meta .g{display:inline;padding:0;color:var(--dim2)}.mrow .meta .g:hover{color:var(--acc)}
 .legend{color:var(--dim);margin:6px 0 12px}.legend span{margin-right:14px}
 kbd{border:1px solid var(--line);border-radius:3px;padding:0 4px;color:var(--dim)}
@@ -76,16 +81,33 @@ function rowHtml(it) {
   const x = it.kind === 'pool' ? `<div class="x" title="remove this pool line" data-x="${it.id}">×</div>` : '<div></div>';
   return `<div class="row ${k}" data-id="${it.id}"><div class="g" title="${it.file}:${it.line}  (click for source)" data-src="${it.file}|${it.line}">${it.line}</div><div class="tag ${k}">${tree}${tag}</div><div><textarea rows="1" data-id="${it.id}">${esc(it.text)}</textarea>${meta}</div>${x}</div>`;
 }
+// the storyline card at the top of a character: summary + beats, editable, saved to tools/arcs.json
+function arcHtml(id) {
+  const a = (DATA.arcs || {})[id] || { arc: '', beats: [] }; const has = a.arc || (a.beats && a.beats.length);
+  let open = false; try { open = localStorage.getItem('arc_open_' + id) !== '0'; } catch (e) { }
+  return `<div class="arc ${open ? 'open' : ''}" data-arc="${id}"><div class="arctop"><span class="arcttl">storyline</span><span class="arcsum">${has ? esc(a.arc) : '<i>no summary yet</i>'}</span><span class="arcbtns"><span class="arcedit" title="edit the summary and beats">edit</span><span class="arctog">${open ? 'hide beats' : (a.beats || []).length + ' beats'}</span></span></div>` +
+    `<ol class="beats">${(a.beats || []).map(b => `<li>${esc(b)}</li>`).join('')}</ol>` +
+    `<div class="arcform"><textarea class="arca" placeholder="one or two sentences: who they are, what the arc is about, how it ends" spellcheck="true">${esc(a.arc || '')}</textarea><textarea class="arcb" placeholder="one beat per line, in story order" spellcheck="true">${esc((a.beats || []).join('\n'))}</textarea><div class="btns"><button class="arcsave primary">save storyline</button><button class="arccancel">cancel</button></div></div></div>`;
+}
+function wireArc() {
+  const el = document.querySelector('.arc'); if (!el) return; const id = el.dataset.arc;
+  el.querySelector('.arctog').onclick = () => { el.classList.toggle('open'); const o = el.classList.contains('open'); try { localStorage.setItem('arc_open_' + id, o ? '1' : '0'); } catch (e) { } el.querySelector('.arctog').textContent = o ? 'hide beats' : el.querySelectorAll('.beats li').length + ' beats'; };
+  el.querySelector('.arcedit').onclick = () => { el.classList.add('editing'); const ta = el.querySelector('.arcb'); [el.querySelector('.arca'), ta].forEach(t => { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 4) + 'px'; }); el.querySelector('.arca').focus(); };
+  el.querySelector('.arccancel').onclick = () => el.classList.remove('editing');
+  el.querySelectorAll('.arcform textarea').forEach(t => { t.oninput = () => { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 4) + 'px'; }; t.onkeydown = ev => { if ((ev.metaKey || ev.ctrlKey) && ev.key === 's') { ev.preventDefault(); ev.stopPropagation(); el.querySelector('.arcsave').click(); } if (ev.key === 'Escape') el.classList.remove('editing'); }; });
+  el.querySelector('.arcsave').onclick = async () => { const r = await post('/api/arc', { id, arc: el.querySelector('.arca').value, beats: el.querySelector('.arcb').value }); if (r.ok) { status('storyline saved', 'ok'); await load(); } else status(r.error, 'bad'); };
+}
 function renderChar(id) {
   const items = DATA.items.filter(i => i.who === id).sort((a, b) => a.file.localeCompare(b.file) || a.start - b.start);
   const name = DATA.names[id] || id; let h = `<h2>${name}<small>${items.length} lines</small></h2>`;
+  h += arcHtml(id);
   const secs = []; for (const it of items) { const key = it.file + '#' + it.section; let s = secs.find(x => x.key === key); if (!s) { s = { key, file: it.file, section: it.section, items: [] }; secs.push(s); } s.items.push(it); }
   const pools = secs.filter(s => s.items.every(i => i.kind === 'pool' || i.kind === 'poolInline')); const rest = secs.filter(s => !pools.includes(s));
   for (const s of rest) { h += `<div class="sec"><div class="h"><b>${esc(s.section)}</b><span class="f">${s.file}</span></div>`; for (const it of s.items) h += rowHtml(it); h += '</div>'; }
   if (pools.length) { h += `<div class="sec"><div class="h"><b>Pool lines</b><span class="f">rotating lines; each shows when its day range and condition allow</span></div>`; for (const s of pools) { h += `<div class="meta" style="margin:6px 0 2px 66px">${s.file} · ${esc(s.section)}</div>`; for (const it of s.items) h += rowHtml(it); } }
   else h += `<div class="sec"><div class="h"><b>Pool lines</b><span class="f">none yet</span></div>`;
   h += `<div class="add"><input id="np-text" placeholder="a new line for ${name}"><input id="np-need" list="needs" placeholder="condition (optional), e.g. () => G.day >= 30"><input id="np-d0" type="number" value="1" min="1" max="99"><input id="np-d1" type="number" value="99" min="1" max="99"><button id="np-add">add line</button></div><datalist id="needs">${DATA.needs.map(n => `<option value="${esc(n)}">`).join('')}</datalist></div>`;
-  $('#main').innerHTML = h; wire();
+  $('#main').innerHTML = h; wire(); wireArc();
   $('#np-add').onclick = async () => { const text = $('#np-text').value.trim(); if (!text) return; const r = await post('/api/pool/add', { who: id, text, need: $('#np-need').value, d0: +$('#np-d0').value, d1: +$('#np-d1').value }); if (r.ok) { status('line added', 'ok'); await load(); } else status(r.error, 'bad'); };
 }
 function renderSearch(q) {
