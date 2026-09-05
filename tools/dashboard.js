@@ -112,7 +112,7 @@ function classify(file, S, t) {
   return { id: file + ':' + t.start, file, start: t.start, end: t.end, line: t.line, kind, who, text: decode(t.raw), raw: t.raw, quote: t.quote, tpl: t.tpl, depth, inOption, section: def ? (def.obj ? def.obj + '.' + def.name : def.name) : '(top level)', sectionLine: def ? def.line : 0, pool };
 }
 function collect() {
-  const files = fs.readdirSync(SRC).filter(f => /^(08|09|10)/.test(f) && f.endsWith('.js')).sort();
+  const files = fs.readdirSync(SRC).filter(f => /^(08|09|10)/.test(f) && f.endsWith('.js') && !/^09l_/.test(f)).sort();
   const items = []; const gates = [];
   for (const file of files) {
     const S = scan(file);
@@ -125,7 +125,7 @@ function collect() {
   }
   // needs catalog for new pool lines
   const needs = [...new Set(items.filter(i => i.pool && i.pool.need).map(i => i.pool.need))].sort();
-  return { files, items, gates, needs, names: NAMES, money: collectMoney(), arcs: readArcs() };
+  return { files, items, gates, needs, names: NAMES, money: collectMoney(), arcs: readArcs(), songs: readSongs() };
 }
 
 // ---------------- arcs ----------------
@@ -136,6 +136,44 @@ function editArc(body) {
   const id = String(body.id || ''); if (!/^[a-zA-Z]\w*$/.test(id)) return { ok: false, error: 'bad id' };
   const arcs = readArcs(); const beats = String(body.beats || '').replace(/\r/g, '').split('\n').map(l => l.replace(/^\s*(\d+[.)]|[-*])\s*/, '').trim()).filter(Boolean);
   arcs[id] = { arc: String(body.arc || '').trim(), beats }; fs.writeFileSync(ARCS_PATH, JSON.stringify(arcs, null, 2) + '\n'); return { ok: true };
+}
+
+// ---------------- songs ----------------
+// The songs are pure JSON between /*SONGS*/ and /*END*/ in src/09l_songs_data.js. The editor rewrites that block.
+const SONGS_PATH = path.join(SRC, '09l_songs_data.js');
+function readSongs() {
+  try { const src = fs.readFileSync(SONGS_PATH, 'utf8'); const a = src.indexOf('/*SONGS*/') + 9, b = src.indexOf('/*END*/'); const songs = JSON.parse(src.slice(a, b));
+    // ids the code refers to by name cannot be deleted or renamed from here
+    const code = fs.readdirSync(SRC).filter(f => f.endsWith('.js') && !/^09l_/.test(f)).map(f => fs.readFileSync(path.join(SRC, f), 'utf8')).join('\n');
+    const referenced = songs.map(s => s.id).filter(id => new RegExp("id === '" + id + "'").test(code) || (id === 'sol1994'));
+    return { list: songs, referenced }; } catch (e) { return { list: [], referenced: [], error: e.message }; }
+}
+function fmtSong(d) {
+  const J = x => JSON.stringify(x);
+  const parts = [`    "id": ${J(d.id)}, "title": ${J(d.title)}, "who": ${J(d.who || 'cal')}, "bpm": ${+d.bpm}, "bar": ${+d.bar}, "key": ${+d.key}, "unlock": ${J(d.unlock || 'always')}${d.solo ? ', "solo": true' : ''}${d.band ? ', "band": true' : ''}${d.hint ? ', "hint": ' + J(d.hint) : ''},`,
+    `    "chords": ${J(d.chords)},`,
+    `    "melody": [\n${d.melody.map(b => '      ' + J(b)).join(',\n')}\n    ],`,
+    `    "lyrics": [\n${(d.lyrics || []).map(l => '      ' + J(l)).join(',\n')}\n    ],`,
+    `    "outro": ${J(d.outro || '')}${d.early ? ',\n    "early": ' + J(d.early) : ''}${d.alt ? ',\n    "alt": ' + J(d.alt) : ''},`,
+    `    "inst": ${J(d.inst || {})}`];
+  return '  {\n' + parts.join('\n') + '\n  }';
+}
+function writeSongs(body) {
+  const list = body.songs; if (!Array.isArray(list) || !list.length) return { ok: false, error: 'no songs' };
+  const ids = new Set();
+  for (const d of list) {
+    if (!d.id || !/^[a-z0-9_]+$/i.test(d.id)) return { ok: false, error: 'Song ids are letters and numbers only: ' + d.id };
+    if (ids.has(d.id)) return { ok: false, error: 'Two songs share the id ' + d.id }; ids.add(d.id);
+    if (!(d.bpm > 20 && d.bpm < 300)) return { ok: false, error: d.title + ': tempo out of range' };
+    if (!(d.bar === 3 || d.bar === 4 || d.bar === 2 || d.bar === 6)) return { ok: false, error: d.title + ': beats per bar must be 2, 3, 4 or 6' };
+    if (!Array.isArray(d.chords) || !d.chords.length || !Array.isArray(d.melody) || d.melody.length !== d.chords.length) return { ok: false, error: d.title + ': melody and chords must have the same number of bars' };
+    for (let i = 0; i < d.melody.length; i++) { const sum = d.melody[i].reduce((a, n) => a + n[1], 0); if (Math.abs(sum - d.bar) > 0.001) return { ok: false, error: `${d.title}: bar ${i + 1} adds up to ${sum} beats, not ${d.bar}` }; }
+  }
+  const cur = readSongs(); for (const id of cur.referenced) if (!ids.has(id)) return { ok: false, error: `The code refers to the song '${id}' by name; it can be edited but not removed.` };
+  const src = fs.readFileSync(SONGS_PATH, 'utf8'); const a = src.indexOf('/*SONGS*/') + 9, b = src.indexOf('/*END*/');
+  const next = src.slice(0, a) + '[\n' + list.map(fmtSong).join(',\n') + '\n]' + src.slice(b);
+  try { new Function(next); JSON.parse(next.slice(a, next.indexOf('/*END*/'))); } catch (e) { return { ok: false, error: 'That would break the file: ' + e.message }; }
+  fs.writeFileSync(SONGS_PATH, next); return { ok: true };
 }
 
 // ---------------- money ----------------
@@ -315,6 +353,7 @@ http.createServer((req, res) => {
   const send = (code, obj, type) => { res.writeHead(code, { 'Content-Type': type || 'application/json; charset=utf-8' }); res.end(type ? obj : JSON.stringify(obj)); };
   if (req.method === 'GET' && (req.url === '/' || req.url.startsWith('/?'))) return send(200, HTML(), 'text/html; charset=utf-8');
   if (req.method === 'GET' && req.url.startsWith('/api/git/status')) { try { return send(200, gitStatus(/fetch=1/.test(req.url))); } catch (e) { return send(500, { repo: false, error: e.message }); } }
+  if (req.method === 'GET' && req.url === '/src/09l_synth.js') { try { return send(200, fs.readFileSync(path.join(SRC, '09l_synth.js'), 'utf8'), 'text/javascript; charset=utf-8'); } catch (e) { return send(404, { error: 'no synth' }); } }
   if (req.method === 'GET' && req.url === '/api/data') { try { return send(200, collect()); } catch (e) { return send(500, { error: e.stack }); } }
   if (req.method === 'GET' && req.url.startsWith('/api/source')) { const u = new URL(req.url, 'http://x'); const f = u.searchParams.get('f'); const line = +u.searchParams.get('line'); try { const lines = fs.readFileSync(path.join(SRC, path.basename(f)), 'utf8').split('\n'); const a = Math.max(0, line - 4), b = Math.min(lines.length, line + 3); return send(200, { from: a + 1, lines: lines.slice(a, b) }); } catch (e) { return send(404, { error: 'no file' }); } }
   if (req.method === 'POST') {
@@ -327,6 +366,7 @@ http.createServer((req, res) => {
         if (req.url === '/api/gate') return send(200, editGate(body));
         if (req.url === '/api/money') return send(200, editMoney(body));
         if (req.url === '/api/arc') return send(200, editArc(body));
+        if (req.url === '/api/songs') return send(200, writeSongs(body));
         if (req.url === '/api/source/edit') return send(200, editSource(body));
         if (req.url === '/api/build') return send(200, build());
         if (req.url === '/api/git/sync') return send(200, gitSync(body));

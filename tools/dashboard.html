@@ -29,6 +29,18 @@ textarea:hover{border-color:var(--line)}textarea:focus{outline:none;border-color
 .srcbody{display:grid;grid-template-columns:44px 1fr}.nums{padding:6px 0;text-align:right;color:var(--dim2);user-select:none;overflow:hidden;line-height:1.5}.nums span{display:block;padding-right:8px}.nums .hl{color:var(--acc)}
 .srcta{width:100%;background:transparent;border:none;color:var(--fg);font:inherit;font-size:11.5px;line-height:1.5;padding:6px 10px;resize:none;white-space:pre;overflow-x:auto;overflow-y:hidden;border-left:1px solid var(--line)}.srcta:focus{outline:none;background:var(--bg2)}
 .add{display:grid;grid-template-columns:1fr 240px 56px 56px 80px;gap:8px;margin:10px 0 0 66px;align-items:center}.add input{background:var(--bg);border:1px solid var(--line);color:var(--fg);font:inherit;padding:4px 6px;border-radius:2px}.add input:focus{outline:none;border-color:var(--acc)}
+/* music */
+.mtabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}.mtab{padding:4px 10px;border:1px solid var(--line);border-radius:3px;cursor:pointer;color:var(--fg)}.mtab small{color:var(--dim2);margin-left:6px}.mtab.on{border-color:var(--acc);color:var(--acc)}.mtab.newsong{color:var(--dim)}.mtab:hover{border-color:var(--acc)}
+.mhead,.mtransport{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin:8px 0;padding:8px 10px;background:var(--bg2);border:1px solid var(--line);border-radius:3px}.mhead label,.mtransport label{color:var(--dim);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.mhead input,.mhead select,.mtransport select,.mlyrics input,.mgrid2 input,.mgrid2 textarea,.mgrid2 select,.mmix input[type=number],.mmix select{background:var(--bg);border:1px solid var(--line);color:var(--fg);font:inherit;padding:3px 6px;border-radius:2px}.mhead input:focus,.mlyrics input:focus,.mgrid2 textarea:focus,.mgrid2 input:focus{outline:none;border-color:var(--acc)}
+.mpos{color:var(--acc);white-space:nowrap}
+.mroll{overflow-x:auto;border:1px solid var(--line);border-radius:3px;background:var(--bg);margin:8px 0}.mroll canvas{display:block;image-rendering:pixelated}
+.msec{margin:14px 0;padding:8px 10px;background:var(--bg2);border:1px solid var(--line);border-radius:3px}.mh{display:flex;gap:12px;align-items:baseline;margin-bottom:8px}.mh b{color:var(--fg)}.mh .hint{color:var(--dim2);font-size:11px;margin-left:auto}
+.mtoggle{color:var(--dim);cursor:pointer;padding:1px 6px;border:1px solid transparent;border-radius:2px}.mtoggle.on{color:var(--acc);border-color:var(--line)}.mtoggle:hover{color:var(--acc)}
+.mlyrics .mly{display:grid;grid-template-columns:64px 1fr 20px;gap:8px;align-items:center;margin:3px 0}.mlyrics .x{text-align:center}
+.mgrid2{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin-top:10px}.mgrid2 label{color:var(--dim);display:flex;flex-direction:column;gap:3px}.mgrid2 label.wide{grid-column:1/-1}.mgrid2 textarea{resize:vertical;overflow:auto;color:var(--narr)}
+.mmix{border-collapse:collapse;width:100%}.mmix th{text-align:left;color:var(--dim2);font-weight:normal;font-size:11px;padding:2px 8px}.mmix td{padding:3px 8px;border-top:1px solid var(--line)}.mmix .pn{color:var(--say)}.mmix input[type=range]{width:90px;vertical-align:middle}.mmix .vv{color:var(--dim);margin-left:6px;font-size:11px}.mmix input[type=number]{width:70px}
+.croots{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}.croot{padding:2px 7px;border:1px solid var(--line);border-radius:2px;cursor:pointer;color:var(--fg)}.croot.on{border-color:var(--acc);color:var(--acc)}.croot:hover{border-color:var(--acc)}
 /* timeline */
 .tl{position:relative;margin-top:8px}.ruler{display:grid;grid-template-columns:200px 1fr;position:sticky;top:0;background:var(--bg);z-index:2;border-bottom:1px solid var(--line);padding-bottom:4px}
 .days{position:relative;height:34px}.days .d{position:absolute;top:18px;font-size:10px;color:var(--dim2);transform:translateX(-50%)}.days .d.wk{color:var(--dim)}.days .m{position:absolute;top:0;font-size:11px;color:var(--acc)}
@@ -61,6 +73,7 @@ kbd{border:1px solid var(--line);border-radius:3px;padding:0 4px;color:var(--dim
 <div id="main"></div>
 <div id="pop"></div>
 <div id="gitpop"></div>
+<script src="/src/09l_synth.js"></script>
 <script>
 const $ = s => document.querySelector(s); let DATA = null; Object.defineProperty(window, "DATA", { get: () => DATA }); let view = { kind: 'char', id: 'amos' }; const dirty = new Map();
 const KIND = { say: 'say', sayPick: 'say', sayExpr: 'say', narr: 'narr', narrPick: 'narr', narrExpr: 'narr', you: 'you', label: 'label', pool: 'pool', poolInline: 'pool' };
@@ -68,12 +81,12 @@ const status = (t, c) => { const s = $('#status'); s.textContent = t; s.classNam
 async function load() { status('loading'); DATA = await (await fetch('/api/data')).json(); dirty.clear(); $('#saveAll').disabled = true; renderSide(); render(); status(`${DATA.items.length} lines, ${DATA.gates.length} day gates`); }
 function charsList() { const counts = {}; for (const it of DATA.items) counts[it.who] = (counts[it.who] || 0) + 1; const order = ['amos', 'mei', 'walter', 'nadia', 'nora', 'sol', 'theo', 'busker', 'emmett', 'signe', 'birdie', 'morrow', 'jo', 'doctor', 'granny', 'kid', 'worker', 'owner', 'pryor', 'lena', 'marsh', 'mrsLin', 'dutch', 'lou', 'widow', 'samDad', 'desk', 'voice', 'caller', 'towerman', 'dog', 'system']; const ids = [...new Set(order.concat(Object.keys(counts)))].filter(k => counts[k]); return ids.map(id => ({ id, name: DATA.names[id] || id, n: counts[id] })); }
 function renderSide() {
-  const s = $('#side'); let h = '<h4>Views</h4>'; h += `<a data-v="timeline" class="${view.kind === 'timeline' ? 'on' : ''}">Timeline<span class="n">1-99</span></a>`; h += `<a data-v="gates" class="${view.kind === 'gates' ? 'on' : ''}">Day gates<span class="n">${DATA.gates.length}</span></a>`; h += `<a data-v="money" class="${view.kind === 'money' ? 'on' : ''}">Money<span class="n">${DATA.money.length}</span></a>`;
+  const s = $('#side'); let h = '<h4>Views</h4>'; h += `<a data-v="timeline" class="${view.kind === 'timeline' ? 'on' : ''}">Timeline<span class="n">1-99</span></a>`; h += `<a data-v="gates" class="${view.kind === 'gates' ? 'on' : ''}">Day gates<span class="n">${DATA.gates.length}</span></a>`; h += `<a data-v="money" class="${view.kind === 'money' ? 'on' : ''}">Money<span class="n">${DATA.money.length}</span></a>`; h += `<a data-v="music" class="${view.kind === 'music' ? 'on' : ''}">Music<span class="n">${DATA.songs.list.length}</span></a>`;
   h += '<h4>Characters</h4>'; for (const c of charsList()) h += `<a data-c="${c.id}" class="${view.kind === 'char' && view.id === c.id ? 'on' : ''}">${c.name}<span class="n">${c.n}</span></a>`;
   s.innerHTML = h; s.querySelectorAll('a').forEach(a => a.onclick = () => { view = a.dataset.v ? { kind: a.dataset.v } : { kind: 'char', id: a.dataset.c }; $('#q').value = ''; renderSide(); render(); $('#main').scrollTop = 0; });
 }
 function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-function render() { const q = $('#q').value.trim().toLowerCase(); if (q) return renderSearch(q); if (view.kind === 'timeline') return renderTimeline(); if (view.kind === 'gates') return renderGates(); if (view.kind === 'money') return renderMoney(); renderChar(view.id); }
+function render() { const q = $('#q').value.trim().toLowerCase(); if (q) return renderSearch(q); if (view.kind === 'timeline') return renderTimeline(); if (view.kind === 'gates') return renderGates(); if (view.kind === 'money') return renderMoney(); if (view.kind === 'music') return renderMusic(); renderChar(view.id); }
 function rowHtml(it) {
   const k = KIND[it.kind] || it.kind; const tree = it.depth ? '<span class="tree">' + '│ '.repeat(it.depth - 1) + (k === 'label' ? '├▸ ' : '│ ') + '</span>' : (k === 'label' ? '<span class="tree">▸ </span>' : '');
   const tag = k === 'say' ? (DATA.names[it.who] || it.who) : k === 'narr' ? '(narration)' : k === 'you' ? 'YOU' : k === 'label' ? 'CHOICE' : 'pool';
@@ -147,7 +160,7 @@ async function saveOne(id) {
 async function reloadQuiet() { const keep = new Map(dirty); DATA = await (await fetch('/api/data')).json(); dirty.clear(); for (const [k, v] of keep) if (DATA.items.find(i => i.id === k)) dirty.set(k, v); }
 async function saveAll() { for (const id of [...dirty.keys()]) await saveOne(id); if (!dirty.size) { status('all saved', 'ok'); } }
 $('#saveAll').onclick = saveAll;
-document.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') document.activeElement.blur(); saveAll(); } });
+document.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); if (view.kind === 'music' && !$('#q').value.trim()) { musicSave(); return; } if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') document.activeElement.blur(); saveAll(); } });
 $('#build').onclick = async () => { status('building...'); const r = await post('/api/build', {}); status(r.ok ? r.out.replace(/\n/g, ' · ') : r.error, r.ok ? 'ok' : 'bad'); };
 $('#q').oninput = () => render();
 // ---- timeline ----
@@ -212,7 +225,7 @@ function gatePop(e, id) {
   const save = async () => { const r = await post('/api/gate', { file: g.file, start: g.start, end: g.end, was: g.day, day: +$('#gd').value }); p.style.display = 'none'; if (r.ok) { status('day changed', 'ok'); await load(); } else status(r.error, 'bad'); };
   $('#gsave').onclick = save; $('#gd').onkeydown = ev => { if (ev.key === 'Enter') save(); if (ev.key === 'Escape') p.style.display = 'none'; };
 }
-document.addEventListener('click', e => { if (!e.target.closest('#pop') && !e.target.dataset.g) $('#pop').style.display = 'none'; });
+document.addEventListener('click', e => { if (!e.target.closest('#pop') && !e.target.dataset.g && e.target.id !== 'mcanvas') $('#pop').style.display = 'none'; });
 
 // ---- git sync: commit here, pull theirs, rebuild, push ----
 let GIT = null;
@@ -248,6 +261,155 @@ function gitConflict(c, lines) { const g = $('#glog'); g.className = 'log'; let 
   h += `<div class="btns" style="margin-top:8px"><button id="gmerge" class="primary">keep these and push</button><span style="color:var(--dim2)">both versions stay in the history either way</span></div>`;
   g.innerHTML = h; $('#gmerge').onclick = async () => { const choices = c.hunks.map((hk, n) => ({ file: hk.file, idx: hk.idx, pick: document.querySelector(`input[name=h${n}]:checked`).value })); $('#gmerge').disabled = true; status('merging...'); const r = await post('/api/git/resolve', { message: c.message, choices }); gitResult(r); }; }
 $('#sync').onclick = gitOpen; $('#git').onclick = gitOpen;
+// ============================================================
+// Music: the songs as data, a piano roll for the melody, chords per bar, timed lyrics, the mix, and a preview that is the game's synth.
+// ============================================================
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const noteName = m => NOTE_NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+const M = { songs: null, cur: 0, dirty: false, pen: 2, view: 'main', ctx: null, master: null, playing: null, raf: 0, cell: 14, row: 10, drag: null, hover: null };
+const UNLOCKS = [['always', 'always (in Cal\'s rotation)'], ['theoReunited', 'once Theo is home'], ['bandNight', 'band nights only (Friday, the Three)'], ['walterDead', 'once Walter is dead'], ['never', 'never in rotation (played by code)'], ['day', 'from day N'], ['flag', 'when a flag is set']];
+function songsInit() { if (!M.songs) { M.songs = JSON.parse(JSON.stringify(DATA.songs.list)); M.dirty = false; } }
+function curSong() { return M.songs[M.cur]; }
+function musicDirty() { M.dirty = true; const b = $('#msave'); if (b) b.disabled = false; status('song edited, not saved'); }
+function songBlank(title) { const id = title.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 16) || 'song' + Date.now(); const bar = 4; const s = { id, title, who: 'cal', bpm: 100, bar, key: 55, unlock: 'always', chords: [], melody: [], lyrics: [[0, '']], outro: '', inst: {} }; for (let i = 0; i < 8; i++) { s.chords.push([0, 'M']); s.melody.push([[null, bar]]); } s.inst = SYNTH.inst(s); return s; }
+function renderMusic() {
+  songsInit(); const s = curSong(); if (!s) { $('#main').innerHTML = '<h2>music</h2><p>No songs.</p>'; return; }
+  let h = `<h2>music<small>${M.songs.length} songs. Click the roll to place a note, click a note to remove it, drag its right edge to stretch it. Chords per bar, lyrics by beat, the mix per instrument. Play is the game's own synth.</small></h2>`;
+  h += `<div class="mtabs">${M.songs.map((x, i) => `<span class="mtab ${i === M.cur ? 'on' : ''}" data-i="${i}">${esc(x.title)}<small>${esc(x.who || 'cal')}</small></span>`).join('')}<span class="mtab newsong" id="madd">+ new song</span></div>`;
+  const unl = /^day/.test(s.unlock) ? 'day' : /^flag:/.test(s.unlock) ? 'flag' : s.unlock;
+  h += `<div class="mhead">
+    <label>title <input id="mtitle" value="${esc(s.title)}"></label>
+    <label>id <input id="mid" value="${esc(s.id)}" ${DATA.songs.referenced.includes(s.id) ? 'disabled title="the code refers to this song by name"' : ''} style="width:90px"></label>
+    <label>who <select id="mwho">${['cal', 'sol', 'three'].map(w => `<option ${w === (s.who || 'cal') ? 'selected' : ''}>${w}</option>`).join('')}</select></label>
+    <label>bpm <input id="mbpm" type="number" value="${s.bpm}" min="30" max="240" style="width:56px"></label>
+    <label>beats/bar <select id="mbar">${[2, 3, 4, 6].map(b => `<option ${b === s.bar ? 'selected' : ''}>${b}</option>`).join('')}</select></label>
+    <label>key <select id="mkey">${Array.from({ length: 25 }, (_, i) => 43 + i).map(k => `<option value="${k}" ${k === s.key ? 'selected' : ''}>${noteName(k)}</option>`).join('')}</select></label>
+    <label>unlock <select id="munlock">${UNLOCKS.map(u => `<option value="${u[0]}" ${u[0] === unl ? 'selected' : ''}>${u[1]}</option>`).join('')}</select><input id="munlockv" value="${unl === 'day' ? s.unlock.replace(/\D/g, '') : unl === 'flag' ? s.unlock.slice(5) : ''}" placeholder="${unl === 'day' ? 'N' : 'flag name'}" style="width:70px;${unl === 'day' || unl === 'flag' ? '' : 'display:none'}"></label>
+    <label><input type="checkbox" id="msolo" ${s.solo ? 'checked' : ''}> solo (no band; Sol's kind)</label>
+    <label><input type="checkbox" id="mband" ${s.band ? 'checked' : ''}> band (cello and horn join)</label>
+  </div>`;
+  h += `<div class="mtransport"><button id="mplay" class="primary">play</button><button id="mstop">stop</button>
+    <label>audition <select id="monly"><option value="">everything that is on</option>${SYNTH.PARTS.map(p => `<option value="${p}">${p} only</option>`).join('')}</select></label>
+    <label><input type="checkbox" id="mmute"> mute in the bell (Sol's)</label>
+    <label>volume <input type="range" id="mvol" min="0" max="3" step="0.1" value="1.4" style="width:90px"></label>
+    <span id="mpos" class="mpos">bar 1 · beat 1</span>
+    <span style="margin-left:auto"></span><label>pen <select id="mpen">${[[1, '1/2 beat'], [2, '1 beat'], [4, '2 beats'], [6, '3 beats'], [8, '4 beats']].map(p => `<option value="${p[0]}" ${p[0] === M.pen ? 'selected' : ''}>${p[1]}</option>`).join('')}</select></label>
+    <button id="mbarplus" title="add a bar at the end">+ bar</button><button id="mbarminus" title="remove the last bar">- bar</button>
+    <button id="msave" class="primary" ${M.dirty ? '' : 'disabled'}>save songs</button><button id="mdel" ${DATA.songs.referenced.includes(s.id) ? 'disabled title="the code refers to this song by name"' : ''}>delete song</button></div>`;
+  h += `<div class="mroll"><canvas id="mcanvas"></canvas></div>`;
+  // lyrics
+  const lyricsOf = () => M.view === 'alt' && s.alt ? s.alt.lyrics : s.lyrics;
+  h += `<div class="msec"><div class="mh"><b>lyrics</b> <span class="mtoggle ${M.view === 'main' ? 'on' : ''}" data-lv="main">main</span>${s.alt ? `<span class="mtoggle ${M.view === 'alt' ? 'on' : ''}" data-lv="alt">alt (when ${esc(s.alt.when)})</span>` : `<span class="mtoggle" id="maddalt">+ alternate lyrics</span>`}<span class="hint">beat numbers count from 0; a bar is ${s.bar} beats</span></div>`;
+  h += `<div class="mlyrics">${lyricsOf().map((l, i) => `<div class="mly"><input type="number" class="lbeat" data-i="${i}" value="${l[0]}" min="0" step="1"><input class="ltext" data-i="${i}" value="${esc(l[1])}"><span class="x" data-ldel="${i}" title="remove">×</span></div>`).join('')}<div class="mly"><span></span><button id="mlyadd">+ line</button></div></div>`;
+  if (M.view === 'alt' && s.alt) h += `<div class="mgrid2"><label>alt title <input id="malttitle" value="${esc(s.alt.title || '')}"></label><label>alt when <select id="maltwhen">${['walterDead', 'theoReunited', 'bandNight', 'never'].map(w => `<option ${w === s.alt.when ? 'selected' : ''}>${w}</option>`).join('')}</select> <span class="hint">the alt plays while this is NOT true</span></label><label class="wide">alt outro <textarea id="maltoutro" rows="2">${esc(s.alt.outro || '')}</textarea></label><span class="mtoggle" id="mdelalt">remove the alternate</span></div>`;
+  h += `<div class="mgrid2"><label class="wide">outro (the narration when it ends) <textarea id="moutro" rows="2">${esc(s.outro || '')}</textarea></label><label class="wide">early (if you walk away; blank for the default) <textarea id="mearly" rows="2">${esc(s.early || '')}</textarea></label><label>hint (the key hint, e.g. "let him stop") <input id="mhint" value="${esc(s.hint || '')}"></label></div></div>`;
+  // the mix
+  const I = SYNTH.inst(s);
+  h += `<div class="msec"><div class="mh"><b>the mix</b><span class="hint">per instrument; blank values fall back to the synth's defaults for this kind of song</span></div><table class="mmix"><tr><th></th><th>on</th><th>vol</th><th>wave</th><th>cutoff Hz</th><th>attack s</th><th>octave</th><th>extra</th><th></th></tr>`;
+  for (const p of SYNTH.PARTS) { const v = I[p]; h += `<tr data-p="${p}"><td class="pn">${p}</td><td><input type="checkbox" class="ion" ${v.on ? 'checked' : ''}></td><td><input type="range" class="ivol" min="0" max="0.15" step="0.005" value="${v.vol}"><span class="vv">${v.vol}</span></td><td><select class="itype">${SYNTH.TYPES.map(t => `<option ${t === v.type ? 'selected' : ''}>${t}</option>`).join('')}</select></td><td><input type="number" class="icut" value="${v.cutoff}" min="100" max="8000" step="50"></td><td><input type="number" class="iatt" value="${v.attack}" min="0.005" max="1" step="0.005"></td><td>${p === 'guitar' ? '' : `<input type="number" class="ioct" value="${v.octave}" min="-3" max="3">`}</td><td>${p === 'guitar' ? `pattern <select class="ipat">${Object.keys(SYNTH.PATTERNS).map(k => `<option ${k === v.pattern ? 'selected' : ''}>${k}</option>`).join('')}</select>` : p === 'horn' ? `mode <select class="imode"><option ${v.mode === 'long' ? 'selected' : ''}>long</option><option ${v.mode === 'all' ? 'selected' : ''}>all</option></select> crack <input type="number" class="icrack" value="${v.crack || 0}" min="0" max="12" style="width:44px"> vibrato <input type="number" class="ivib" value="${v.vibrato}" min="0" max="0.03" step="0.001" style="width:74px">` : ''}</td><td><span class="mtoggle" data-aud="${p}">hear it</span></td></tr>`; }
+  h += `</table></div>`;
+  $('#main').innerHTML = h; wireMusic();
+}
+function wireMusic() {
+  const s = curSong();
+  document.querySelectorAll('.mtab[data-i]').forEach(t => t.onclick = () => { musicStop(); M.cur = +t.dataset.i; M.view = 'main'; renderMusic(); });
+  $('#madd').onclick = () => { const t = prompt('Title of the new song?'); if (!t) return; M.songs.push(songBlank(t.trim())); M.cur = M.songs.length - 1; M.view = 'main'; musicDirty(); renderMusic(); };
+  $('#mdel').onclick = () => { if (!confirm(`Remove "${s.title}" from the game?`)) return; M.songs.splice(M.cur, 1); M.cur = Math.max(0, M.cur - 1); musicDirty(); renderMusic(); };
+  const bind = (id, f) => { const el = $(id); if (el) el.onchange = () => { f(el); musicDirty(); rollDraw(); }; };
+  bind('#mtitle', el => { s.title = el.value; document.querySelector('.mtab.on').firstChild.textContent = s.title; }); bind('#mid', el => { s.id = el.value.trim(); });
+  bind('#mwho', el => { s.who = el.value; }); bind('#mbpm', el => { s.bpm = +el.value; }); bind('#mkey', el => { s.key = +el.value; });
+  bind('#mbar', el => { const nb = +el.value; s.bar = nb; s.melody = s.melody.map(bar => rebar(bar, nb)); renderMusic(); });
+  bind('#munlock', el => { const v = el.value; const iv = $('#munlockv'); if (v === 'day') { iv.style.display = ''; iv.placeholder = 'N'; s.unlock = 'day>=' + (iv.value.replace(/\D/g, '') || '30'); iv.value = s.unlock.replace(/\D/g, ''); } else if (v === 'flag') { iv.style.display = ''; iv.placeholder = 'flag name'; s.unlock = 'flag:' + (iv.value || 'someFlag'); iv.value = s.unlock.slice(5); } else { iv.style.display = 'none'; s.unlock = v; } });
+  bind('#munlockv', el => { const v = $('#munlock').value; if (v === 'day') s.unlock = 'day>=' + (el.value.replace(/\D/g, '') || '1'); else if (v === 'flag') s.unlock = 'flag:' + el.value.trim(); });
+  bind('#msolo', el => { s.solo = el.checked || undefined; if (!s.solo) delete s.solo; s.inst = SYNTH.inst(s); renderMusic(); }); bind('#mband', el => { s.band = el.checked || undefined; if (!s.band) delete s.band; s.inst = SYNTH.inst(s); renderMusic(); });
+  bind('#moutro', el => { s.outro = el.value; }); bind('#mearly', el => { s.early = el.value.trim() || undefined; if (!s.early) delete s.early; }); bind('#mhint', el => { s.hint = el.value.trim() || undefined; if (!s.hint) delete s.hint; });
+  bind('#malttitle', el => { s.alt.title = el.value; }); bind('#maltwhen', el => { s.alt.when = el.value; }); bind('#maltoutro', el => { s.alt.outro = el.value; });
+  $('#mpen').onchange = () => { M.pen = +$('#mpen').value; };
+  $('#mbarplus').onclick = () => { s.chords.push([s.chords[s.chords.length - 1] ? s.chords[s.chords.length - 1][0] : 0, 'M']); s.melody.push([[null, s.bar]]); musicDirty(); rollSize(); rollDraw(); };
+  $('#mbarminus').onclick = () => { if (s.chords.length <= 2) return; s.chords.pop(); s.melody.pop(); const tb = s.chords.length * s.bar; s.lyrics = s.lyrics.filter(l => l[0] < tb); musicDirty(); renderMusic(); };
+  document.querySelectorAll('.mtoggle[data-lv]').forEach(t => t.onclick = () => { M.view = t.dataset.lv; renderMusic(); });
+  const ma = $('#maddalt'); if (ma) ma.onclick = () => { s.alt = { when: 'walterDead', title: s.title, lyrics: JSON.parse(JSON.stringify(s.lyrics)), outro: s.outro }; M.view = 'alt'; musicDirty(); renderMusic(); };
+  const md = $('#mdelalt'); if (md) md.onclick = () => { if (!confirm('Remove the alternate lyrics?')) return; delete s.alt; M.view = 'main'; musicDirty(); renderMusic(); };
+  const L = () => M.view === 'alt' && s.alt ? s.alt.lyrics : s.lyrics;
+  document.querySelectorAll('.lbeat').forEach(i => i.onchange = () => { L()[+i.dataset.i][0] = Math.max(0, +i.value); musicDirty(); rollDraw(); });
+  document.querySelectorAll('.ltext').forEach(i => i.oninput = () => { L()[+i.dataset.i][1] = i.value; musicDirty(); rollDraw(); });
+  document.querySelectorAll('[data-ldel]').forEach(x => x.onclick = () => { L().splice(+x.dataset.ldel, 1); musicDirty(); renderMusic(); });
+  $('#mlyadd').onclick = () => { const ly = L(); const last = ly.length ? ly[ly.length - 1][0] : -s.bar * 4; ly.push([Math.min(last + s.bar * 4, s.chords.length * s.bar - 1), '']); musicDirty(); renderMusic(); document.querySelectorAll('.ltext')[ly.length - 1].focus(); };
+  // the mix
+  document.querySelectorAll('.mmix tr[data-p]').forEach(tr => { const p = tr.dataset.p; const I = () => (s.inst[p] = s.inst[p] || Object.assign({}, SYNTH.inst(s)[p]));
+    const on = (cls, f) => { const el = tr.querySelector(cls); if (el) el.oninput = el.onchange = () => { f(el, I()); musicDirty(); }; };
+    on('.ion', (el, v) => v.on = el.checked); on('.ivol', (el, v) => { v.vol = +el.value; tr.querySelector('.vv').textContent = el.value; }); on('.itype', (el, v) => v.type = el.value); on('.icut', (el, v) => v.cutoff = +el.value); on('.iatt', (el, v) => v.attack = +el.value); on('.ioct', (el, v) => v.octave = +el.value);
+    on('.ipat', (el, v) => v.pattern = el.value); on('.imode', (el, v) => v.mode = el.value); on('.icrack', (el, v) => v.crack = +el.value); on('.ivib', (el, v) => v.vibrato = +el.value);
+    tr.querySelector('[data-aud]').onclick = () => musicPlay(p); });
+  $('#mplay').onclick = () => musicPlay($('#monly').value || null); $('#mstop').onclick = musicStop; $('#mvol').oninput = () => { if (M.master) M.master.gain.value = +$('#mvol').value; };
+  $('#msave').onclick = musicSave;
+  rollSize(); rollWire(); rollDraw();
+}
+// ---- the melody as a roll: bars of [note, beats] <-> notes with a start in half-beats ----
+function rebar(bar, nb) { let out = []; let acc = 0; for (const [n, b] of bar) { if (acc + b <= nb) { out.push([n, b]); acc += b; } else if (acc < nb) { out.push([n, nb - acc]); acc = nb; } } if (acc < nb) out.push([null, nb - acc]); return out; }
+function rollNotes(s) { const notes = []; s.melody.forEach((bar, bi) => { let t = bi * s.bar * 2; for (const [n, b] of bar) { if (n !== null) notes.push({ n, start: t, len: Math.round(b * 2), bar: bi }); t += Math.round(b * 2); } }); return notes; }
+function rollCommit(s, notes) { // back into bars; rests fill the gaps; notes are clipped to their bar
+  const nb = s.chords.length; const out = [];
+  for (let bi = 0; bi < nb; bi++) { const b0 = bi * s.bar * 2, b1 = b0 + s.bar * 2; const inBar = notes.filter(x => x.start >= b0 && x.start < b1).sort((a, b) => a.start - b.start); const bar = []; let t = b0;
+    for (const x of inBar) { if (x.start < t) continue; if (x.start > t) bar.push([null, (x.start - t) / 2]); const len = Math.min(x.len, b1 - x.start); bar.push([x.n, len / 2]); t = x.start + len; }
+    if (t < b1) bar.push([null, (b1 - t) / 2]); out.push(bar); }
+  s.melody = out;
+}
+const ROLL = { top: 44, left: 64, rows: 25, cw: 14, rh: 10 };
+function rollSize() { const s = curSong(); const c = $('#mcanvas'); if (!c) return; const cols = s.chords.length * s.bar * 2; c.width = ROLL.left + cols * ROLL.cw + 8; c.height = ROLL.top + ROLL.rows * ROLL.rh + 8; c.style.width = c.width + 'px'; c.style.height = c.height + 'px'; }
+function rollHit(ev) { const c = $('#mcanvas'); const r = c.getBoundingClientRect(); const x = ev.clientX - r.left, y = ev.clientY - r.top; const s = curSong(); const cols = s.chords.length * s.bar * 2;
+  const col = Math.floor((x - ROLL.left) / ROLL.cw), row = Math.floor((y - ROLL.top) / ROLL.rh); const note = ROLL.rows - 1 - row;
+  if (y < 18 && x >= ROLL.left) return { zone: 'lyric', col }; if (y >= 18 && y < ROLL.top && x >= ROLL.left) return { zone: 'chord', bar: Math.floor(col / (s.bar * 2)) };
+  if (col < 0 || col >= cols || row < 0 || row >= ROLL.rows) return { zone: 'none' }; return { zone: 'roll', col, note, x, y }; }
+function rollWire() { const c = $('#mcanvas'); const s = curSong();
+  c.onmousemove = ev => { const h = rollHit(ev); M.hover = h; if (h.zone === 'roll' && M.drag) { const n = M.drag.note; n.len = Math.max(1, h.col - n.start + 1); M.drag.moved = true; } c.style.cursor = h.zone === 'roll' ? (rollNotes(s).some(n => n.n === h.note && h.col === n.start + n.len - 1) ? 'ew-resize' : 'cell') : h.zone === 'chord' ? 'pointer' : 'default'; rollDraw(); };
+  c.onmouseleave = () => { M.hover = null; rollDraw(); };
+  c.onmousedown = ev => { const h = rollHit(ev); if (h.zone !== 'roll') return; const notes = rollNotes(s); const edge = notes.find(n => n.n === h.note && h.col === n.start + n.len - 1); if (edge && ev.button === 0) { M.drag = { note: edge, notes, moved: false }; } };
+  c.onmouseup = ev => { const s2 = curSong(); if (M.drag) { const d = M.drag; M.drag = null; if (d.moved) { rollCommit(s2, d.notes); musicDirty(); rollDraw(); return; } } };
+  c.onclick = ev => { const h = rollHit(ev); const s2 = curSong();
+    if (h.zone === 'chord') { chordPop(ev, h.bar); return; }
+    if (h.zone !== 'roll') return; let notes = rollNotes(s2); const hit = notes.find(n => n.n === h.note && h.col >= n.start && h.col < n.start + n.len);
+    if (hit) { notes = notes.filter(n => n !== hit); } else { const bar = Math.floor(h.col / (s2.bar * 2)); const b1 = (bar + 1) * s2.bar * 2; const len = Math.min(M.pen, b1 - h.col); notes = notes.filter(n => !(n.start < h.col + len && n.start + n.len > h.col)); notes.push({ n: h.note, start: h.col, len, bar }); if (M.ctx) { const t0 = M.ctx.currentTime + 0.02; SYNTH.schedule(M.ctx, M.master, Object.assign({}, s2, { chords: [[0, 'M']], melody: [[[h.note, 1]]], bar: 1 }), t0, { only: 'melody' }); } }
+    rollCommit(s2, notes); musicDirty(); rollDraw(); };
+  c.oncontextmenu = ev => { ev.preventDefault(); const h = rollHit(ev); if (h.zone !== 'roll') return; const s2 = curSong(); const notes = rollNotes(s2).filter(n => !(n.n === h.note && h.col >= n.start && h.col < n.start + n.len)); rollCommit(s2, notes); musicDirty(); rollDraw(); };
+}
+function chordPop(ev, bar) { const s = curSong(); const p = $('#pop'); const ch = s.chords[bar];
+  p.innerHTML = `<div class="c">bar ${bar + 1}</div><div class="croots">${Array.from({ length: 12 }, (_, i) => `<span class="croot ${i === ch[0] ? 'on' : ''}" data-r="${i}">${noteName(s.key + i).replace(/\d/, '')}</span>`).join('')}</div><div class="croots"><span class="croot ${ch[1] === 'M' ? 'on' : ''}" data-q="M">major</span><span class="croot ${ch[1] === 'm' ? 'on' : ''}" data-q="m">minor</span><span class="croot" id="cpx">close</span></div>`;
+  p.style.display = 'block'; p.style.left = Math.min(ev.clientX, window.innerWidth - 300) + 'px'; p.style.top = (ev.clientY + 8) + 'px';
+  const hear = () => { if (!musicCtx()) return; const t0 = M.ctx.currentTime + 0.02; SYNTH.schedule(M.ctx, M.master, Object.assign({}, s, { chords: [s.chords[bar]], melody: [[[null, s.bar]]] }), t0, {}); };
+  p.querySelectorAll('[data-r]').forEach(r => r.onclick = () => { ch[0] = +r.dataset.r; p.querySelectorAll('[data-r]').forEach(x => x.classList.toggle('on', +x.dataset.r === ch[0])); musicDirty(); rollDraw(); hear(); });
+  p.querySelectorAll('[data-q]').forEach(q => q.onclick = () => { ch[1] = q.dataset.q; p.querySelectorAll('[data-q]').forEach(x => x.classList.toggle('on', x.dataset.q === ch[1])); musicDirty(); rollDraw(); hear(); });
+  $('#cpx').onclick = () => p.style.display = 'none'; }
+function rollDraw() {
+  const s = curSong(); const c = $('#mcanvas'); if (!c || !s) return; const g = c.getContext('2d'); const cols = s.chords.length * s.bar * 2; const { top, left, rows, cw, rh } = ROLL;
+  g.fillStyle = '#0e1013'; g.fillRect(0, 0, c.width, c.height);
+  // the grid: rows are semitones above the key; in-key rows (major scale of the key, or minor if the first chord is minor) lit a little
+  const minor = s.chords[0] && s.chords[0][1] === 'm'; const scale = minor ? [0, 2, 3, 5, 7, 8, 10] : [0, 2, 4, 5, 7, 9, 11];
+  for (let r = 0; r < rows; r++) { const n = rows - 1 - r; const y = top + r * rh; const inKey = scale.includes(n % 12); g.fillStyle = n % 12 === 0 ? '#1a1e26' : inKey ? '#13161b' : '#0f1115'; g.fillRect(left, y, cols * cw, rh); g.fillStyle = n % 12 === 0 ? '#e8c84a' : inKey ? '#8a92a4' : '#3d4450'; g.font = '9px ' + getComputedStyle(document.body).fontFamily; g.textAlign = 'right'; g.fillText(noteName(s.key + 12 + n), left - 6, y + rh - 2); }
+  for (let col = 0; col <= cols; col++) { const x = left + col * cw; const bar = col % (s.bar * 2) === 0, beat = col % 2 === 0; g.fillStyle = bar ? '#3d4450' : beat ? '#22262e' : '#181b21'; g.fillRect(x, top, 1, rows * rh); }
+  for (let r = 0; r <= rows; r++) { g.fillStyle = '#15181e'; g.fillRect(left, top + r * rh, cols * cw, 1); }
+  // chords
+  g.textAlign = 'left'; s.chords.forEach((ch, bi) => { const x = left + bi * s.bar * 2 * cw; g.fillStyle = bi % 2 ? '#1a1e25' : '#1e222a'; g.fillRect(x + 1, 19, s.bar * 2 * cw - 2, top - 21); g.fillStyle = '#7ad0c8'; g.font = '11px ' + getComputedStyle(document.body).fontFamily; g.fillText(noteName(s.key + ch[0]).replace(/\d/, '') + (ch[1] === 'm' ? 'm' : ''), x + 5, 36); g.fillStyle = '#3d4450'; g.font = '9px ' + getComputedStyle(document.body).fontFamily; g.fillText(String(bi + 1), x + s.bar * 2 * cw - 12, 28); });
+  g.fillStyle = '#6b7380'; g.font = '9px ' + getComputedStyle(document.body).fontFamily; g.textAlign = 'right'; g.fillText('chord', left - 6, 36); g.fillText('lyric', left - 6, 12);
+  // lyrics
+  const ly = M.view === 'alt' && s.alt ? s.alt.lyrics : s.lyrics; g.textAlign = 'left'; ly.forEach((l, i) => { const x = left + l[0] * 2 * cw; g.fillStyle = '#e8a86a'; g.fillRect(x, 2, 2, 16); g.fillStyle = '#c8ccd8'; g.font = '10px ' + getComputedStyle(document.body).fontFamily; const nx = ly[i + 1] ? left + ly[i + 1][0] * 2 * cw : left + cols * cw; g.save(); g.beginPath(); g.rect(x + 4, 0, nx - x - 6, 18); g.clip(); g.fillText(l[1], x + 5, 13); g.restore(); });
+  // notes
+  const notes = rollNotes(s); const I = SYNTH.inst(s); const col0 = I.melody.on ? '#e8c84a' : '#6b7380';
+  for (const n of notes) { const x = left + n.start * cw, y = top + (rows - 1 - n.n) * rh; g.fillStyle = col0; g.fillRect(x + 1, y + 1, n.len * cw - 2, rh - 2); g.fillStyle = '#fff3b0'; g.fillRect(x + 1, y + 1, 2, rh - 2); g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(x + n.len * cw - 4, y + 1, 3, rh - 2); }
+  if (M.hover && M.hover.zone === 'roll' && !M.drag) { const x = left + M.hover.col * cw, y = top + (rows - 1 - M.hover.note) * rh; g.strokeStyle = 'rgba(232,200,74,0.6)'; g.strokeRect(x + 0.5, y + 0.5, cw - 1, rh - 1); }
+  // playhead
+  if (M.playing) { const beat = (M.ctx.currentTime - M.playing.t0) / M.playing.beat; const x = left + beat * 2 * cw; if (beat >= 0 && x < left + cols * cw) { g.fillStyle = '#e86a6a'; g.fillRect(Math.round(x), 0, 2, c.height); } }
+}
+// ---- preview: the game's synth on a context of our own ----
+function musicCtx() { if (!M.ctx) { try { M.ctx = new (window.AudioContext || window.webkitAudioContext)(); M.master = M.ctx.createGain(); M.master.gain.value = +($('#mvol') ? $('#mvol').value : 1.4); M.master.connect(M.ctx.destination); } catch (e) { status('no audio here', 'bad'); return null; } } if (M.ctx.state === 'suspended') M.ctx.resume(); return M.ctx; }
+function musicPlay(only) { musicStop(); if (!musicCtx()) return; const s = curSong(); const t0 = M.ctx.currentTime + 0.1; const r = SYNTH.schedule(M.ctx, M.master, s, t0, { only: only || null, mute: $('#mmute') && $('#mmute').checked }); M.playing = { t0, nodes: r.nodes, beat: r.beat, dur: r.dur, song: s };
+  const tick = () => { if (!M.playing) return; const el = M.ctx.currentTime - M.playing.t0; if (el > M.playing.dur) { musicStop(); return; } const beat = el / M.playing.beat; const pos = $('#mpos'); if (pos && beat >= 0) { const bar = Math.floor(beat / s.bar) + 1, b = Math.floor(beat % s.bar) + 1; const ly = M.view === 'alt' && s.alt ? s.alt.lyrics : s.lyrics; let li = -1; ly.forEach((l, i) => { if (beat >= l[0] - 0.2) li = i; }); pos.textContent = `bar ${bar} · beat ${b}` + (li >= 0 && ly[li][1] ? '   "' + ly[li][1] + '"' : ''); }
+    // scroll the roll along
+    const wrap = document.querySelector('.mroll'); if (wrap && beat >= 0) { const x = ROLL.left + beat * 2 * ROLL.cw; if (x > wrap.scrollLeft + wrap.clientWidth - 80 || x < wrap.scrollLeft) wrap.scrollLeft = Math.max(0, x - 120); }
+    rollDraw(); M.raf = requestAnimationFrame(tick); }; M.raf = requestAnimationFrame(tick); status('playing ' + s.title); }
+function musicStop() { if (M.playing && M.ctx) SYNTH.hush(M.ctx, M.playing.nodes); M.playing = null; cancelAnimationFrame(M.raf); const pos = $('#mpos'); if (pos) pos.textContent = 'bar 1 · beat 1'; rollDraw(); }
+async function musicSave() { if (!M.songs) return; const r = await post('/api/songs', { songs: M.songs }); if (r.ok) { M.dirty = false; status('songs saved; build index.html to hear them in the game', 'ok'); DATA.songs.list = JSON.parse(JSON.stringify(M.songs)); renderSide(); const b = $('#msave'); if (b) b.disabled = true; } else status(r.error, 'bad'); }
+
 gitRefresh(true); setInterval(() => { if ($('#gitpop').style.display !== 'block') gitRefresh(true); }, 90000);
 load();
 </script>
